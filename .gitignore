@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+#vi tmp
+*.swp
+
 # C extensions
 *.so
 
@@ -87,3 +90,6 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# Idea
+.idea/
