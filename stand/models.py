@@ -5,6 +5,7 @@ import datetime
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, \
     Enum, DateTime, Numeric, Text, Unicode, UnicodeText
+from sqlalchemy import event
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy_i18n import make_translatable, translation_base, Translatable
@@ -27,6 +28,13 @@ class StatusExecution:
     PENDING = 'PENDING'
 
 
+# noinspection PyClassHasNoInit
+class ClusterType:
+    SPARK_LOCAL = 'SPARK_LOCAL'
+    MESOS = 'MESOS'
+    YARN = 'YARN'
+
+
 class Job(db.Model):
     """ A workflow execution """
     __tablename__ = 'job'
@@ -46,6 +54,9 @@ class Job(db.Model):
     user_name = Column(String(200), nullable=False)
 
     # Associations
+    cluster_id = Column(Integer, 
+                        ForeignKey("cluster.id"), nullable=False)
+    cluster = relationship("Cluster", foreign_keys=[cluster_id])
     steps = relationship("JobStep", back_populates="job")
 
     def __unicode__(self):
@@ -98,6 +109,26 @@ class JobStepLog(db.Model):
 
     def __unicode__(self):
         return self.level
+
+    def __repr__(self):
+        return '<Instance {}: {}>'.format(self.__class__, self.id)
+
+
+class Cluster(db.Model):
+    """ Processing cluster """
+    __tablename__ = 'cluster'
+
+    # Fields
+    id = Column(Integer, primary_key=True)
+    name = Column(String(200), nullable=False)
+    description = Column(String(200), nullable=False)
+    enabled = Column(String(200), nullable=False)
+    type = Column(Enum(*ClusterType.__dict__.keys(), 
+                       name='ClusterTypeEnumType'), nullable=False, default=ClusterType.SPARK_LOCAL)
+    address = Column(String(200), nullable=False)
+
+    def __unicode__(self):
+        return self.name
 
     def __repr__(self):
         return '<Instance {}: {}>'.format(self.__class__, self.id)

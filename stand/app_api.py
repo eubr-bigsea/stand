@@ -16,6 +16,7 @@ from flask_restful import Api
 from cache import cache
 
 from job_api import JobDetailApi, JobListApi
+from cluster_api import ClusterDetailApi, ClusterListApi
 from models import db
 
 sqlalchemy_utils.i18n.get_locale = get_locale
@@ -48,6 +49,8 @@ logging.getLogger('werkzeug').setLevel(logging.DEBUG)
 mappings = {
     '/jobs': JobListApi,
     '/jobs/<int:job_id>': JobDetailApi,
+    '/clusters': ClusterListApi,
+    '/clusters/<int:cluster_id>': ClusterDetailApi,
 }
 for path, view in mappings.iteritems():
     api.add_resource(view, path)

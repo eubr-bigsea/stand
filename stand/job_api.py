@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-}
+from app_auth import requires_auth
 from flask import request, current_app
 from flask_restful import Resource
-
-from app_auth import requires_auth
-from models import db, Job
 from schema import *
 
 
@@ -16,7 +14,9 @@ class JobListApi(Resource):
         only = ('id', 'name') \
             if request.args.get('simple', 'false') == 'true' else None
         jobs = Job.query.all()
-        return JobListResponseSchema(many=True, only=only).dump(jobs).data
+
+        return JobListResponseSchema(
+            many=True, only=only).dump(jobs).data
 
     @staticmethod
     @requires_auth
@@ -30,13 +30,14 @@ class JobListApi(Resource):
             if form.errors:
                 result, result_code = dict(
                     status="ERROR", message="Validation error",
-                    errors=form.errors,), 401
+                    errors=form.errors), 401
             else:
                 try:
                     job = form.data
                     db.session.add(job)
                     db.session.commit()
-                    result, result_code = response_schema.dump(job).data, 200
+                    result, result_code = response_schema.dump(
+                        job).data, 200
                 except Exception, e:
                     result, result_code = dict(status="ERROR",
                                                message="Internal error"), 500
