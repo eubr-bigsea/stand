@@ -155,7 +155,7 @@ def main(container=False):
 
         if server_config.get('environment', 'dev') == 'dev':
             if not container:
-                app.run(debug=True, host='0.0.0.0')
+                app.run(debug=True, host='0.0.0.0', port=3320)
             else:
                 app.debug = True
 
