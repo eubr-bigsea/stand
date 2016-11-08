@@ -8,7 +8,7 @@ Stand is the execution API for Lemonade project. It provides methods to run work
 ## Installation
 ### Getting the source code
 
-git clone
+ `git clone https://github.com/eubr-bigsea/stand.git`
 
 ### Requirements
  - Python 2.7.x
