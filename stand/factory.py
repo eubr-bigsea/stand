@@ -1,4 +1,6 @@
+import json
 import logging
+import os
 
 import socketio
 from flask import Flask
@@ -6,15 +8,17 @@ from flask_admin import Admin
 from flask_babel import Babel
 from flask_cors import CORS
 from flask_restful import Api
-from flask_cache import Cache
-from stand.app import simple_page
+from flask_caching import Cache
 from stand.cluster_api import ClusterDetailApi
 from stand.cluster_api import ClusterListApi
 from stand.job_api import JobListApi, JobDetailApi
 from stand.models import db
 
+from flask_redis import FlaskRedis
+from stand.redis_service import redis_store
 
-def create_app(config, container=False):
+
+def create_app(settings_override=None, log_level=logging.DEBUG):
     app = Flask(__name__)
 
     app.config["RESTFUL_JSON"] = {
@@ -22,40 +26,30 @@ def create_app(config, container=False):
         'sort_keys': False,
     }
     app.secret_key = 'l3m0n4d1'
+    with open(os.environ.get('STAND_CONFIG_FILE')) as f:
+        config = json.loads(f.read())
+        app.config['STAND_CONFIG'] = config
+
     server_config = config.get('servers', {})
     app.config['SQLALCHEMY_DATABASE_URI'] = server_config.get('database_url')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SQLALCHEMY_POOL_SIZE'] = 10
-    app.config['SQLALCHEMY_POOL_RECYCLE'] = 240
+    app.config['REDIS_URL'] = server_config.get('redis_url')
+    app.config.update(config.get('config', {}))
+
+    if settings_override:
+        app.config.update(settings_override)
 
     db.init_app(app)
     with app.app_context():
         db.create_all()
-
-    if server_config.get('environment', 'dev') == 'dev':
-        if not container:
-            app.run(debug=True, host='0.0.0.0', port=3320)
-        else:
-            app.debug = True
-
-    # i18n configuration
-    babel = Babel(app)
-
-    # Web socket
-    socket_io_config = config['socket_id']
-    mgr = socketio.RedisManager(socket_io_config['queue_url'], 'discovery')
-    sio = socketio.Server(engineio_options={'logger': True},
-                          client_manager=mgr,
-                          allow_upgrades=True)
-    socketio_app = socketio.Middleware(sio, app)
 
     # Flask Admin
     admin = Admin(app, name='Stand', template_mode='bootstrap3')
 
     # Logging configuration
     logging.basicConfig()
-    logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
-    logging.getLogger('werkzeug').setLevel(logging.DEBUG)
+    logging.getLogger('sqlalchemy.engine').setLevel(log_level)
+    logging.getLogger('werkzeug').setLevel(log_level)
 
     # CORS configuration
     CORS(app, resources={r"/*": {"origins": "*"}})
@@ -71,11 +65,39 @@ def create_app(config, container=False):
     for path, view in mappings.iteritems():
         api.add_resource(view, path)
 
-    app.register_blueprint(simple_page)
-
     # Cache configuration for API
     app.config['CACHE_TYPE'] = 'simple'
     cache = Cache(config={'CACHE_TYPE': 'simple'})
     cache.init_app(app)
 
-    return True, app, socketio_app
+    return app
+
+
+def create_socket_io_app(_app):
+    """
+    Creates websocket app
+    :param _app: Flask app
+    """
+    socket_io_config = _app.config['STAND_CONFIG']['servers']
+    mgr = socketio.RedisManager(socket_io_config['redis_url'], 'discovery')
+    sio = socketio.Server(engineio_options={'logger': True},
+                          client_manager=mgr,
+                          allow_upgrades=True)
+    return sio, socketio.Middleware(sio, _app)
+
+
+def create_babel_i18n(_app):
+    """ i18n configuration
+    :param _app: Flask app
+    :return: Babel configuration
+    """
+    return Babel(_app)
+
+
+def create_redis_store(_app):
+    """
+    Redis store. Used to control queues and subscription services
+    :param _app: Flask app
+    :return: redis_store instance (wrapper around pyredis)
+    """
+    return redis_store.init_app(_app)

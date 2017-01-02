@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+import datetime
 import json
 from copy import deepcopy
 from marshmallow import Schema, fields, post_load
@@ -106,9 +106,9 @@ class JobItemResponseSchema(Schema):
     status = fields.String(required=True, missing=StatusExecution.WAITING,
                            default=StatusExecution.WAITING,
                            validate=[OneOf(StatusExecution.__dict__.keys())])
-    cluster = fields.Nested('schema.ClusterItemResponseSchema',
+    cluster = fields.Nested('stand.schema.ClusterItemResponseSchema',
                             required=True)
-    steps = fields.Nested('schema.JobStepItemResponseSchema',
+    steps = fields.Nested('stand.schema.JobStepItemResponseSchema',
                           required=True,
                           many=True)
     user = fields.Function(lambda x: {"id": x.user_id, "name": x.user_name, "login": x.user_login})
@@ -133,7 +133,7 @@ class JobListResponseSchema(Schema):
     status = fields.String(required=True, missing=StatusExecution.WAITING,
                            default=StatusExecution.WAITING,
                            validate=[OneOf(StatusExecution.__dict__.keys())])
-    cluster = fields.Nested('schema.ClusterListResponseSchema',
+    cluster = fields.Nested('stand.schema.ClusterListResponseSchema',
                             required=True)
     user = fields.Function(lambda x: {"id": x.user_id, "name": x.user_name, "login": x.user_login})
     workflow = fields.Function(lambda x: {"id": x.workflow_id, "name": x.workflow_name})
@@ -158,7 +158,7 @@ class JobCreateRequestSchema(Schema):
     user_login = fields.String(required=True)
     user_name = fields.String(required=True)
     cluster_id = fields.Integer(required=True)
-    steps = fields.Nested('schema.JobStepCreateRequestSchema',
+    steps = fields.Nested('stand.schema.JobStepCreateRequestSchema',
                           required=True,
                           many=True)
 
@@ -183,9 +183,9 @@ class JobExecuteResponseSchema(Schema):
     workflow_id = fields.Integer(required=True)
     message = fields.String(allow_none=True)
     status_url = fields.Url(required=True)
-    cluster = fields.Nested('schema.ClusterExecuteResponseSchema',
+    cluster = fields.Nested('stand.schema.ClusterExecuteResponseSchema',
                             required=True)
-    steps = fields.Nested('schema.JobStepExecuteResponseSchema',
+    steps = fields.Nested('stand.schema.JobStepExecuteResponseSchema',
                           required=True,
                           many=True)
 
@@ -220,7 +220,7 @@ class JobStepItemResponseSchema(Schema):
     std_out = fields.String(allow_none=True)
     std_err = fields.String(allow_none=True)
     exit_code = fields.Integer(allow_none=True)
-    logs = fields.Nested('schema.JobStepLogItemResponseSchema',
+    logs = fields.Nested('stand.schema.JobStepLogItemResponseSchema',
                          required=True,
                          many=True)
     operation = fields.Function(lambda x: {"id": x.operation_id, "name": x.operation_name})
@@ -243,7 +243,7 @@ class JobStepListResponseSchema(Schema):
     task_id = fields.Integer(required=True)
     operation_id = fields.Integer(required=True)
     operation_name = fields.String(required=True)
-    logs = fields.Nested('schema.JobStepLogListResponseSchema',
+    logs = fields.Nested('stand.schema.JobStepLogListResponseSchema',
                          required=True,
                          many=True)
 
@@ -264,7 +264,7 @@ class JobStepCreateRequestSchema(Schema):
     task_id = fields.Integer(required=True)
     operation_id = fields.Integer(required=True)
     operation_name = fields.String(required=True)
-    logs = fields.Nested('schema.JobStepLogCreateRequestSchema',
+    logs = fields.Nested('stand.schema.JobStepLogCreateRequestSchema',
                          required=True,
                          many=True)
 

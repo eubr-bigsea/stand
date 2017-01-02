@@ -1,8 +1,21 @@
 # -*- coding: utf-8 -*-}
+import math
+
 from app_auth import requires_auth
 from flask import request, current_app
 from flask_restful import Resource
 from schema import *
+from stand.services import JobService
+
+
+def apply_filter(query, args, name, transform=None, transform_name=None):
+    result = query
+    if name in args and args[name].strip() != '':
+        v = transform(args[name]) if transform else args[name]
+        f = transform_name(name) if transform_name else name
+        result = query.filter_by(**{f: v})
+
+    return result
 
 
 class JobListApi(Resource):
@@ -11,12 +24,34 @@ class JobListApi(Resource):
     @staticmethod
     @requires_auth
     def get():
-        only = ('id', 'name') \
-            if request.args.get('simple', 'false') == 'true' else None
-        jobs = Job.query.all()
+        only = None
+        if request.args.get('fields'):
+            only = tuple(
+                [x.strip() for x in request.args.get('fields').split(',')])
 
-        return JobListResponseSchema(
-            many=True, only=only).dump(jobs).data
+        jobs = Job.query
+        for name in ['workflow', 'user']:
+            jobs = apply_filter(jobs, request.args, name, int,
+                                lambda field: field + '_id')
+        page = request.args.get('page')
+
+        if page is not None and page.isdigit():
+            page_size = int(request.args.get('size', 20))
+            page = int(page)
+            pagination = jobs.paginate(page, page_size, True)
+            result = {
+                'data': JobListResponseSchema(many=True, only=only).dump(
+                    pagination.items).data,
+                'pagination': {
+                    'page': page, 'size': page_size,
+                    'total': pagination.total,
+                    'pages': int(math.ceil(1.0 * pagination.total / page_size))}
+            }
+        else:
+            result = {'data': JobListResponseSchema(many=True, only=only).dump(
+                jobs).data}
+
+        return result
 
     @staticmethod
     @requires_auth
@@ -34,10 +69,9 @@ class JobListApi(Resource):
             else:
                 try:
                     job = form.data
-                    db.session.add(job)
-                    db.session.commit()
-                    result, result_code = response_schema.dump(
-                        job).data, 200
+                    JobService.save(job)
+
+                    result, result_code = response_schema.dump(job).data, 200
                 except Exception, e:
                     result, result_code = dict(status="ERROR",
                                                message="Internal error"), 500

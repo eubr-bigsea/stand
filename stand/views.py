@@ -1,58 +1,23 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import argparse
-import json
-import logging
-import socketio
 
 import sqlalchemy_utils
-from flask import Flask, request, render_template
-
-from flask_admin import Admin
-from flask_admin.contrib.sqla import ModelView
-from flask_babel import get_locale, Babel
-from flask_cors import CORS
-from flask_restful import Api, abort
-from cache import cache
-
-from job_api import JobDetailApi, JobListApi
-from cluster_api import ClusterDetailApi, ClusterListApi
-from models import db
 from flask import Blueprint
+from flask import request, render_template
+from flask_babel import get_locale
+from flask_restful import abort
+from app import babel, app
+
 sqlalchemy_utils.i18n.get_locale = get_locale
 
-"""
-app = Flask(__name__)
-babel = Babel(app)
-
-# Web socket
-mgr = socketio.RedisManager('redis://localhost:6379/', 'discovery')
-sio = socketio.Server(engineio_options={'logger': True},
-                      client_manager=mgr,
-                      allow_upgrades=True)
-
-app.secret_key = 'l3m0n4d1'
-# Flask Admin 
-admin = Admin(app, name='Lemonade', template_mode='bootstrap3')
-
-# CORS
-CORS(app, resources={r"/*": {"origins": "*"}})
-api = Api(app)
-
-# Cache
-app.config['CACHE_TYPE'] = 'simple'
-cache.init_app(app)
-"""
-
-simple_page = Blueprint('simple_page', __name__,
-                        template_folder='templates')
-
+'''
 # @app.before_request
 def before():
     print request.args
     if request.args and 'lang' in request.args:
         if request.args['lang'] not in ('es', 'en'):
             return abort(404)
+'''
 
 
 @babel.localeselector
@@ -64,7 +29,6 @@ def get_locale():
 def index():
     """Serve the client-side application."""
     return render_template('index.html')
-
 
 
 """

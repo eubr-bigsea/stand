@@ -1,58 +1,17 @@
 import json
+from functools import partial
 
 from flask import url_for
 from stand.models import StatusExecution
-from functools import partial
 
-from stand.schema import JobListResponseSchema
-
-job_detail_url = partial(url_for, endpoint='jobdetailapi')
 job_list_url = partial(url_for, endpoint='joblistapi')
 
 HEADERS = {'X-Auth-Token': '123456'}
 
 
-# def test_create_job(session):
-#     now = datetime.datetime.now()
-#     post = Job(
-#         created=now, started=now, finished=None,
-#         status=StatusExecution.COMPLETED,
-#         workflow_id=1, workflow_name='Teste', workflow_definition=None,
-#         user_id=1, user_login='Walter', user_name='Walter dos Santos Filho',
-#         cluster_id=1)
-#
-#     session.add(post)
-#     session.commit()
-#
-#     assert post.id > 0
-
-# noinspection PyUnusedLocal
-def test_init(session):
-    """ Used to initialize session (needed to link session in Factory boy
-     with pytest.
-    """
-    pass
-
-
 def test_list_jobs_api_unauthorized(client):
     jobs = client.get(job_list_url())
     assert (jobs.status_code == 401)
-
-
-def test_get_job_by_id_api_works(client, model_factories):
-    fake_job = model_factories.job_factory.create(
-        status=StatusExecution.CANCELED, id=22)
-
-    response = client.get(job_detail_url(job_id=fake_job.id), headers=HEADERS)
-    job = response.json
-
-    assert (fake_job.id == job['id'])
-    assert (fake_job.status == job['status'])
-
-
-def test_get_job_by_id_api_not_found(client, job_factory):
-    response = client.get(job_detail_url(job_id=22), headers=HEADERS)
-    assert (response.status_code == 404)
 
 
 def test_list_empty_list_jobs_api(client):
@@ -180,3 +139,64 @@ def test_list_jobs_paged_out_of_bounds_return_404(client, model_factories):
     }
     response = client.get(job_list_url(), headers=HEADERS, query_string=data)
     assert response.status_code == 404
+
+
+def test_create_job_ok_result_success(client, model_factories):
+    model_factories.cluster_factory.create(id=999)
+
+    data = {
+        'user_id': 1,
+        'user_login': 'turing',
+        'user_name': 'Alan Turing',
+        'workflow_name': 'Titanic',
+        'workflow_id': 1,
+        'cluster_id': 999,
+        'steps': [],
+    }
+    headers = {'Content-Type': 'application/json'}
+    headers.update(HEADERS)
+    response = client.post(job_list_url(), headers=headers,
+                           data=json.dumps(data))
+    assert response.status_code == 200
+
+
+def test_create_job_nok_result_fail_missing_fields(client, model_factories):
+    model_factories.cluster_factory.create(id=999)
+
+    data = {
+
+    }
+    headers = {'Content-Type': 'application/json'}
+    headers.update(HEADERS)
+    response = client.post(job_list_url(), headers=headers,
+                           data=json.dumps(data))
+    result = response.json
+    assert result['status'] == 'ERROR'
+    assert result['message'] == 'Validation error'
+
+    assert sorted(result['errors'].keys()) == sorted(
+        ['user_id', 'user_login', 'workflow_name', 'workflow_id', 'cluster_id',
+         'steps', 'user_name'])
+
+    assert response.status_code == 401
+
+
+def test_create_job_invalid_cluster_fail(client, model_factories):
+    model_factories.cluster_factory.create(id=999)
+
+    data = {
+
+    }
+    headers = {'Content-Type': 'application/json'}
+    headers.update(HEADERS)
+    response = client.post(job_list_url(), headers=headers,
+                           data=json.dumps(data))
+    result = response.json
+    assert result['status'] == 'ERROR'
+    assert result['message'] == 'Validation error'
+
+    assert sorted(result['errors'].keys()) == sorted(
+        ['user_id', 'user_login', 'workflow_name', 'workflow_id', 'cluster_id',
+         'steps', 'user_name'])
+
+    assert response.status_code == 401
