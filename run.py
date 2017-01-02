@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 import eventlet
 
-eventlet.monkey_patch()
-
 import werkzeug.serving
-from app_api import main
+from stand.app_api import main
+
+eventlet.monkey_patch()
 
 
 def run(new_sio_app):
