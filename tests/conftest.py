@@ -1,14 +1,12 @@
 # from project.database import db as _db
 import logging
 import sys
-
-import os
 from collections import namedtuple
 
+import os
 import pytest
 from factories import JobFactory, ClusterFactory
-from pytest_factoryboy import register
-from stand.factory import create_app, create_redis_store
+from stand.factory import create_app
 from stand.models import db as _db
 
 sys.path.append(os.path.dirname(os.path.curdir))
@@ -25,16 +23,16 @@ def app(request):
         'TESTING': True,
         'SQLALCHEMY_DATABASE_URI': TEST_DATABASE_URI
     }
-    result = create_app(settings_override, log_level=logging.WARN)
-    result.debug = True
+    result_app = create_app(settings_override, log_level=logging.WARN)
+    result_app.debug = True
     # Establish an application context before running the tests.
-    ctx = result.app_context()
+    ctx = result_app.app_context()
     ctx.push()
 
     # Redis
-    redis_store = create_redis_store(result)
+    # redis_store = create_redis_store(result_app, mocked=True)
 
-    yield result
+    yield result_app
 
     ctx.pop()
 

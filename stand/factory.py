@@ -1,21 +1,31 @@
 import json
 import logging
-import os
 
+import os
 import socketio
 from flask import Flask
 from flask_admin import Admin
 from flask_babel import Babel
-from flask_cors import CORS
-from flask_restful import Api
 from flask_caching import Cache
+from flask_cors import CORS
+from flask_redis import FlaskRedis
+from flask_restful import Api
+from mockredis import MockRedis
 from stand.cluster_api import ClusterDetailApi
 from stand.cluster_api import ClusterListApi
-from stand.job_api import JobListApi, JobDetailApi
+from stand.configuration import stand_configuration
+from stand.job_api import JobListApi, JobDetailApi, \
+    JobStopActionApi
 from stand.models import db
 
-from flask_redis import FlaskRedis
-from stand.redis_service import redis_store
+
+class MockRedisWrapper(MockRedis):
+    """
+    A wrapper to add the `from_url` classmethod
+    """
+    @classmethod
+    def from_url(cls, *args, **kwargs):
+        return cls()
 
 
 def create_app(settings_override=None, log_level=logging.DEBUG):
@@ -26,9 +36,8 @@ def create_app(settings_override=None, log_level=logging.DEBUG):
         'sort_keys': False,
     }
     app.secret_key = 'l3m0n4d1'
-    with open(os.environ.get('STAND_CONFIG_FILE')) as f:
-        config = json.loads(f.read())
-        app.config['STAND_CONFIG'] = config
+    config = stand_configuration
+    app.config['STAND_CONFIG'] = config
 
     server_config = config.get('servers', {})
     app.config['SQLALCHEMY_DATABASE_URI'] = server_config.get('database_url')
@@ -59,6 +68,7 @@ def create_app(settings_override=None, log_level=logging.DEBUG):
     mappings = {
         '/jobs': JobListApi,
         '/jobs/<int:job_id>': JobDetailApi,
+        '/jobs/<int:job_id>/stop': JobStopActionApi,
         '/clusters': ClusterListApi,
         '/clusters/<int:cluster_id>': ClusterDetailApi,
     }
@@ -100,4 +110,10 @@ def create_redis_store(_app):
     :param _app: Flask app
     :return: redis_store instance (wrapper around pyredis)
     """
-    return redis_store.init_app(_app)
+    if _app.testing:
+        redis_store = FlaskRedis()
+    else:
+        redis_store = FlaskRedis.from_custom_provider(MockRedisWrapper)
+    redis_store.init_app(_app)
+
+    return redis_store
