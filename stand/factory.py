@@ -37,13 +37,14 @@ def create_app(settings_override=None, log_level=logging.DEBUG):
     }
     app.secret_key = 'l3m0n4d1'
     config = stand_configuration
-    app.config['STAND_CONFIG'] = config
+    app.config['STAND_CONFIG'] = config['stand']
 
-    server_config = config.get('servers', {})
+    server_config = config['stand'].get('servers', {})
     app.config['SQLALCHEMY_DATABASE_URI'] = server_config.get('database_url')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['REDIS_URL'] = server_config.get('redis_url')
     app.config.update(config.get('config', {}))
+    app.debug = config['stand'].get('debug', False)
 
     if settings_override:
         app.config.update(settings_override)
