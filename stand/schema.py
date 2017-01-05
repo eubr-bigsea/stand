@@ -44,10 +44,6 @@ class ClusterListResponseSchema(Schema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
     name = fields.String(required=True)
-    type = fields.String(required=True, missing=ClusterType.SPARK_LOCAL,
-                         default=ClusterType.SPARK_LOCAL,
-                         validate=[OneOf(ClusterType.__dict__.keys())])
-    address = fields.String(required=True)
 
     @post_load
     def make_object(self, data):
@@ -62,10 +58,6 @@ class ClusterItemResponseSchema(Schema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
     name = fields.String(required=True)
-    type = fields.String(required=True, missing=ClusterType.SPARK_LOCAL,
-                         default=ClusterType.SPARK_LOCAL,
-                         validate=[OneOf(ClusterType.__dict__.keys())])
-    address = fields.String(required=True)
 
     @post_load
     def make_object(self, data):
@@ -149,18 +141,11 @@ class JobListResponseSchema(Schema):
 
 class JobCreateRequestSchema(Schema):
     """ JSON serialization schema """
-    started = fields.DateTime(required=False, allow_none=True)
-    finished = fields.DateTime(required=False, allow_none=True)
     workflow_id = fields.Integer(required=True)
-    workflow_name = fields.String(required=True)
-    workflow_definition = fields.String(required=False, allow_none=True)
     user_id = fields.Integer(required=True)
     user_login = fields.String(required=True)
     user_name = fields.String(required=True)
     cluster_id = fields.Integer(required=True)
-    steps = fields.Nested('stand.schema.JobStepCreateRequestSchema',
-                          required=True,
-                          many=True)
 
     @post_load
     def make_object(self, data):

@@ -23,6 +23,7 @@ class MockRedisWrapper(MockRedis):
     """
     A wrapper to add the `from_url` classmethod
     """
+
     @classmethod
     def from_url(cls, *args, **kwargs):
         return cls()
@@ -118,3 +119,7 @@ def create_redis_store(_app):
     redis_store.init_app(_app)
 
     return redis_store
+
+
+def create_services(_app):
+    pass
