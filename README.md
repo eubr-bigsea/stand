@@ -23,23 +23,21 @@ git clone
  ```
 
 ## Configuration
-All configuration is defined in a JSON file, with the following structure:
+All configuration is defined in a Yaml file, with the following structure:
 
 ```
-{
-    "port": 3320,
-    "servers": {
-        "database_url": "mysql+pymysql://user:password@server:port/database",
-        "environment": "prod",
-        "redis_server": "redis_server"
-    },
-    "services": {
-        "tahiti": {
-            "url": "http://tahiti_server/tahiti",
-            "token": "authorization_token"
-        }
-    }
-}
+stand:
+    debug: true
+    servers:
+        database_url: mysql+pymysql://user:password@server:port/database
+        redis_url: redis://redis_server:6379
+    services:
+        tahiti:
+            url: http://server/tahiti
+            auth_token: "authorization_token"
+    config:
+        SQLALCHEMY_POOL_SIZE: 10
+        SQLALCHEMY_POOL_RECYCLE: 240
 ```
 ## Database creation
 
@@ -50,9 +48,10 @@ they are created automatically after starting Stand. Otherwise, you have to exec
 
 ```
 cd <download_dir>
-python stand/app_api.py -c <path_of_configuration_file>
+export STAND_CONFIG_FILE=<path for Yaml configuration file>
+python stand/app.py
 ```
-Service will run on port 3320 (default).
+Service will run on port 5000 (default).
 
 ## API documentation
 

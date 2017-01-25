@@ -149,13 +149,29 @@ def test_create_job_ok_result_success(client, model_factories, tahiti_service):
     model_factories.cluster_factory.create(id=999, )
 
     data = {
-        'user_id': 1,
-        'user_login': 'turing',
-        'user_name': 'Alan Turing',
-        'workflow_name': 'Titanic',
-        'workflow_id': 1,
-        'cluster_id': 999,
-        'steps': [],
+        'user': {
+            'id': 1,
+            'login': 'turing',
+            'name': 'Alan Turing'
+        },
+        'workflow': {
+            'name': 'Titanic',
+            'id': 1,
+            'platform': {
+                'id': 1
+            },
+            'tasks': [
+                {
+                    'id': '2323aa-2323dac-as9987',
+                    'forms': {},
+                    'operation_id': 1
+                }
+            ]
+        },
+        'cluster': {
+            'id': 999
+        },
+
     }
     headers = {'Content-Type': 'application/json'}
     headers.update(HEADERS)
@@ -202,7 +218,8 @@ def test_create_job_nok_result_fail_missing_fields(client, model_factories):
     assert result['message'] == 'Validation error'
 
     assert sorted(result['errors'].keys()) == sorted(
-        ['user_id', 'user_login', 'workflow_id', 'cluster_id', 'user_name'])
+        ['cluster', 'user', 'workflow', 'workflow_name',
+         'user_id', 'user_login', 'workflow_id', 'cluster_id', 'user_name'])
 
     assert response.status_code == 401
 
@@ -222,7 +239,8 @@ def test_create_job_invalid_cluster_fail(client, model_factories, redis_store):
     assert result['message'] == 'Validation error'
 
     assert sorted(result['errors'].keys()) == sorted(
-        ['user_id', 'user_login', 'workflow_id', 'cluster_id', 'user_name'])
+        ['cluster', 'user', 'workflow', 'workflow_name',
+         'user_id', 'user_login', 'workflow_id', 'cluster_id', 'user_name'])
     content = redis_store.get('start')
     assert len(content) == 0
 
@@ -232,13 +250,29 @@ def test_create_job_workflow_running_another_job_fail(client, model_factories):
         id=444, status=StatusExecution.RUNNING, workflow_id=10000)
 
     data = {
-        'user_id': 1,
-        'user_login': 'turing',
-        'user_name': 'Alan Turing',
-        'workflow_name': 'Titanic',
-        'workflow_id': fake_job.workflow_id,
-        'cluster_id': 999,
-        'steps': [],
+        'user': {
+            'id': 1,
+            'login': 'turing',
+            'name': 'Alan Turing'
+        },
+        'workflow': {
+            'name': 'Titanic',
+            'id': 1,
+            'platform': {
+                'id': 1
+            },
+            'tasks': [
+                {
+                    'id': '2323aa-2323dac-as9987',
+                    'forms': {},
+                    'operation_id': 1
+                }
+            ]
+        },
+        'cluster': {
+            'id': 999
+        },
+
     }
     headers = {'Content-Type': 'application/json'}
     headers.update(HEADERS)

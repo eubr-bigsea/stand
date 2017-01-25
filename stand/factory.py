@@ -15,7 +15,7 @@ from stand.cluster_api import ClusterDetailApi
 from stand.cluster_api import ClusterListApi
 from stand.configuration import stand_configuration
 from stand.job_api import JobListApi, JobDetailApi, \
-    JobStopActionApi
+    JobStopActionApi, JobLockActionApi, JobUnlockActionApi
 from stand.models import db
 
 
@@ -71,6 +71,8 @@ def create_app(settings_override=None, log_level=logging.DEBUG):
         '/jobs': JobListApi,
         '/jobs/<int:job_id>': JobDetailApi,
         '/jobs/<int:job_id>/stop': JobStopActionApi,
+        '/jobs/<int:job_id>/lock': JobLockActionApi,
+        '/jobs/<int:job_id>/unlock': JobUnlockActionApi,
         '/clusters': ClusterListApi,
         '/clusters/<int:cluster_id>': ClusterDetailApi,
     }
