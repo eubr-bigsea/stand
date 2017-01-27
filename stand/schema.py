@@ -25,10 +25,27 @@ def load_json(str_value):
 
 
 # region Protected
+class EntityIdCreateRequestSchema(Schema):
+    id = fields.Integer(required=True)
+
+
+class ClusterIdCreateRequestSchema(EntityIdCreateRequestSchema):
+    pass
+
+
+class PlatformIdCreateRequestSchema(EntityIdCreateRequestSchema):
+    pass
+
+
+class OperationIdCreateRequestSchema(EntityIdCreateRequestSchema):
+    pass
+
+
 class WorkflowDefinitionCreateRequestSchema(Schema):
     """
     Workflow definition. Must be in same format as in Tahiti.
     """
+    id = fields.Integer(required=True)
     name = fields.String(required=True)
     description = fields.String(required=False, allow_none=True)
     enabled = fields.Boolean(required=True, missing=True,
@@ -53,7 +70,7 @@ class TaskDefinitionCreateRequestSchema(Schema):
     top = fields.Integer(required=False)
     z_index = fields.Integer(required=False)
     forms = fields.Dict(required=True)
-    operation_id = fields.Integer(required=True)
+    operation = fields.Nested(OperationIdCreateRequestSchema, required=True)
 
 
 class FlowDefinitionCreateRequestSchema(Schema):
@@ -72,14 +89,6 @@ class UserCreateRequestSchema(Schema):
     name = fields.String(required=True)
 
 
-class ClusterIdCreateRequestSchema(Schema):
-    id = fields.Integer(required=True)
-
-
-class PlatformIdCreateRequestSchema(Schema):
-    id = fields.Integer(required=True)
-
-
 # endregion
 
 
@@ -91,8 +100,7 @@ class ClusterSimpleListResponseSchema(Schema):
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of Cluster"""
-        declared = dir(Cluster)
-        return Cluster(**dict([(k, v) for k, v in data.items() if k in declared]))
+        return Cluster(**data)
 
     class Meta:
         ordered = True
@@ -107,8 +115,7 @@ class ClusterListResponseSchema(Schema):
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of Cluster"""
-        declared = dir(Cluster)
-        return Cluster(**dict([(k, v) for k, v in data.items() if k in declared]))
+        return Cluster(**data)
 
     class Meta:
         ordered = True
@@ -123,8 +130,7 @@ class ClusterItemResponseSchema(Schema):
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of Cluster"""
-        declared = dir(Cluster)
-        return Cluster(**dict([(k, v) for k, v in data.items() if k in declared]))
+        return Cluster(**data)
 
     class Meta:
         ordered = True
@@ -145,8 +151,7 @@ class ClusterCreateRequestSchema(Schema):
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of Cluster"""
-        declared = dir(Cluster)
-        return Cluster(**dict([(k, v) for k, v in data.items() if k in declared]))
+        return Cluster(**data)
 
     class Meta:
         ordered = True
@@ -174,8 +179,7 @@ class JobItemResponseSchema(Schema):
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of Job"""
-        declared = dir(Job)
-        return Job(**dict([(k, v) for k, v in data.items() if k in declared]))
+        return Job(**data)
 
     class Meta:
         ordered = True
@@ -200,8 +204,7 @@ class JobListResponseSchema(Schema):
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of Job"""
-        declared = dir(Job)
-        return Job(**dict([(k, v) for k, v in data.items() if k in declared]))
+        return Job(**data)
 
     class Meta:
         ordered = True
@@ -209,13 +212,6 @@ class JobListResponseSchema(Schema):
 
 class JobCreateRequestSchema(Schema):
     """ JSON serialization schema """
-    workflow_id = fields.Integer(required=True)
-    workflow_name = fields.String(required=True)
-    workflow_definition = fields.String(required=False, allow_none=True)
-    user_id = fields.Integer(required=True)
-    user_login = fields.String(required=True)
-    user_name = fields.String(required=True)
-    cluster_id = fields.Integer(required=True)
     workflow = fields.Nested(
         'stand.schema.WorkflowDefinitionCreateRequestSchema',
         required=True)
@@ -225,6 +221,32 @@ class JobCreateRequestSchema(Schema):
     user = fields.Nested(
         'stand.schema.UserCreateRequestSchema',
         required=True)
+
+    # noinspection PyUnresolvedReferences
+    @post_load
+    def make_object(self, data):
+        """ Deserializes data into an instance of Job"""
+        
+        data['cluster_id'] = data['cluster']['id']
+        data['user_id'] = data['user']['id']
+        data['user_name'] = data['user']['name']
+        data['user_login'] = data['user']['login']
+        data['workflow_id'] = data['workflow']['id']
+        data['workflow_name'] = data['workflow']['name']
+        data['workflow_definition'] = json.dumps(data['workflow'])
+        
+        now = datetime.datetime.now()
+        data['steps'] = [JobStep(date=now, status=StatusExecution.PENDING,
+                             task_id=t['id'],
+                             operation_id=t['operation']['id'],
+                             operation_name="EMPTY")
+                     for t in data['workflow'].get('tasks', [])]
+        
+        data.pop('cluster')
+        data.pop('workflow')
+        data.pop('user')
+        
+        return Job(**data)
 
     class Meta:
         ordered = True
@@ -252,8 +274,7 @@ class JobExecuteResponseSchema(Schema):
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of Job"""
-        declared = dir(Job)
-        return Job(**dict([(k, v) for k, v in data.items() if k in declared]))
+        return Job(**data)
 
     class Meta:
         ordered = True
@@ -267,8 +288,7 @@ class JobStatusRequestSchema(Schema):
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of Job"""
-        declared = dir(Job)
-        return Job(**dict([(k, v) for k, v in data.items() if k in declared]))
+        return Job(**data)
 
     class Meta:
         ordered = True
@@ -293,8 +313,7 @@ class JobStepItemResponseSchema(Schema):
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of JobStep"""
-        declared = dir(JobStep)
-        return JobStep(**dict([(k, v) for k, v in data.items() if k in declared]))
+        return JobStep(**data)
 
     class Meta:
         ordered = True
@@ -316,8 +335,7 @@ class JobStepListResponseSchema(Schema):
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of JobStep"""
-        declared = dir(JobStep)
-        return JobStep(**dict([(k, v) for k, v in data.items() if k in declared]))
+        return JobStep(**data)
 
     class Meta:
         ordered = True
@@ -339,8 +357,7 @@ class JobStepCreateRequestSchema(Schema):
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of JobStep"""
-        declared = dir(JobStep)
-        return JobStep(**dict([(k, v) for k, v in data.items() if k in declared]))
+        return JobStep(**data)
 
     class Meta:
         ordered = True
@@ -357,8 +374,7 @@ class JobStepLogListResponseSchema(Schema):
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of JobStepLog"""
-        declared = dir(JobStepLog)
-        return JobStepLog(**dict([(k, v) for k, v in data.items() if k in declared]))
+        return JobStepLog(**data)
 
     class Meta:
         ordered = True
@@ -375,8 +391,7 @@ class JobStepLogItemResponseSchema(Schema):
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of JobStepLog"""
-        declared = dir(JobStepLog)
-        return JobStepLog(**dict([(k, v) for k, v in data.items() if k in declared]))
+        return JobStepLog(**data)
 
     class Meta:
         ordered = True
@@ -393,8 +408,7 @@ class JobStepLogCreateRequestSchema(Schema):
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of JobStepLog"""
-        declared = dir(JobStepLog)
-        return JobStepLog(**dict([(k, v) for k, v in data.items() if k in declared]))
+        return JobStepLog(**data)
 
     class Meta:
         ordered = True

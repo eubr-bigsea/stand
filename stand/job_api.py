@@ -64,18 +64,6 @@ class JobListApi(Resource):
             request_schema = JobCreateRequestSchema()
             response_schema = JobItemResponseSchema()
 
-            cluster = request_json.get('cluster', {})
-            request_json['cluster_id'] = cluster.get('id')
-
-            user = request_json.get('user', {})
-            request_json['user_id'] = user.get('id')
-            request_json['user_name'] = user.get('name')
-            request_json['user_login'] = user.get('login')
-
-            workflow = request_json.get('workflow', {})
-            request_json['workflow_id'] = workflow.get('id')
-            request_json['workflow_name'] = workflow.get('name')
-
             request_json['status'] = StatusExecution.WAITING
 
             form = request_schema.load(request_json)
@@ -86,12 +74,7 @@ class JobListApi(Resource):
                     errors=form.errors), 401
             else:
                 try:
-                    job_input = form.data
-                    job_input.pop('user')
-                    job_input.pop('cluster')
-                    job_input.pop('workflow')
-
-                    job = Job(**job_input)
+                    job = form.data
                     JobService.start(job)
                     result_code = 200
                     result = dict(data=response_schema.dump(job).data,
