@@ -48,7 +48,7 @@ class JobService:
         db.session.commit()
 
     @staticmethod
-    def start(job):
+    def start(job, workflow):
         invalid_statuses = [StatusExecution.RUNNING, StatusExecution.PENDING,
                             StatusExecution.INTERRUPTED,
                             StatusExecution.WAITING]
@@ -70,14 +70,18 @@ class JobService:
         redis_store = connect_redis_store()
         # This queue is used to keep the order of execution and to know
         # what is pending.
-        msg = json.dumps(dict(job_id=job.id, workflow_id=job.workflow_id,
-                              workflow=dict(id=job.workflow_id)))
-        redis_store.rpush("start", msg)
+
+        # @FIXME Each workflow has only one app. In future, we may support N
+        msg = json.dumps(dict(app_id=job.workflow_id,
+                              workflow_id=job.workflow_id,
+                              type='execute',
+                              workflow=job.workflow_definition))
+        redis_store.rpush("queue_start", msg)
 
         db.session.flush()  # Flush is needed to get the value of job.id
 
-        # This hash stores information about job, e.g., its status
-        # redis_store.hset('job_{}'.format(job.id), 'status', job.status)
+        redis_store.hset('record_workflow_{}'.format(job.workflow_id),
+                         'status', job.status)
 
         db.session.commit()
 
