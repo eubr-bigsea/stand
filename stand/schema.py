@@ -173,7 +173,7 @@ class JobItemResponseSchema(Schema):
                           required=True,
                           many=True)
     user = fields.Function(lambda x: {"id": x.user_id, "name": x.user_name, "login": x.user_login})
-    workflow = fields.Function(lambda x: {"id": x.workflow_id, "name": x.workflow_name})
+    workflow = fields.Function(lambda x: json.loads(x.workflow_definition)
 
     # noinspection PyUnresolvedReferences
     @post_load
@@ -198,7 +198,7 @@ class JobListResponseSchema(Schema):
     cluster = fields.Nested('stand.schema.ClusterListResponseSchema',
                             required=True)
     user = fields.Function(lambda x: {"id": x.user_id, "name": x.user_name, "login": x.user_login})
-    workflow = fields.Function(lambda x: {"id": x.workflow_id, "name": x.workflow_name})
+    workflow = fields.Function(lambda x: json.loads(x.workflow_definition)
 
     # noinspection PyUnresolvedReferences
     @post_load
