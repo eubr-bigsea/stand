@@ -73,7 +73,6 @@ class JobService:
 
         # @FIXME Each workflow has only one app. In future, we may support N
         msg = json.dumps(dict(app_id=job.workflow_id,
-                              job_id=job.id,
                               workflow_id=job.workflow_id,
                               type='execute',
                               workflow=workflow))
