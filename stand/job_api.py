@@ -75,7 +75,7 @@ class JobListApi(Resource):
             else:
                 try:
                     job = form.data
-                    JobService.start(job)
+                    JobService.start(job, request_json['workflow'])
                     result_code = 200
                     result = dict(data=response_schema.dump(job).data,
                                   message='', status='OK')
@@ -86,7 +86,7 @@ class JobListApi(Resource):
                 except Exception as e:
                     result, result_code = dict(status="ERROR",
                                                message="Internal error"), 500
-                    if current_app.debug:
+                    if current_app.debug or True:
                         result['debug_detail'] = e.message
                     db.session.rollback()
 
