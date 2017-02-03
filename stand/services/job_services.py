@@ -73,9 +73,10 @@ class JobService:
 
         # @FIXME Each workflow has only one app. In future, we may support N
         msg = json.dumps(dict(app_id=job.workflow_id,
+                              job_id=job.id,
                               workflow_id=job.workflow_id,
                               type='execute',
-                              workflow=job.workflow_definition))
+                              workflow=workflow))
         redis_store.rpush("queue_start", msg)
 
         db.session.flush()  # Flush is needed to get the value of job.id
