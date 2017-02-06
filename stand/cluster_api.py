@@ -11,8 +11,12 @@ class ClusterListApi(Resource):
     @staticmethod
     @requires_auth
     def get():
-        only = ('id', 'name') \
-            if request.args.get('simple', 'false') == 'true' else None
+        if request.args.get('fields'):
+            only = [f.strip() for f in
+                    request.args.get('fields').split(',')]
+        else:
+            only = ('id', 'name') \
+                if request.args.get('simple', 'false') == 'true' else None
         enabled_filter = request.args.get('enabled')
         if enabled_filter:
             clusters = Cluster.query.filter(

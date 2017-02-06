@@ -8,6 +8,7 @@ import pytest
 from factories import JobFactory, ClusterFactory
 from stand.factory import create_app
 from stand.models import db as _db
+from stand.services.redis_service import connect_redis_store
 
 sys.path.append(os.path.dirname(os.path.curdir))
 
@@ -25,13 +26,12 @@ def app(request):
     }
     result_app = create_app(settings_override, log_level=logging.WARN)
     result_app.debug = True
+    result_app.config['TESTING'] = True
     # Establish an application context before running the tests.
     ctx = result_app.app_context()
     ctx.push()
 
-    # Redis
-    # redis_store = create_redis_store(result_app, mocked=True)
-
+    result_app.testing = True
     yield result_app
 
     ctx.pop()
@@ -89,3 +89,13 @@ def cluster_factory(session):
 def model_factories(job_factory, cluster_factory):
     factories = namedtuple('ModelFactories', 'job_factory, cluster_factory')
     return factories(job_factory=job_factory, cluster_factory=cluster_factory)
+
+
+@pytest.fixture(scope='function')
+def redis_store():
+    return connect_redis_store(None, True)
+
+
+@pytest.fixture(scope='function')
+def tahiti_service():
+    return ""

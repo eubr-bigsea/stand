@@ -15,14 +15,16 @@ from stand.cluster_api import ClusterDetailApi
 from stand.cluster_api import ClusterListApi
 from stand.configuration import stand_configuration
 from stand.job_api import JobListApi, JobDetailApi, \
-    JobStopActionApi
+    JobStopActionApi, JobLockActionApi, JobUnlockActionApi
 from stand.models import db
+from stand.services.redis_service import connect_redis_store
 
 
 class MockRedisWrapper(MockRedis):
     """
     A wrapper to add the `from_url` classmethod
     """
+
     @classmethod
     def from_url(cls, *args, **kwargs):
         return cls()
@@ -37,13 +39,15 @@ def create_app(settings_override=None, log_level=logging.DEBUG):
     }
     app.secret_key = 'l3m0n4d1'
     config = stand_configuration
-    app.config['STAND_CONFIG'] = config
+    app.config['STAND_CONFIG'] = config['stand']
 
-    server_config = config.get('servers', {})
+    server_config = config['stand'].get('servers', {})
     app.config['SQLALCHEMY_DATABASE_URI'] = server_config.get('database_url')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
     app.config['REDIS_URL'] = server_config.get('redis_url')
     app.config.update(config.get('config', {}))
+    app.debug = config['stand'].get('debug', False)
 
     if settings_override:
         app.config.update(settings_override)
@@ -69,6 +73,8 @@ def create_app(settings_override=None, log_level=logging.DEBUG):
         '/jobs': JobListApi,
         '/jobs/<int:job_id>': JobDetailApi,
         '/jobs/<int:job_id>/stop': JobStopActionApi,
+        '/jobs/<int:job_id>/lock': JobLockActionApi,
+        '/jobs/<int:job_id>/unlock': JobUnlockActionApi,
         '/clusters': ClusterListApi,
         '/clusters/<int:cluster_id>': ClusterDetailApi,
     }
@@ -89,7 +95,7 @@ def create_socket_io_app(_app):
     :param _app: Flask app
     """
     socket_io_config = _app.config['STAND_CONFIG']['servers']
-    mgr = socketio.RedisManager(socket_io_config['redis_url'], 'discovery')
+    mgr = socketio.RedisManager(socket_io_config['redis_url'], 'job_output')
     sio = socketio.Server(engineio_options={'logger': True},
                           client_manager=mgr,
                           allow_upgrades=True)
@@ -110,10 +116,11 @@ def create_redis_store(_app):
     :param _app: Flask app
     :return: redis_store instance (wrapper around pyredis)
     """
-    if _app.testing:
-        redis_store = FlaskRedis()
-    else:
-        redis_store = FlaskRedis.from_custom_provider(MockRedisWrapper)
+    redis_store = connect_redis_store(_app.config['REDIS_URL'], False)
     redis_store.init_app(_app)
 
     return redis_store
+
+
+def create_services(_app):
+    pass

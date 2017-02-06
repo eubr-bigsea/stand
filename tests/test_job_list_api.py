@@ -5,6 +5,7 @@ from functools import partial
 from flask import url_for
 from stand.models import StatusExecution
 from stand.services.redis_service import connect_redis_store
+from stand.services.tahiti_service import TahitiService
 
 job_list_url = partial(url_for, endpoint='joblistapi')
 job_stop_url = partial(url_for, endpoint='jobstopactionapi')
@@ -144,29 +145,64 @@ def test_list_jobs_paged_out_of_bounds_return_404(client, model_factories):
     assert response.status_code == 404
 
 
-def test_create_job_ok_result_success(client, model_factories):
-    model_factories.cluster_factory.create(id=999)
-
+def test_create_job_ok_result_success(client, model_factories, tahiti_service):
+    model_factories.cluster_factory.create(id=999, )
+    workflow_id = 281
     data = {
-        'user_id': 1,
-        'user_login': 'turing',
-        'user_name': 'Alan Turing',
-        'workflow_name': 'Titanic',
-        'workflow_id': 1,
-        'cluster_id': 999,
-        'steps': [],
+        'user': {
+            'id': 1,
+            'login': 'turing',
+            'name': 'Alan Turing'
+        },
+        'workflow': {
+            'name': 'Titanic',
+            'id': workflow_id,
+            'platform': {
+                'id': 1
+            },
+            'tasks': [
+                {
+                    'id': '2323aa-2323dac-as9987',
+                    'forms': {},
+                    'operation': {
+                        'id': 1
+                    }
+                }
+            ]
+        },
+        'cluster': {
+            'id': 999
+        },
+
     }
     headers = {'Content-Type': 'application/json'}
     headers.update(HEADERS)
+
+    # Monkey patching remove API services
+    def get_workflow(instance, workflow_id):
+        return {'name': 'OK'}
+
+    def get_cluster(instance, cluseter_id):
+        return {"name": 'Teste'}
+
+    setattr(TahitiService, 'get_workflow', get_workflow)
+    setattr(TahitiService, 'get_cluster', get_cluster)
+
     response = client.post(job_list_url(), headers=headers,
                            data=json.dumps(data))
 
-    # print response.json
-    assert response.status_code == 200
-    assert response.json['data']['id'] is not None
-    redis_store = connect_redis_store()
-    queued = redis_store.get('start')[0]
-    assert queued['workflow']['id'] == response.json['data']['workflow']['id']
+    assert response.status_code == 200, response.json
+    job_id = response.json['data']['id']
+    assert job_id is not None
+    redis_store = connect_redis_store(None, True)
+
+    queued = redis_store.get('queue_start')[0]
+    assert json.loads(queued)['workflow']['id'] == \
+           response.json['data']['workflow']['id']
+
+    status = redis_store.hget('record_workflow_{}'.format(workflow_id),
+                              'status')
+    assert status == StatusExecution.WAITING
 
 
 def test_create_job_nok_result_fail_missing_fields(client, model_factories):
@@ -180,18 +216,19 @@ def test_create_job_nok_result_fail_missing_fields(client, model_factories):
     response = client.post(job_list_url(), headers=headers,
                            data=json.dumps(data))
     result = response.json
+
     assert result['status'] == 'ERROR'
     assert result['message'] == 'Validation error'
 
     assert sorted(result['errors'].keys()) == sorted(
-        ['user_id', 'user_login', 'workflow_name', 'workflow_id', 'cluster_id',
-         'steps', 'user_name'])
+        ['cluster', 'user', 'workflow'])
 
     assert response.status_code == 401
 
 
-def test_create_job_invalid_cluster_fail(client, model_factories):
+def test_create_job_invalid_cluster_fail(client, model_factories, redis_store):
     model_factories.cluster_factory.create(id=999)
+    redis_store.flushdb()
 
     data = {}
     headers = {'Content-Type': 'application/json'}
@@ -204,32 +241,47 @@ def test_create_job_invalid_cluster_fail(client, model_factories):
     assert result['message'] == 'Validation error'
 
     assert sorted(result['errors'].keys()) == sorted(
-        ['user_id', 'user_login', 'workflow_name', 'workflow_id', 'cluster_id',
-         'steps', 'user_name'])
-
-    assert len(connect_redis_store().get('start')) == 0
+        ['cluster', 'user', 'workflow'])
+    content = redis_store.get('start')
+    assert len(content) == 0
 
 
 def test_create_job_workflow_running_another_job_fail(client, model_factories):
-    fake_job = model_factories.job_factory.create(
-        id=444, status=StatusExecution.RUNNING, workflow_id=10000)
+    workflow_id = 10000
+    model_factories.job_factory.create(
+        id=444, status=StatusExecution.RUNNING, workflow_id=workflow_id)
 
     data = {
-        'user_id': 1,
-        'user_login': 'turing',
-        'user_name': 'Alan Turing',
-        'workflow_name': 'Titanic',
-        'workflow_id': fake_job.workflow_id,
-        'cluster_id': 999,
-        'steps': [],
+        'user': {
+            'id': 1,
+            'login': 'turing',
+            'name': 'Alan Turing'
+        },
+        'workflow': {
+            'name': 'Titanic',
+            'id': workflow_id,
+            'platform': {
+                'id': 1
+            },
+            'tasks': [
+                {
+                    'id': '2323aa-2323dac-as9987',
+                    'forms': {},
+                    'operation': {'id': 1}
+                }
+            ]
+        },
+        'cluster': {
+            'id': 999
+        },
+
     }
     headers = {'Content-Type': 'application/json'}
     headers.update(HEADERS)
 
     response = client.post(job_list_url(), headers=headers,
                            data=json.dumps(data))
-    # print response.json
-    assert response.status_code == 401
+    assert response.status_code == 401, response.json
     result = response.json
     assert result['status'] == 'ERROR'
     assert result['code'] == 'ALREADY_RUNNING'

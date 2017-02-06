@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-}
+import json
 from collections import namedtuple
 from functools import wraps
 
@@ -13,10 +14,12 @@ def check_auth(token):
 
 def authenticate():
     """Sends a 401 response that enables basic auth"""
-    return Response(
-        'Could not verify your access level for that URL.\n'
-        'You have to login with proper credentials', 401,
-        {'WWW-Authenticate': 'Basic realm="Login Required"'})
+    headers = {'WWW-Authenticate': 'Basic realm="Login Required"',
+               'Content-Type': 'application/json'}
+    content = json.dumps(
+        dict(msg=('Could not verify your access level for that URL.'
+                  'You have to login with proper credentials'), status="ERROR"))
+    return Response(content, 401, headers)
 
 
 def requires_auth(f):

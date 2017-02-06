@@ -23,7 +23,72 @@ def load_json(str_value):
     except:
         return "Error loading JSON"
 
-# region Protected\s*
+
+# region Protected
+class EntityIdCreateRequestSchema(Schema):
+    id = fields.Integer(required=True)
+
+
+class ClusterIdCreateRequestSchema(EntityIdCreateRequestSchema):
+    pass
+
+
+class PlatformIdCreateRequestSchema(EntityIdCreateRequestSchema):
+    pass
+
+
+class OperationIdCreateRequestSchema(EntityIdCreateRequestSchema):
+    pass
+
+
+class WorkflowDefinitionCreateRequestSchema(Schema):
+    """
+    Workflow definition. Must be in same format as in Tahiti.
+    """
+    id = fields.Integer(required=True)
+    name = fields.String(required=True)
+    description = fields.String(required=False, allow_none=True)
+    enabled = fields.Boolean(required=True, missing=True,
+                             default=True)
+    image = fields.String(required=False, allow_none=True)
+    tasks = fields.Nested('stand.schema.TaskDefinitionCreateRequestSchema',
+                          required=True,
+                          many=True)
+    flows = fields.Nested('stand.schema.FlowDefinitionCreateRequestSchema',
+                          required=False,
+                          many=True)
+    platform = fields.Nested('stand.schema.PlatformIdCreateRequestSchema',
+                             required=True)
+
+    user = fields.Nested('stand.schema.UserCreateRequestSchema',
+                         required=False)
+
+
+class TaskDefinitionCreateRequestSchema(Schema):
+    id = fields.String(required=True)
+    left = fields.Integer(required=False)
+    top = fields.Integer(required=False)
+    z_index = fields.Integer(required=False)
+    forms = fields.Dict(required=True)
+    operation = fields.Nested(OperationIdCreateRequestSchema, required=True)
+
+
+class FlowDefinitionCreateRequestSchema(Schema):
+    """ JSON schema for new instance """
+    source_port = fields.Integer(required=True)
+    target_port = fields.Integer(required=True)
+    source_port_name = fields.String(required=True)
+    target_port_name = fields.String(required=True)
+    source_id = fields.String(required=True)
+    target_id = fields.String(required=True)
+
+
+class UserCreateRequestSchema(Schema):
+    id = fields.Integer(required=True)
+    login = fields.String(required=True)
+    name = fields.String(required=True)
+
+
 # endregion
 
 
@@ -31,6 +96,7 @@ class ClusterSimpleListResponseSchema(Schema):
     """ JSON simple """
     id = fields.Integer(required=True)
 
+    # noinspection PyUnresolvedReferences
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of Cluster"""
@@ -44,11 +110,8 @@ class ClusterListResponseSchema(Schema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
     name = fields.String(required=True)
-    type = fields.String(required=True, missing=ClusterType.SPARK_LOCAL,
-                         default=ClusterType.SPARK_LOCAL,
-                         validate=[OneOf(ClusterType.__dict__.keys())])
-    address = fields.String(required=True)
 
+    # noinspection PyUnresolvedReferences
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of Cluster"""
@@ -62,11 +125,8 @@ class ClusterItemResponseSchema(Schema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
     name = fields.String(required=True)
-    type = fields.String(required=True, missing=ClusterType.SPARK_LOCAL,
-                         default=ClusterType.SPARK_LOCAL,
-                         validate=[OneOf(ClusterType.__dict__.keys())])
-    address = fields.String(required=True)
 
+    # noinspection PyUnresolvedReferences
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of Cluster"""
@@ -87,6 +147,7 @@ class ClusterCreateRequestSchema(Schema):
                          validate=[OneOf(ClusterType.__dict__.keys())])
     address = fields.String(required=True)
 
+    # noinspection PyUnresolvedReferences
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of Cluster"""
@@ -112,8 +173,9 @@ class JobItemResponseSchema(Schema):
                           required=True,
                           many=True)
     user = fields.Function(lambda x: {"id": x.user_id, "name": x.user_name, "login": x.user_login})
-    workflow = fields.Function(lambda x: {"id": x.workflow_id, "name": x.workflow_name})
+    workflow = fields.Function(lambda x: json.loads(x.workflow_definition))
 
+    # noinspection PyUnresolvedReferences
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of Job"""
@@ -136,8 +198,9 @@ class JobListResponseSchema(Schema):
     cluster = fields.Nested('stand.schema.ClusterListResponseSchema',
                             required=True)
     user = fields.Function(lambda x: {"id": x.user_id, "name": x.user_name, "login": x.user_login})
-    workflow = fields.Function(lambda x: {"id": x.workflow_id, "name": x.workflow_name})
+    workflow = fields.Function(lambda x: json.loads(x.workflow_definition))
 
+    # noinspection PyUnresolvedReferences
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of Job"""
@@ -149,22 +212,40 @@ class JobListResponseSchema(Schema):
 
 class JobCreateRequestSchema(Schema):
     """ JSON serialization schema """
-    started = fields.DateTime(required=False, allow_none=True)
-    finished = fields.DateTime(required=False, allow_none=True)
-    workflow_id = fields.Integer(required=True)
-    workflow_name = fields.String(required=True)
-    workflow_definition = fields.String(required=False, allow_none=True)
-    user_id = fields.Integer(required=True)
-    user_login = fields.String(required=True)
-    user_name = fields.String(required=True)
-    cluster_id = fields.Integer(required=True)
-    steps = fields.Nested('stand.schema.JobStepCreateRequestSchema',
-                          required=True,
-                          many=True)
+    workflow = fields.Nested(
+        'stand.schema.WorkflowDefinitionCreateRequestSchema',
+        required=True)
+    cluster = fields.Nested(
+        'stand.schema.ClusterIdCreateRequestSchema',
+        required=True)
+    user = fields.Nested(
+        'stand.schema.UserCreateRequestSchema',
+        required=True)
 
+    # noinspection PyUnresolvedReferences
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of Job"""
+        
+        data['cluster_id'] = data['cluster']['id']
+        data['user_id'] = data['user']['id']
+        data['user_name'] = data['user']['name']
+        data['user_login'] = data['user']['login']
+        data['workflow_id'] = data['workflow']['id']
+        data['workflow_name'] = data['workflow']['name']
+        data['workflow_definition'] = json.dumps(data['workflow'])
+        
+        now = datetime.datetime.now()
+        data['steps'] = [JobStep(date=now, status=StatusExecution.PENDING,
+                             task_id=t['id'],
+                             operation_id=t['operation']['id'],
+                             operation_name="EMPTY")
+                     for t in data['workflow'].get('tasks', [])]
+        
+        data.pop('cluster')
+        data.pop('workflow')
+        data.pop('user')
+        
         return Job(**data)
 
     class Meta:
@@ -189,6 +270,7 @@ class JobExecuteResponseSchema(Schema):
                           required=True,
                           many=True)
 
+    # noinspection PyUnresolvedReferences
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of Job"""
@@ -202,6 +284,7 @@ class JobStatusRequestSchema(Schema):
     """ JSON schema for executing tasks """
     token = fields.String(allow_none=True)
 
+    # noinspection PyUnresolvedReferences
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of Job"""
@@ -226,6 +309,7 @@ class JobStepItemResponseSchema(Schema):
     operation = fields.Function(lambda x: {"id": x.operation_id, "name": x.operation_name})
     task = fields.Function(lambda x: {"id": x.task_id})
 
+    # noinspection PyUnresolvedReferences
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of JobStep"""
@@ -247,6 +331,7 @@ class JobStepListResponseSchema(Schema):
                          required=True,
                          many=True)
 
+    # noinspection PyUnresolvedReferences
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of JobStep"""
@@ -268,6 +353,7 @@ class JobStepCreateRequestSchema(Schema):
                          required=True,
                          many=True)
 
+    # noinspection PyUnresolvedReferences
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of JobStep"""
@@ -284,6 +370,7 @@ class JobStepLogListResponseSchema(Schema):
     date = fields.DateTime(required=True)
     message = fields.String(required=True)
 
+    # noinspection PyUnresolvedReferences
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of JobStepLog"""
@@ -300,6 +387,7 @@ class JobStepLogItemResponseSchema(Schema):
     date = fields.DateTime(required=True)
     message = fields.String(required=True)
 
+    # noinspection PyUnresolvedReferences
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of JobStepLog"""
@@ -316,6 +404,7 @@ class JobStepLogCreateRequestSchema(Schema):
     date = fields.DateTime(required=True)
     message = fields.String(required=True)
 
+    # noinspection PyUnresolvedReferences
     @post_load
     def make_object(self, data):
         """ Deserializes data into an instance of JobStepLog"""
