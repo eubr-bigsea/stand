@@ -30,9 +30,9 @@ class JobListApi(Resource):
                 [x.strip() for x in request.args.get('fields').split(',')])
 
         jobs = Job.query
-        for name in ['workflow', 'user']:
+        for name in ['workflow_id', 'user_id']:
             jobs = apply_filter(jobs, request.args, name, int,
-                                lambda field: field + '_id')
+                                lambda field: field)
         page = request.args.get('page')
 
         if page is not None and page.isdigit():
@@ -180,11 +180,11 @@ class JobStopActionApi(Resource):
                 result, result_code = dict(status="ERROR",
                                            message=je.message,
                                            code=je.error_code), 401
-                if je.error_code == JobException.ALREADY_FINISHED:
-                    result['status'] = 'OK'
-                    result['data'] = response_schema.dump(job).data
-                    result_code = 200
-            except Exception, e:
+                # if je.error_code == JobException.ALREADY_FINISHED:
+                #     result['status'] = 'OK'
+                #     result['data'] = response_schema.dump(job).data
+                #     result_code = 200
+            except Exception as e:
                 result, result_code = dict(status="ERROR",
                                            message="Internal error"), 500
                 if current_app.debug:
