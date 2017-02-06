@@ -147,7 +147,7 @@ def test_list_jobs_paged_out_of_bounds_return_404(client, model_factories):
 
 def test_create_job_ok_result_success(client, model_factories, tahiti_service):
     model_factories.cluster_factory.create(id=999, )
-
+    workflow_id = 281
     data = {
         'user': {
             'id': 1,
@@ -156,7 +156,7 @@ def test_create_job_ok_result_success(client, model_factories, tahiti_service):
         },
         'workflow': {
             'name': 'Titanic',
-            'id': 1,
+            'id': workflow_id,
             'platform': {
                 'id': 1
             },
@@ -164,7 +164,9 @@ def test_create_job_ok_result_success(client, model_factories, tahiti_service):
                 {
                     'id': '2323aa-2323dac-as9987',
                     'forms': {},
-                    'operation_id': 1
+                    'operation': {
+                        'id': 1
+                    }
                 }
             ]
         },
@@ -189,16 +191,17 @@ def test_create_job_ok_result_success(client, model_factories, tahiti_service):
     response = client.post(job_list_url(), headers=headers,
                            data=json.dumps(data))
 
-    print response.json
-    assert response.status_code == 200
+    assert response.status_code == 200, response.json
     job_id = response.json['data']['id']
     assert job_id is not None
-    redis_store = connect_redis_store()
+    redis_store = connect_redis_store(None, True)
 
-    queued = redis_store.get('start')[0]
-    assert queued['workflow']['id'] == response.json['data']['workflow']['id']
+    queued = redis_store.get('queue_start')[0]
+    assert json.loads(queued)['workflow']['id'] == \
+           response.json['data']['workflow']['id']
 
-    status = redis_store.hget('job_{}'.format(job_id), 'status')
+    status = redis_store.hget('record_workflow_{}'.format(workflow_id),
+                              'status')
     assert status == StatusExecution.WAITING
 
 
@@ -218,8 +221,7 @@ def test_create_job_nok_result_fail_missing_fields(client, model_factories):
     assert result['message'] == 'Validation error'
 
     assert sorted(result['errors'].keys()) == sorted(
-        ['cluster', 'user', 'workflow', 'workflow_name',
-         'user_id', 'user_login', 'workflow_id', 'cluster_id', 'user_name'])
+        ['cluster', 'user', 'workflow'])
 
     assert response.status_code == 401
 
@@ -239,15 +241,15 @@ def test_create_job_invalid_cluster_fail(client, model_factories, redis_store):
     assert result['message'] == 'Validation error'
 
     assert sorted(result['errors'].keys()) == sorted(
-        ['cluster', 'user', 'workflow', 'workflow_name',
-         'user_id', 'user_login', 'workflow_id', 'cluster_id', 'user_name'])
+        ['cluster', 'user', 'workflow'])
     content = redis_store.get('start')
     assert len(content) == 0
 
 
 def test_create_job_workflow_running_another_job_fail(client, model_factories):
-    fake_job = model_factories.job_factory.create(
-        id=444, status=StatusExecution.RUNNING, workflow_id=10000)
+    workflow_id = 10000
+    model_factories.job_factory.create(
+        id=444, status=StatusExecution.RUNNING, workflow_id=workflow_id)
 
     data = {
         'user': {
@@ -257,7 +259,7 @@ def test_create_job_workflow_running_another_job_fail(client, model_factories):
         },
         'workflow': {
             'name': 'Titanic',
-            'id': 1,
+            'id': workflow_id,
             'platform': {
                 'id': 1
             },
@@ -265,7 +267,7 @@ def test_create_job_workflow_running_another_job_fail(client, model_factories):
                 {
                     'id': '2323aa-2323dac-as9987',
                     'forms': {},
-                    'operation_id': 1
+                    'operation': {'id': 1}
                 }
             ]
         },
@@ -279,8 +281,7 @@ def test_create_job_workflow_running_another_job_fail(client, model_factories):
 
     response = client.post(job_list_url(), headers=headers,
                            data=json.dumps(data))
-    # print response.json
-    assert response.status_code == 401
+    assert response.status_code == 401, response.json
     result = response.json
     assert result['status'] == 'ERROR'
     assert result['code'] == 'ALREADY_RUNNING'

@@ -26,6 +26,7 @@ def app(request):
     }
     result_app = create_app(settings_override, log_level=logging.WARN)
     result_app.debug = True
+    result_app.config['TESTING'] = True
     # Establish an application context before running the tests.
     ctx = result_app.app_context()
     ctx.push()
@@ -92,7 +93,7 @@ def model_factories(job_factory, cluster_factory):
 
 @pytest.fixture(scope='function')
 def redis_store():
-    return connect_redis_store()
+    return connect_redis_store(None, True)
 
 
 @pytest.fixture(scope='function')

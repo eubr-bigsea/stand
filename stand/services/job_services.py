@@ -67,7 +67,7 @@ class JobService:
         job.status = StatusExecution.WAITING
         db.session.add(job)
 
-        redis_store = connect_redis_store()
+        redis_store = connect_redis_store(None, True)
         # This queue is used to keep the order of execution and to know
         # what is pending.
 
@@ -80,8 +80,14 @@ class JobService:
 
         db.session.flush()  # Flush is needed to get the value of job.id
 
-        redis_store.hset('record_workflow_{}'.format(job.workflow_id),
-                         'status', job.status)
+        # This hash controls the status of job. Used for prevent starting
+        # jobs in invalid states
+        record_wf_id = 'record_workflow_{}'.format(job.workflow_id)
+        redis_store.hset(record_wf_id, 'status', job.status)
+
+        # TTL=1h (sufficient time to other stages use the information)
+        redis_store.expire(record_wf_id, time=3600)
+        redis_store.expire('queue_app_{}'.format(job.workflow_id), time=3600)
 
         db.session.commit()
 
@@ -102,15 +108,15 @@ class JobService:
             db.session.add(job)
             db.session.flush()
 
-            redis_store = connect_redis_store()
+            redis_store = connect_redis_store(None, True)
 
             # This queue controls what should be stopped
             redis_store.rpush("stop", dict(job_id=job.id))
 
             # This hash controls the status of job. Used for prevent starting
             # a canceled job be started by Juicer.
-            redis_store.hset("job_{}".format(job.id), 'status',
-                             StatusExecution.CANCELED)
+            redis_store.hset('record_workflow_{}'.format(job.workflow_id),
+                             'status', StatusExecution.CANCELED)
 
             db.session.commit()
 
@@ -123,7 +129,7 @@ class JobService:
     def lock(job, user, computer, force=False):
         job_id = "job_{}".format(job.id)
 
-        redis_store = connect_redis_store()
+        redis_store = connect_redis_store(None, True)
         already_locked = redis_store.hget(job_id, 'lock')
         # unlocked
         if already_locked == '' or force:
@@ -145,7 +151,7 @@ class JobService:
     @staticmethod
     def get_lock_status(job):
         job_id = "job_{}".format(job.id)
-        redis_store = connect_redis_store()
+        redis_store = connect_redis_store(None, True)
         already_locked = redis_store.hget(job_id, 'lock')
         if already_locked != '':
             return json.loads(already_locked)
