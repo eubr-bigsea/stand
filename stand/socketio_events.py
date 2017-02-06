@@ -54,7 +54,7 @@ class StandSocketIO:
         self.socket_io.emit('response', {'msg': 'Connected', 'count': 0},
                             room=sid, namespace=self.namespace)
 
-    def on_disconnect(self, sid, message):
+    def on_disconnect(self, sid):
         self.socket_io.disconnect(sid, namespace=self.namespace)
         logger.debug('%s disconnected', sid)
 
