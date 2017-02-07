@@ -22,6 +22,7 @@ def connect_redis_store(url, testing=False):
         redis_store = FlaskRedis.from_custom_provider(MockRedisWrapper)
     elif url is None:
         redis_store = FlaskRedis()
+        redis_store.init_app(current_app)
     else:
         parsed = urlparse.urlparse(url)
         parsed_qs = urlparse.parse_qs(parsed.query)

@@ -67,12 +67,13 @@ class JobService:
         job.status = StatusExecution.WAITING
         db.session.add(job)
 
-        redis_store = connect_redis_store(None, True)
+        redis_store = connect_redis_store(None, testing=False)
         # This queue is used to keep the order of execution and to know
         # what is pending.
 
         # @FIXME Each workflow has only one app. In future, we may support N
         msg = json.dumps(dict(app_id=job.workflow_id,
+                              job_id=job.id,
                               workflow_id=job.workflow_id,
                               type='execute',
                               workflow=workflow))
@@ -108,7 +109,7 @@ class JobService:
             db.session.add(job)
             db.session.flush()
 
-            redis_store = connect_redis_store(None, True)
+            redis_store = connect_redis_store(None, testing=False)
 
             # This queue controls what should be stopped
             redis_store.rpush("stop", dict(job_id=job.id))
@@ -129,7 +130,7 @@ class JobService:
     def lock(job, user, computer, force=False):
         job_id = "job_{}".format(job.id)
 
-        redis_store = connect_redis_store(None, True)
+        redis_store = connect_redis_store(None, testing=False)
         already_locked = redis_store.hget(job_id, 'lock')
         # unlocked
         if already_locked == '' or force:
@@ -151,7 +152,7 @@ class JobService:
     @staticmethod
     def get_lock_status(job):
         job_id = "job_{}".format(job.id)
-        redis_store = connect_redis_store(None, True)
+        redis_store = connect_redis_store(None, testing=False)
         already_locked = redis_store.hget(job_id, 'lock')
         if already_locked != '':
             return json.loads(already_locked)

@@ -5,15 +5,12 @@ data. Used to test Stand clients in an integration test.
 """
 import json
 import logging
+import logging.config
 import random
 import time
-import urlparse
 
-import os
 import socketio
-from flask_redis import FlaskRedis
 from flask_script import Manager
-from stand.configuration import load as load_configuration
 
 # Logging configuration
 from stand.factory import create_app, create_redis_store
@@ -21,10 +18,6 @@ from stand.factory import create_app, create_redis_store
 app = create_app(log_level=logging.WARNING)
 redis_store = create_redis_store(app)
 manager = Manager(app)
-
-logging.basicConfig()
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 STATUSES = ['COMPLETED', 'RUNNING', 'INTERRUPTED', 'CANCELED', 'WAITING',
             'ERROR']
@@ -48,6 +41,8 @@ MESSAGES = [
 
 @manager.command
 def simulate():
+    logging.config.fileConfig('logging_config.ini')
+    logger = logging.getLogger(__name__)
     # ap = argparse.ArgumentParser()
     # ap.add_argument('-c', '')
     import pdb
@@ -58,18 +53,18 @@ def simulate():
         try:
             _, job_json = redis_store.blpop('queue_start')
             job = json.loads(job_json)
-            logger.debug('Simulating workflow %s with job %s', job.get('id'),
-                         job.get('name'))
+            logger.debug('Simulating workflow %s with job %s',
+                         job.get('workflow_id'), job.get('id'))
 
             room = job['workflow_id']
             mgr.emit('update workflow',
-                     data={'msg': random.choice(MESSAGES),
+                     data={'message': random.choice(MESSAGES),
                            'status': 'RUNNING', 'id': job['workflow_id']},
                      room=room, namespace="/stand")
 
             for task in job.get('tasks', []):
                 mgr.emit('update task',
-                         data={'msg': random.choice(MESSAGES),
+                         data={'message': random.choice(MESSAGES),
                                'status': random.choice(STATUSES),
                                'id': task.get('id')}, room=room,
                          namespace="/stand")
@@ -77,7 +72,7 @@ def simulate():
 
             time.sleep(1)
             mgr.emit('update workflow',
-                     data={'msg': random.choice(MESSAGES),
+                     data={'message': random.choice(MESSAGES),
                            'status': 'FINISHED', 'id': job['workflow_id']},
                      room=job['workflow_id'], namespace="/stand")
         except KeyError as ke:
