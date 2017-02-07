@@ -8,6 +8,12 @@ from stand.models import db, StatusExecution, JobException, Job
 from stand.services.redis_service import connect_redis_store
 from stand.services.tahiti_service import tahiti_service
 
+logging.basicConfig(
+    format=('[%(levelname)s] %(asctime)s,%(msecs)05.1f '
+            '(%(funcName)s:%(lineno)s) %(message)s'),
+    datefmt='%H:%M:%S')
+log = logging.getLogger()
+log.setLevel(logging.DEBUG)
 
 class JobService:
     def __init__(self, session, config):
@@ -48,7 +54,7 @@ class JobService:
         db.session.commit()
 
     @staticmethod
-    def start(job, workflow):
+    def start(job, workflow, app_configs={}):
         invalid_statuses = [StatusExecution.RUNNING, StatusExecution.PENDING,
                             StatusExecution.INTERRUPTED,
                             StatusExecution.WAITING]
@@ -67,7 +73,7 @@ class JobService:
         job.status = StatusExecution.WAITING
         db.session.add(job)
 
-        redis_store = connect_redis_store(None, True)
+        redis_store = connect_redis_store(None, testing=False)
         # This queue is used to keep the order of execution and to know
         # what is pending.
 
@@ -75,6 +81,7 @@ class JobService:
         msg = json.dumps(dict(app_id=job.workflow_id,
                               workflow_id=job.workflow_id,
                               type='execute',
+                              app_configs=app_configs,
                               workflow=workflow))
         redis_store.rpush("queue_start", msg)
 
@@ -108,7 +115,7 @@ class JobService:
             db.session.add(job)
             db.session.flush()
 
-            redis_store = connect_redis_store(None, True)
+            redis_store = connect_redis_store(None, testing=False)
 
             # This queue controls what should be stopped
             redis_store.rpush("stop", dict(job_id=job.id))
@@ -129,7 +136,7 @@ class JobService:
     def lock(job, user, computer, force=False):
         job_id = "job_{}".format(job.id)
 
-        redis_store = connect_redis_store(None, True)
+        redis_store = connect_redis_store(None, testing=False)
         already_locked = redis_store.hget(job_id, 'lock')
         # unlocked
         if already_locked == '' or force:
@@ -151,7 +158,7 @@ class JobService:
     @staticmethod
     def get_lock_status(job):
         job_id = "job_{}".format(job.id)
-        redis_store = connect_redis_store(None, True)
+        redis_store = connect_redis_store(None, testing=False)
         already_locked = redis_store.hget(job_id, 'lock')
         if already_locked != '':
             return json.loads(already_locked)
