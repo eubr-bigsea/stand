@@ -9,18 +9,18 @@ import logging.config
 import random
 import time
 
+import eventlet
 import socketio
 from flask_script import Manager
 
 # Logging configuration
 from stand.factory import create_app, create_redis_store
+from stand.models import Job, StatusExecution, db
 
 app = create_app(log_level=logging.WARNING)
 redis_store = create_redis_store(app)
 manager = Manager(app)
 
-STATUSES = ['COMPLETED', 'RUNNING', 'INTERRUPTED', 'CANCELED', 'WAITING',
-            'ERROR']
 MESSAGES = [
     "The greatest discovery of my generation is that a human being can alter "
     "his life by altering his attitudes of mind.",
@@ -45,40 +45,51 @@ def simulate():
     logger = logging.getLogger(__name__)
     # ap = argparse.ArgumentParser()
     # ap.add_argument('-c', '')
-    import pdb
-    pdb.set_trace()
     mgr = socketio.RedisManager(app.config.get('REDIS_URL'), 'job_output')
 
+    statuses = [StatusExecution.RUNNING, StatusExecution.COMPLETED,
+                StatusExecution.CANCELED, StatusExecution.ERROR,
+                StatusExecution.PENDING, StatusExecution.INTERRUPTED,
+                StatusExecution.WAITING]
     while True:
         try:
             _, job_json = redis_store.blpop('queue_start')
             job = json.loads(job_json)
             logger.debug('Simulating workflow %s with job %s',
-                         job.get('workflow_id'), job.get('id'))
+                         job.get('workflow_id'), job.get('job_id'))
 
-            room = job['workflow_id']
-            mgr.emit('update workflow',
+            room = str(job['job_id'])
+            mgr.emit('update job',
                      data={'message': random.choice(MESSAGES),
-                           'status': 'RUNNING', 'id': job['workflow_id']},
+                           'status': StatusExecution.RUNNING,
+                           'id': job['workflow_id']},
                      room=room, namespace="/stand")
 
-            for task in job.get('tasks', []):
+            for task in job.get('workflow', {}).get('tasks', []):
                 mgr.emit('update task',
                          data={'message': random.choice(MESSAGES),
-                               'status': random.choice(STATUSES),
+                               'status': random.choice(statuses),
                                'id': task.get('id')}, room=room,
                          namespace="/stand")
-                time.sleep(1)
+                eventlet.sleep(1)
 
-            time.sleep(1)
-            mgr.emit('update workflow',
+            eventlet.sleep(1)
+            mgr.emit('update job',
                      data={'message': random.choice(MESSAGES),
-                           'status': 'FINISHED', 'id': job['workflow_id']},
-                     room=job['workflow_id'], namespace="/stand")
+                           'status': StatusExecution.COMPLETED,
+                           'id': job['workflow_id']},
+                     room=room, namespace="/stand")
+            job_entity = Job.query.get(job.get('job_id'))
+            job_entity.status = StatusExecution.COMPLETED
+            db.session.add(job_entity)
+            db.session.commit()
+
         except KeyError as ke:
             logger.error('Invalid json? KeyError: %s', ke)
+            raise
         except Exception as ex:
             logger.error(ex.message)
+            raise
         logger.info('Simulation finished')
 
 
