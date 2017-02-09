@@ -78,8 +78,9 @@ class JobService:
         # what is pending.
 
         # @FIXME Each workflow has only one app. In future, we may support N
-        msg = json.dumps(dict(app_id=job.workflow_id,
-                              workflow_id=job.workflow_id,
+        msg = json.dumps(dict(workflow_id=job.workflow_id,
+                              app_id=job.workflow_id,
+                              job_id=job.id,
                               type='execute',
                               app_configs=app_configs,
                               workflow=workflow))

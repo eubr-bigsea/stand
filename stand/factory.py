@@ -13,7 +13,6 @@ from flask_restful import Api
 from mockredis import MockRedis
 from stand.cluster_api import ClusterDetailApi
 from stand.cluster_api import ClusterListApi
-from stand.configuration import stand_configuration
 from stand.job_api import JobListApi, JobDetailApi, \
     JobStopActionApi, JobLockActionApi, JobUnlockActionApi
 from stand.models import db
@@ -30,7 +29,10 @@ class MockRedisWrapper(MockRedis):
         return cls()
 
 
-def create_app(settings_override=None, log_level=logging.DEBUG):
+def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
+    os.environ['STAND_CONFIG_FILE'] = config_file
+
+    from stand.configuration import stand_configuration
     app = Flask(__name__)
 
     app.config["RESTFUL_JSON"] = {
