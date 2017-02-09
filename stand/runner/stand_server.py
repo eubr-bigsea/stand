@@ -23,5 +23,11 @@ if __name__ == '__main__':
     stand_socket_io = StandSocketIO(app)
     redis_store = create_redis_store(app)
 
-    if app:
+    if app.debug:
         app.run(debug=True)
+    else:        
+        port = int(app.config['STAND_CONFIG'].get('port', 5000))
+
+        # noinspection PyUnresolvedReferences
+        eventlet.wsgi.server(eventlet.listen(('', port)),
+                         stand_socket_io.socket_app)
