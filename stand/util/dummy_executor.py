@@ -9,13 +9,16 @@ import logging.config
 import random
 import time
 
+import datetime
+
 import eventlet
 import socketio
 from flask_script import Manager
 
 # Logging configuration
+from sqlalchemy import and_
 from stand.factory import create_app, create_redis_store
-from stand.models import Job, StatusExecution, db
+from stand.models import Job, StatusExecution, db, JobStep, JobStepLog
 
 app = create_app(log_level=logging.WARNING)
 redis_store = create_redis_store(app)
@@ -47,10 +50,10 @@ def simulate():
     # ap.add_argument('-c', '')
     mgr = socketio.RedisManager(app.config.get('REDIS_URL'), 'job_output')
 
-    statuses = [StatusExecution.RUNNING, StatusExecution.COMPLETED,
+    statuses = [StatusExecution.RUNNING,
                 StatusExecution.CANCELED, StatusExecution.ERROR,
                 StatusExecution.PENDING, StatusExecution.INTERRUPTED,
-                StatusExecution.WAITING]
+                StatusExecution.WAITING, StatusExecution.COMPLETED]
     while True:
         try:
             _, job_json = redis_store.blpop('queue_start')
@@ -58,27 +61,60 @@ def simulate():
             logger.debug('Simulating workflow %s with job %s',
                          job.get('workflow_id'), job.get('job_id'))
 
-            room = str(job['job_id'])
-            mgr.emit('update job',
-                     data={'message': random.choice(MESSAGES),
-                           'status': StatusExecution.RUNNING,
-                           'id': job['workflow_id']},
-                     room=room, namespace="/stand")
+            for k in ['job_id', 'workflow_id', 'user_id', 'app_id']:
+                if k in job:
+                    logger.info('Room for %s', k)
+                    room = str(job[k])
+                    mgr.emit('update job',
+                             data={'message': random.choice(MESSAGES),
+                                   'status': StatusExecution.RUNNING,
+                                   'id': job['workflow_id']},
+                             room=room, namespace="/stand")
 
             for task in job.get('workflow', {}).get('tasks', []):
-                mgr.emit('update task',
-                         data={'message': random.choice(MESSAGES),
-                               'status': random.choice(statuses),
-                               'id': task.get('id')}, room=room,
-                         namespace="/stand")
-                eventlet.sleep(1)
+                for k in ['job_id', 'workflow_id', 'user_id', 'app_id']:
+                    if k in job:
+                        logger.info('Room for %s and task %s', k,
+                                    task.get('id'))
+                        room = str(job[k])
+                        mgr.emit('update task',
+                                 data={'message': random.choice(MESSAGES),
+                                       'status': random.choice(statuses[:-2]),
+                                       'id': task.get('id')}, room=room,
+                                 namespace="/stand")
+                eventlet.sleep(2)
+                for k in ['job_id', 'workflow_id', 'user_id', 'app_id']:
+                    if k in job:
+                        room = str(job[k])
+                        mgr.emit('update task',
+                                 data={'message': random.choice(MESSAGES),
+                                       'status': StatusExecution.COMPLETED,
+                                       'id': task.get('id')}, room=room,
+                                 namespace="/stand")
 
-            eventlet.sleep(1)
-            mgr.emit('update job',
-                     data={'message': random.choice(MESSAGES),
-                           'status': StatusExecution.COMPLETED,
-                           'id': job['workflow_id']},
-                     room=room, namespace="/stand")
+                # Updates task in database
+                job_step_entity = JobStep.query.filter(and_(
+                    JobStep.job_id == job.get('job_id'),
+                    JobStep.task_id == task['id'])).first()
+
+                job_step_entity.status = StatusExecution.COMPLETED
+                job_step_entity.logs.append(JobStepLog(
+                    level='WARNING', date=datetime.datetime.now(),
+                    message=random.choice(MESSAGES)))
+
+                db.session.add(job_step_entity)
+
+            # eventlet.sleep(5)
+            for k in ['job_id', 'workflow_id', 'user_id', 'app_id']:
+                if k in job:
+                    logger.info('Room for %s', k)
+                    room = str(job[k])
+                    mgr.emit('update job',
+                             data={'message': random.choice(MESSAGES),
+                                   'status': StatusExecution.COMPLETED,
+                                   'id': job['workflow_id']},
+                             room=room, namespace="/stand")
+
             job_entity = Job.query.get(job.get('job_id'))
             job_entity.status = StatusExecution.COMPLETED
             db.session.add(job_entity)

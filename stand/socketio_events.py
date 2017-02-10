@@ -25,27 +25,29 @@ class StandSocketIO:
             self.socket_io.on(event, namespace=self.namespace, handler=handler)
 
     def on_join_room(self, sid, message):
-        self.logger.debug('%s joined room %s', sid, message['room'])
-        self.socket_io.enter_room(sid, message['room'],
-                                  namespace=self.namespace)
+        room = str(message.get('room'))
+        self.logger.debug('%s joined room %s', sid, room)
+        self.socket_io.enter_room(sid, room, namespace=self.namespace)
         self.socket_io.emit(
-            'response', {'msg': 'Entered room: {}'.format(message['room'])},
+            'response', {'msg': 'Entered room: *{}*'.format(room)},
             room=sid, namespace=self.namespace)
 
     def on_leave_room(self, sid, message):
-        self.logger.debug('%s left room %s', sid, message.get('room'))
-        self.socket_io.leave_room(sid, message['room'],
+        room = str(message.get('room'))
+        self.logger.debug('%s left room %s', sid, room)
+        self.socket_io.leave_room(sid, room,
                                   namespace=self.namespace)
         self.socket_io.emit(
-            'response', {'msg': 'Left room: {}'.format(message.get('room'))},
+            'response', {'msg': 'Left room: {}'.format(room)},
             room=sid, namespace=self.namespace)
 
     def on_close_room(self, sid, message):
-        self.logger.debug('%s is closing room %s', sid, message.get('room'))
+        room = str(message.get('room'))
+        self.logger.debug('%s is closing room %s', sid, room)
         self.socket_io.emit(
-            'response', {'msg': 'Room closed: {}'.format(message.get('room'))},
-            room=message['room'], namespace=self.namespace)
-        self.socket_io.close_room(message.get('room'), namespace=self.namespace)
+            'response', {'msg': 'Room closed: {}'.format(room)}, room=room,
+            namespace=self.namespace)
+        self.socket_io.close_room(room, namespace=self.namespace)
 
     def on_connect(self, sid, message):
         self.logger.debug('%s connected', sid)
