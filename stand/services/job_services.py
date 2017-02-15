@@ -118,8 +118,12 @@ class JobService:
 
             redis_store = connect_redis_store(None, testing=False)
 
-            # This queue controls what should be stopped
-            redis_store.rpush("stop", dict(job_id=job.id))
+            # @FIXME Each workflow has only one app. In future, we may support N
+            msg = json.dumps(dict(workflow_id=job.workflow_id,
+                              app_id=job.workflow_id,
+                              job_id=job.id,
+                              type='terminate'))
+            redis_store.rpush("queue_start", msg)
 
             # This hash controls the status of job. Used for prevent starting
             # a canceled job be started by Juicer.
