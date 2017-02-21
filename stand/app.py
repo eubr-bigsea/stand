@@ -24,3 +24,4 @@ if app.debug:
     # noinspection PyUnresolvedReferences
     eventlet.wsgi.server(eventlet.listen(('', port)),
                          stand_socket_io.socket_app)
+

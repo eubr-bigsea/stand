@@ -33,6 +33,17 @@ class JobListApi(Resource):
         for name in ['workflow_id', 'user_id']:
             jobs = apply_filter(jobs, request.args, name, int,
                                 lambda field: field)
+
+        sort = request.args.get('sort', 'name')
+        if sort not in ['status', 'id', 'user_name', 'workflow_name',
+                        'workflow_id', 'updated']:
+            sort = 'id'
+        sort_option = getattr(Job, sort)
+        if request.args.get('asc', 'true') == 'false':
+            sort_option = sort_option.desc()
+
+        jobs = jobs.order_by(sort_option)
+
         page = request.args.get('page')
 
         if page is not None and page.isdigit():

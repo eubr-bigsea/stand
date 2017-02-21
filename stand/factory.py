@@ -1,6 +1,6 @@
 import json
 import logging
-
+import logging.config
 import os
 import socketio
 from flask import Flask
@@ -62,9 +62,9 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
     admin = Admin(app, name='Stand', template_mode='bootstrap3')
 
     # Logging configuration
-    logging.basicConfig()
-    logging.getLogger('sqlalchemy.engine').setLevel(log_level)
-    logging.getLogger('werkzeug').setLevel(log_level)
+    logging.config.fileConfig('logging_config.ini')
+    # logging.getLogger('sqlalchemy.engine').setLevel(log_level)
+    # logging.getLogger('werkzeug').setLevel(log_level)
 
     # CORS configuration
     CORS(app, resources={r"/*": {"origins": "*"}})

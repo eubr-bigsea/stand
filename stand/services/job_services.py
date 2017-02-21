@@ -72,6 +72,7 @@ class JobService:
         # Initial job status must be WAITING
         job.status = StatusExecution.WAITING
         db.session.add(job)
+        db.session.flush()  # Flush is needed to get the value of job.id
 
         redis_store = connect_redis_store(None, testing=False)
         # This queue is used to keep the order of execution and to know
@@ -86,7 +87,6 @@ class JobService:
                               workflow=workflow))
         redis_store.rpush("queue_start", msg)
 
-        db.session.flush()  # Flush is needed to get the value of job.id
 
         # This hash controls the status of job. Used for prevent starting
         # jobs in invalid states

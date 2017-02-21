@@ -31,6 +31,7 @@ def connect_redis_store(url, testing=False):
         redis_store.init_app(current_app)
     elif url is None:
         redis_store = FlaskRedis()
+        redis_store.init_app(current_app)
     else:
         redis_store = _redis_from_url(url)
     return redis_store
