@@ -23,7 +23,8 @@ Stand is the execution API for Lemonade project. It provides methods to run work
  ```
 
 ## Configuration
-All configuration is defined in a Yaml file, with the following structure:
+All configuration is defined in a Yaml file located in `conf/stand-config.yaml`,
+with the following structure:
 
 ```
 stand:
@@ -39,6 +40,9 @@ stand:
         SQLALCHEMY_POOL_SIZE: 10
         SQLALCHEMY_POOL_RECYCLE: 240
 ```
+
+You will find the template above in `conf/stand-config.yaml.template`.
+
 ## Database creation
 
 If the database user specified in the `database_url` parameter in configuration file has permission of creating tables, 
@@ -48,14 +52,29 @@ they are created automatically after starting Stand. Otherwise, you have to exec
 
 ```
 cd <download_dir>
-export STAND_CONFIG_FILE=<path for Yaml configuration file>
-python stand/app.py
+./sbin/stand-daemon.sh start
 ```
 Service will run on port 5000 (default).
 
+You can check the stand daemon status with:
+```
+./sbin/stand-daemon.sh status
+```
+
+You can stop the stand daemon with:
+```
+./sbin/stand-daemon.sh stop
+```
+
 ## API documentation
 
-FIXME To be written
+**Endpoint** | **Purpose**
+-------------|-------------
+/jobs/<int:job_id> | JobDetailApi
+/jobs/<int:job_id>/stop | JobStopActionApi
+/jobs/<int:job_id>/lock | JobLockActionApi
+/jobs/<int:job_id>/unlock | JobUnlockActionApi
+/clusters/<int:cluster_id> | ClusterDetailApi
 
 ## Redis usage
 
