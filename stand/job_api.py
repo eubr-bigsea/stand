@@ -86,7 +86,8 @@ class JobListApi(Resource):
             else:
                 try:
                     job = form.data
-                    JobService.start(job, request_json['workflow'])
+                    JobService.start(job, request_json['workflow'],
+                            request_json.get('app_configs', {}))
                     result_code = 200
                     result = dict(data=response_schema.dump(job).data,
                                   message='', status='OK')

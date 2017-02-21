@@ -8,6 +8,12 @@ from stand.models import db, StatusExecution, JobException, Job
 from stand.services.redis_service import connect_redis_store
 from stand.services.tahiti_service import tahiti_service
 
+logging.basicConfig(
+    format=('[%(levelname)s] %(asctime)s,%(msecs)05.1f '
+            '(%(funcName)s:%(lineno)s) %(message)s'),
+    datefmt='%H:%M:%S')
+log = logging.getLogger()
+log.setLevel(logging.DEBUG)
 
 class JobService:
     def __init__(self, session, config):
@@ -48,7 +54,7 @@ class JobService:
         db.session.commit()
 
     @staticmethod
-    def start(job, workflow):
+    def start(job, workflow, app_configs={}):
         invalid_statuses = [StatusExecution.RUNNING, StatusExecution.PENDING,
                             StatusExecution.INTERRUPTED,
                             StatusExecution.WAITING]
@@ -73,10 +79,11 @@ class JobService:
         # what is pending.
 
         # @FIXME Each workflow has only one app. In future, we may support N
-        msg = json.dumps(dict(app_id=job.workflow_id,
+        msg = json.dumps(dict(workflow_id=job.workflow_id,
+                              app_id=job.workflow_id,
                               job_id=job.id,
-                              workflow_id=job.workflow_id,
                               type='execute',
+                              app_configs=app_configs,
                               workflow=workflow))
         redis_store.rpush("queue_start", msg)
 
@@ -111,8 +118,12 @@ class JobService:
 
             redis_store = connect_redis_store(None, testing=False)
 
-            # This queue controls what should be stopped
-            redis_store.rpush("stop", dict(job_id=job.id))
+            # @FIXME Each workflow has only one app. In future, we may support N
+            msg = json.dumps(dict(workflow_id=job.workflow_id,
+                              app_id=job.workflow_id,
+                              job_id=job.id,
+                              type='terminate'))
+            redis_store.rpush("queue_start", msg)
 
             # This hash controls the status of job. Used for prevent starting
             # a canceled job be started by Juicer.
