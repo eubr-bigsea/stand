@@ -35,11 +35,17 @@ class ClusterType:
     YARN = 'YARN'
 
 
-class JobException(Exception):
+# noinspection PyClassHasNoInit
+class ClusterPermission:
+    EXECUTE = 'EXECUTE'
+
+
+# noinspection PyClassHasNoInit
+class JobException:
     ALREADY_FINISHED = 'ALREADY_FINISHED'
     ALREADY_LOCKED = 'ALREADY_LOCKED'
-    ALREADY_RUNNING = "ALREADY_RUNNING"
-    INVALID_STATE = "INVALID_STATE"
+    ALREADY_RUNNING = 'ALREADY_RUNNING'
+    INVALID_STATE = 'INVALID_STATE'
 
     def __init__(self, message, error_code):
         self.message = message
@@ -55,9 +61,8 @@ class Job(db.Model):
     created = Column(DateTime, nullable=False, default=func.now())
     started = Column(DateTime)
     finished = Column(DateTime)
-    status = Column(Enum(*StatusExecution.__dict__.keys(),
-                         name='StatusExecutionEnumType'), nullable=False,
-                    default=StatusExecution.WAITING)
+    status = Column(Enum(*StatusExecution.__dict__.keys(), 
+                         name='StatusExecutionEnumType'), nullable=False, default=StatusExecution.WAITING)
     workflow_id = Column(Integer, nullable=False)
     workflow_name = Column(String(200), nullable=False)
     workflow_definition = Column(Text)
@@ -66,7 +71,7 @@ class Job(db.Model):
     user_name = Column(String(200), nullable=False)
 
     # Associations
-    cluster_id = Column(Integer,
+    cluster_id = Column(Integer, 
                         ForeignKey("cluster.id"), nullable=False)
     cluster = relationship("Cluster", foreign_keys=[cluster_id])
     steps = relationship("JobStep", back_populates="job")
@@ -85,14 +90,14 @@ class JobStep(db.Model):
     # Fields
     id = Column(Integer, primary_key=True)
     date = Column(DateTime, nullable=False)
-    status = Column(Enum(*StatusExecution.__dict__.keys(),
+    status = Column(Enum(*StatusExecution.__dict__.keys(), 
                          name='StatusExecutionEnumType'), nullable=False)
     task_id = Column(Integer, nullable=False)
     operation_id = Column(Integer, nullable=False)
     operation_name = Column(String(200), nullable=False)
 
     # Associations
-    job_id = Column(Integer,
+    job_id = Column(Integer, 
                     ForeignKey("job.id"), nullable=False)
     job = relationship("Job", foreign_keys=[job_id])
     logs = relationship("JobStepLog")
@@ -115,7 +120,7 @@ class JobStepLog(db.Model):
     message = Column(Text, nullable=False)
 
     # Associations
-    step_id = Column(Integer,
+    step_id = Column(Integer, 
                      ForeignKey("job_step.id"), nullable=False)
     step = relationship("JobStep", foreign_keys=[step_id])
 
@@ -135,13 +140,80 @@ class Cluster(db.Model):
     name = Column(String(200), nullable=False)
     description = Column(String(200), nullable=False)
     enabled = Column(String(200), nullable=False)
-    type = Column(Enum(*ClusterType.__dict__.keys(),
-                       name='ClusterTypeEnumType'), nullable=False,
-                  default=ClusterType.SPARK_LOCAL)
+    type = Column(Enum(*ClusterType.__dict__.keys(), 
+                       name='ClusterTypeEnumType'), nullable=False, default=ClusterType.SPARK_LOCAL)
     address = Column(String(200), nullable=False)
 
     def __unicode__(self):
         return self.name
+
+    def __repr__(self):
+        return '<Instance {}: {}>'.format(self.__class__, self.id)
+
+
+class ClusterAccess(db.Model):
+    """ Permissions for cluster utilization """
+    __tablename__ = 'cluster_access'
+
+    # Fields
+    id = Column(Integer, primary_key=True)
+    permission = Column(Enum(*ClusterPermission.__dict__.keys(), 
+                             name='ClusterPermissionEnumType'), nullable=False, default=ClusterPermission.EXECUTE)
+    permission = Column(Enum(*ClusterPermission.__dict__.keys(), 
+                             name='ClusterPermissionEnumType'), nullable=False, default=ClusterPermission.EXECUTE)
+    user_id = Column(Integer, nullable=False)
+    user_login = Column(String(50), nullable=False)
+    user_name = Column(String(200), nullable=False)
+
+    # Associations
+    cluster_id = Column(Integer, 
+                        ForeignKey("cluster.id"), nullable=False)
+    cluster = relationship("Cluster", foreign_keys=[cluster_id])
+
+    def __unicode__(self):
+        return self.permission
+
+    def __repr__(self):
+        return '<Instance {}: {}>'.format(self.__class__, self.id)
+
+
+class Room(db.Model):
+    """ Communication room available in Stand """
+    __tablename__ = 'room'
+
+    # Fields
+    id = Column(Integer, primary_key=True)
+    name = Column(String(200), nullable=False)
+    created = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
+    consumers = Column(Integer, nullable=False, default=0)
+
+    def __unicode__(self):
+        return self.name
+
+    def __repr__(self):
+        return '<Instance {}: {}>'.format(self.__class__, self.id)
+
+
+class RoomParticipant(db.Model):
+    """ Participant of a room """
+    __tablename__ = 'room_participant'
+
+    # Fields
+    id = Column(Integer, primary_key=True)
+    sid = Column(String(200), nullable=False)
+    join_date = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
+    leave_date = Column(DateTime)
+
+    # Associations
+    room_id = Column(Integer, 
+                     ForeignKey("room.id"), nullable=False)
+    room = relationship("Room", foreign_keys=[room_id], 
+                        backref=backref(
+                            "participants",
+                            cascade="all, delete-orphan"))
+
+    def __unicode__(self):
+        return self.sid
 
     def __repr__(self):
         return '<Instance {}: {}>'.format(self.__class__, self.id)

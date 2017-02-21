@@ -51,8 +51,8 @@ def simulate():
     mgr = socketio.RedisManager(app.config.get('REDIS_URL'), 'job_output')
 
     statuses = [StatusExecution.RUNNING,
-                StatusExecution.CANCELED, StatusExecution.ERROR,
-                StatusExecution.PENDING, StatusExecution.INTERRUPTED,
+                # StatusExecution.CANCELED, StatusExecution.ERROR,
+                # StatusExecution.PENDING, StatusExecution.INTERRUPTED,
                 StatusExecution.WAITING, StatusExecution.COMPLETED]
     while True:
         try:
@@ -72,6 +72,8 @@ def simulate():
                              room=room, namespace="/stand")
 
             for task in job.get('workflow', {}).get('tasks', []):
+                if task['operation']['id'] == 25: # comment
+                    continue
                 for k in ['job_id', 'workflow_id', 'user_id', 'app_id']:
                     if k in job:
                         logger.info('Room for %s and task %s', k,
@@ -82,7 +84,7 @@ def simulate():
                                        'status': random.choice(statuses[:-2]),
                                        'id': task.get('id')}, room=room,
                                  namespace="/stand")
-                eventlet.sleep(2)
+                eventlet.sleep(random.randint(2, 8))
                 for k in ['job_id', 'workflow_id', 'user_id', 'app_id']:
                     if k in job:
                         room = str(job[k])
