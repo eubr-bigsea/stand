@@ -93,7 +93,9 @@ def model_factories(job_factory, cluster_factory):
 
 @pytest.fixture(scope='function')
 def redis_store():
-    return connect_redis_store(None, True)
+    store = connect_redis_store(None, True)
+    store.flushdb()
+    return store
 
 
 @pytest.fixture(scope='function')

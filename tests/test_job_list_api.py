@@ -145,7 +145,7 @@ def test_list_jobs_paged_out_of_bounds_return_404(client, model_factories):
     assert response.status_code == 404
 
 
-def test_create_job_ok_result_success(client, model_factories, tahiti_service):
+def test_create_job_ok_result_success(client, model_factories, redis_store):
     model_factories.cluster_factory.create(id=999, )
     workflow_id = 281
     data = {
@@ -194,12 +194,9 @@ def test_create_job_ok_result_success(client, model_factories, tahiti_service):
     assert response.status_code == 200, response.json
     job_id = response.json['data']['id']
     assert job_id is not None
-    redis_store = connect_redis_store(None, True)
 
     queued = redis_store.get('queue_start')[0]
-    import pdb
-    pdb.set_trace()
-    assert json.loads(queued)['workflow']['id'] == \
+    assert json.loads(queued)['workflow_id'] == \
            response.json['data']['workflow']['id']
 
     status = redis_store.hget('record_workflow_{}'.format(workflow_id),

@@ -15,6 +15,7 @@ logging.basicConfig(
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 
+
 class JobService:
     def __init__(self, session, config):
         self.config = config
@@ -87,7 +88,6 @@ class JobService:
                               workflow=workflow))
         redis_store.rpush("queue_start", msg)
 
-
         # This hash controls the status of job. Used for prevent starting
         # jobs in invalid states
         record_wf_id = 'record_workflow_{}'.format(job.workflow_id)
@@ -120,14 +120,17 @@ class JobService:
 
             # @FIXME Each workflow has only one app. In future, we may support N
             msg = json.dumps(dict(workflow_id=job.workflow_id,
-                              app_id=job.workflow_id,
-                              job_id=job.id,
-                              type='terminate'))
+                                  app_id=job.workflow_id,
+                                  job_id=job.id,
+                                  type='terminate'))
             redis_store.rpush("queue_start", msg)
 
             # This hash controls the status of job. Used for prevent starting
-            # a canceled job be started by Juicer.
+            # a canceled job be started by Juicer (FIXME: is it used?).
             redis_store.hset('record_workflow_{}'.format(job.workflow_id),
+                             'status', StatusExecution.CANCELED)
+
+            redis_store.hset('job_{}'.format(job.id),
                              'status', StatusExecution.CANCELED)
 
             db.session.commit()
