@@ -21,14 +21,14 @@ Stand is the execution API for Lemonade project. It provides methods to run work
  cd <donwload_dir>
  pip install -r requirements.txt
  ```
-
 ## Configuration
-All configuration is defined in a Yaml file located in `conf/stand-config.yaml`,
+All configuration is defined in a Yaml file `stand-config.yaml`,
 with the following structure:
 
 ```
 stand:
     debug: true
+    port: 3323
     servers:
         database_url: mysql+pymysql://user:password@server:port/database
         redis_url: redis://redis_server:6379
@@ -36,7 +36,7 @@ stand:
         tahiti:
             url: http://server/tahiti
             auth_token: "authorization_token"
-    config:
+    config:limonero
         SQLALCHEMY_POOL_SIZE: 10
         SQLALCHEMY_POOL_RECYCLE: 240
 ```
@@ -45,8 +45,33 @@ You will find the template above in `conf/stand-config.yaml.template`.
 
 ## Database creation
 
-If the database user specified in the `database_url` parameter in configuration file has permission of creating tables, 
-they are created automatically after starting Stand. Otherwise, you have to execute the SQL script located in the folder |FIXME|.
+Open a connection to the MySQL server and create a new database having the same
+name as specified in the `database_url` parameter in the configuration file:
+```
+CREATE DATABASE stand CHARACTER SET utf8 COLLATE utf8_general_ci;
+```
+
+After, grant permissions to the user specified in the configuration:
+```
+GRANT ALL ON stand.* TO 'user'@'%' IDENTIFIED BY 'password';
+FLUSH PRIVILEGES;
+```
+
+Change to the source code directory and execute the following command:
+```
+PYTHONPATH=. STAND_CONFIG=./stand-config.yaml python stand/manage.py db upgrade
+```
+This command will create the tables in the database.
+
+Finally, go back to MySQL and execute the following command in the new database, changing parameters accordinately:
+ ```
+ USE stand;
+
+ INSERT INTO `stand`.`cluster`
+   (`id`, `name`, `description`,  `enabled`, `type`, `address`)
+   VALUES (1, 'Cluster', 'Example cluster', 1, 'SPARK_LOCAL', 'spark://address:7000');
+ ```
+
 
 ## Running
 
@@ -54,7 +79,7 @@ they are created automatically after starting Stand. Otherwise, you have to exec
 cd <download_dir>
 ./sbin/stand-daemon.sh start
 ```
-Service will run on port 5000 (default).
+Service will run on port 3323 (default).
 
 You can check the stand daemon status with:
 ```
@@ -64,6 +89,18 @@ You can check the stand daemon status with:
 You can stop the stand daemon with:
 ```
 ./sbin/stand-daemon.sh stop
+```
+ ## Using docker
+ In order to build the container, change to source code directory and execute the command:
+ ```
+ docker build -t bigsea/stand .
+ ```
+ Repeat [config](#config) stop and run using config file
+ ```
+ docker run \
+    -v $PWD/stand-config.yaml:/usr/src/app/stand-config.yaml \
+    -p 3323:3323 \
+    bigsea/stand
 ```
 
 ## API documentation
