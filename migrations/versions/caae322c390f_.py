@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 43ee01cbcf55
+Revision ID: caae322c390f
 Revises: 
-Create Date: 2017-02-22 17:43:42.806594
+Create Date: 2017-02-22 19:02:25.570381
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '43ee01cbcf55'
+revision = 'caae322c390f'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -23,7 +23,7 @@ def upgrade():
     sa.Column('name', sa.String(length=200), nullable=False),
     sa.Column('description', sa.String(length=200), nullable=False),
     sa.Column('enabled', sa.String(length=200), nullable=False),
-    sa.Column('type', sa.Enum('MESOS', 'YARN', 'values', 'SPARK_LOCAL', name='ClusterTypeEnumType'), nullable=False),
+    sa.Column('type', sa.Enum('MESOS', 'YARN', 'SPARK_LOCAL', name='ClusterTypeEnumType'), nullable=False),
     sa.Column('address', sa.String(length=200), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
@@ -36,7 +36,7 @@ def upgrade():
     )
     op.create_table('cluster_access',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('permission', sa.Enum('values', 'EXECUTE', name='ClusterPermissionEnumType'), nullable=False),
+    sa.Column('permission', sa.Enum('EXECUTE', name='ClusterPermissionEnumType'), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('user_login', sa.String(length=50), nullable=False),
     sa.Column('user_name', sa.String(length=200), nullable=False),
@@ -49,7 +49,7 @@ def upgrade():
     sa.Column('created', sa.DateTime(), nullable=False),
     sa.Column('started', sa.DateTime(), nullable=True),
     sa.Column('finished', sa.DateTime(), nullable=True),
-    sa.Column('status', sa.Enum('COMPLETED', 'RUNNING', 'INTERRUPTED', 'CANCELED', 'WAITING', 'values', 'ERROR', 'PENDING', name='StatusExecutionEnumType'), nullable=False),
+    sa.Column('status', sa.Enum('COMPLETED', 'RUNNING', 'INTERRUPTED', 'CANCELED', 'WAITING', 'ERROR', 'PENDING', name='StatusExecutionEnumType'), nullable=False),
     sa.Column('workflow_id', sa.Integer(), nullable=False),
     sa.Column('workflow_name', sa.String(length=200), nullable=False),
     sa.Column('workflow_definition', sa.Text(), nullable=True),
@@ -72,8 +72,8 @@ def upgrade():
     op.create_table('job_step',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('date', sa.DateTime(), nullable=False),
-    sa.Column('status', sa.Enum('COMPLETED', 'RUNNING', 'INTERRUPTED', 'CANCELED', 'WAITING', 'values', 'ERROR', 'PENDING', name='StatusExecutionEnumType'), nullable=False),
-    sa.Column('task_id', sa.Integer(), nullable=False),
+    sa.Column('status', sa.Enum('COMPLETED', 'RUNNING', 'INTERRUPTED', 'CANCELED', 'WAITING', 'ERROR', 'PENDING', name='StatusExecutionEnumType'), nullable=False),
+    sa.Column('task_id', sa.String(length=200), nullable=False),
     sa.Column('operation_id', sa.Integer(), nullable=False),
     sa.Column('operation_name', sa.String(length=200), nullable=False),
     sa.Column('job_id', sa.Integer(), nullable=False),

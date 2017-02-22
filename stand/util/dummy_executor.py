@@ -99,12 +99,14 @@ def simulate():
                     JobStep.job_id == job.get('job_id'),
                     JobStep.task_id == task['id'])).first()
 
-                job_step_entity.status = StatusExecution.COMPLETED
-                job_step_entity.logs.append(JobStepLog(
-                    level='WARNING', date=datetime.datetime.now(),
-                    message=random.choice(MESSAGES)))
-
-                db.session.add(job_step_entity)
+                try:
+                    job_step_entity.status = StatusExecution.COMPLETED
+                    job_step_entity.logs.append(JobStepLog(
+                        level='WARNING', date=datetime.datetime.now(),
+                        message=random.choice(MESSAGES)))
+                    db.session.add(job_step_entity)
+                except Exception as ex:
+                    logger.error(ex)
 
             # eventlet.sleep(5)
             for k in ['job_id', 'workflow_id', 'user_id', 'app_id']:

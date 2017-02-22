@@ -8,10 +8,6 @@ from stand.socketio_events import StandSocketIO
 
 eventlet.monkey_patch(all=True)
 
-# print "#" * 20
-# print 'Starting Lemonade Stand'
-# print "#" * 20
-
 app = create_app()
 babel = create_babel_i18n(app)
 stand_socket_io = StandSocketIO(app)
@@ -30,7 +26,8 @@ def main(is_main_module):
             # admin.add_view(StorageModelView(Storage, db.session))
             app.run(debug=True, port=port)
         else:
-            eventlet.wsgi.server(eventlet.listen(('', port)), app)
+            eventlet.wsgi.server(eventlet.listen(('', port)),
+                                 stand_socket_io.socket_app)
 
 main(__name__ == '__main__')
 
