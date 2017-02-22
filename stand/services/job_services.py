@@ -64,7 +64,7 @@ class JobService:
         # Validate if workflow is already running
         jobs_running = Job.query.filter(Job.status.in_(invalid_statuses)) \
             .filter(Job.workflow_id == job.workflow_id).first()
-        if jobs_running > 0:
+        if jobs_running:
             raise JobException(
                 'Workflow is already being run by another job ({})'.format(
                     jobs_running.id), JobException.ALREADY_RUNNING)

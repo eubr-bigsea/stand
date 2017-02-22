@@ -262,6 +262,7 @@ class JobSampleActionApi(Resource):
         if job is not None:
             data = json.loads(request.data)
             try:
+                fields = ['id', 'name', 'salary', 'birthday']
                 data = json.dumps(
                     [
                         {}

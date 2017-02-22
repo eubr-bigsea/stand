@@ -69,7 +69,7 @@ def test_list_filter_jobs_by_workflow_returns_2_of_3(client, model_factories):
             {'id': workflow_id - 1000, 'name': 'WS'}))
 
     data = {
-        'workflow': workflow_id
+        'workflow_id': workflow_id
     }
     response = client.get(job_list_url(), headers=HEADERS, query_string=data)
     jobs = response.json['data']
@@ -86,7 +86,7 @@ def test_list_filter_jobs_by_user_returns_1_of_3(client, model_factories):
     model_factories.job_factory.create(id=3003, user_id=user_id * 4)
 
     data = {
-        'user': user_id
+        'user_id': user_id
     }
     response = client.get(job_list_url(), headers=HEADERS, query_string=data)
     jobs = response.json['data']
@@ -197,6 +197,8 @@ def test_create_job_ok_result_success(client, model_factories, tahiti_service):
     redis_store = connect_redis_store(None, True)
 
     queued = redis_store.get('queue_start')[0]
+    import pdb
+    pdb.set_trace()
     assert json.loads(queued)['workflow']['id'] == \
            response.json['data']['workflow']['id']
 
