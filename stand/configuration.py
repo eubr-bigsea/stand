@@ -5,11 +5,11 @@ import os
 
 
 def load():
-    if 'STAND_CONFIG_FILE' in os.environ:
-        with open(os.environ.get('STAND_CONFIG_FILE')) as f:
+    if 'STAND_CONFIG' in os.environ and os.environ.get('STAND_CONFIG'):
+        with open(os.environ.get('STAND_CONFIG')) as f:
             config = yaml.load(f.read())
     else:
-        config = {}
+        config = {'stand': {}}
     return config
 
 stand_configuration = load()

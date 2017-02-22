@@ -14,7 +14,7 @@ from mockredis import MockRedis
 from stand.cluster_api import ClusterDetailApi
 from stand.cluster_api import ClusterListApi
 from stand.job_api import JobListApi, JobDetailApi, \
-    JobStopActionApi, JobLockActionApi, JobUnlockActionApi
+    JobStopActionApi, JobLockActionApi, JobUnlockActionApi, JobSampleActionApi
 from stand.models import db
 from stand.services.redis_service import connect_redis_store
 
@@ -30,7 +30,7 @@ class MockRedisWrapper(MockRedis):
 
 
 def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
-    os.environ['STAND_CONFIG_FILE'] = config_file
+    os.environ['STAND_CONFIG'] = config_file
 
     from stand.configuration import stand_configuration
     app = Flask(__name__)
@@ -77,6 +77,7 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
         '/jobs/<int:job_id>/stop': JobStopActionApi,
         '/jobs/<int:job_id>/lock': JobLockActionApi,
         '/jobs/<int:job_id>/unlock': JobUnlockActionApi,
+        '/jobs/<int:job_id>/sample/<str:task_id>': JobSampleActionApi,
         '/clusters': ClusterListApi,
         '/clusters/<int:cluster_id>': ClusterDetailApi,
     }

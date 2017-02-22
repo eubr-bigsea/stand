@@ -188,7 +188,7 @@ class JobStopActionApi(Resource):
                 result, result_code = dict(
                     status="OK", message="Deleted",
                     data=response_schema.dump(job).data), 200
-            except JobException, je:
+            except JobException as je:
                 result, result_code = dict(status="ERROR",
                                            message=je.message,
                                            code=je.error_code), 401
@@ -231,13 +231,13 @@ class JobLockActionApi(Resource):
             try:
                 JobService.lock(job, data['user'], data['computer'])
                 result, result_code = dict(status="OK", message="Locked"), 200
-            except JobException, je:
+            except JobException as je:
                 result, result_code = dict(
                     status="ERROR", message=je.message, code=je.error_code), 401
                 if je.error_code == JobException.ALREADY_LOCKED:
                     result_code = 409
 
-            except Exception, e:
+            except Exception as e:
                 result, result_code = dict(status="ERROR",
                                            message="Internal error"), 500
                 if current_app.debug:
@@ -249,3 +249,36 @@ class JobLockActionApi(Resource):
 class JobUnlockActionApi(Resource):
     """ RPC API for action that unlocks a Job for edition"""
     pass
+
+class JobSampleActionApi(Resource):
+    """ RPC API for action that retrieves sample results from backend """
+
+    @staticmethod
+    @requires_auth
+    def post(job_id, task_id):
+        result, result_code = dict(status="ERROR", message="Not found"), 404
+
+        job = Job.query.get(job_id)
+        if job is not None:
+            data = json.loads(request.data)
+            try:
+                data = json.dumps(
+                    [
+                        {}
+                    ]
+                )
+                result, result_code = dict(status="OK", message="", fieds=fields,
+                    data=data), 200
+            except JobException as je:
+                result, result_code = dict(
+                    status="ERROR", message=je.message, code=je.error_code), 401
+                if je.error_code == JobException.ALREADY_LOCKED:
+                    result_code = 409
+
+            except Exception as e:
+                result, result_code = dict(status="ERROR",
+                                           message="Internal error"), 500
+                if current_app.debug:
+                    result['debug_detail'] = e.message
+                db.session.rollback()
+        return result, result_code

@@ -41,7 +41,7 @@ class ClusterPermission:
 
 
 # noinspection PyClassHasNoInit
-class JobException:
+class JobException(BaseException):
     ALREADY_FINISHED = 'ALREADY_FINISHED'
     ALREADY_LOCKED = 'ALREADY_LOCKED'
     ALREADY_RUNNING = 'ALREADY_RUNNING'
