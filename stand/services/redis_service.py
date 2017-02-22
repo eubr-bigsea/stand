@@ -24,9 +24,7 @@ def connect_redis_store(url, testing=False):
                 db=int(parsed_qs.get('db', 0)))
         return redis_store
 
-    # import pdb
-    # pdb.set_trace()
-    if testing or current_app.testing:
+    if testing or (current_app and current_app.testing):
         redis_store = FlaskRedis.from_custom_provider(MockRedisWrapper)
         redis_store.init_app(current_app)
         setattr(redis_store, 'expire', lambda x, time: 1)

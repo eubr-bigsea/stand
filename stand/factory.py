@@ -29,8 +29,7 @@ class MockRedisWrapper(MockRedis):
         return cls()
 
 
-def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
-    os.environ['STAND_CONFIG'] = config_file
+def create_app(settings_override=None, log_level=logging.DEBUG):
 
     from stand.configuration import stand_configuration
     app = Flask(__name__)
@@ -55,8 +54,9 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
         app.config.update(settings_override)
 
     db.init_app(app)
-    with app.app_context():
-        db.create_all()
+    if app.testing:
+        with app.app_context():
+            db.create_all()
 
     # Flask Admin
     admin = Admin(app, name='Stand', template_mode='bootstrap3')
