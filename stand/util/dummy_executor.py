@@ -109,6 +109,10 @@ def simulate():
                     logger.error(ex)
 
             # eventlet.sleep(5)
+            job_entity = Job.query.get(job.get('job_id'))
+            job_entity.finished = datetime.datetime.utcnow()
+            job_entity.status = StatusExecution.COMPLETED
+
             for k in ['job_id', 'workflow_id', 'user_id', 'app_id']:
                 if k in job:
                     logger.info('Room for %s', k)
@@ -116,11 +120,10 @@ def simulate():
                     mgr.emit('update job',
                              data={'message': random.choice(MESSAGES),
                                    'status': StatusExecution.COMPLETED,
-                                   'id': job['workflow_id']},
+                                   'finished': job_entity.finished.isoformat(),
+                                   'id': job['job_id']},
                              room=room, namespace="/stand")
 
-            job_entity = Job.query.get(job.get('job_id'))
-            job_entity.status = StatusExecution.COMPLETED
             db.session.add(job_entity)
             db.session.commit()
 

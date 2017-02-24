@@ -4,6 +4,10 @@ import logging
 
 import eventlet
 from factory import create_app, create_babel_i18n, create_redis_store
+from pymysql import OperationalError
+from sqlalchemy import event
+from sqlalchemy.exc import DisconnectionError
+from sqlalchemy.pool import Pool
 from stand.socketio_events import StandSocketIO
 
 eventlet.monkey_patch(all=True)
@@ -12,6 +16,22 @@ app = create_app()
 babel = create_babel_i18n(app)
 stand_socket_io = StandSocketIO(app)
 redis_store = create_redis_store(app)
+
+
+@event.listens_for(Pool, "checkout")
+def check_connection(dbapi_con, con_record, con_proxy):
+    cursor = dbapi_con.cursor()
+    try:
+        cursor.execute("SELECT 1")
+    except OperationalError, ex:
+        if ex.args[0] in (
+                2006,  # MySQL server has gone away
+                2013,  # Lost connection to MySQL server during query
+                2055):  # Lost connection to MySQL server at '%s', system error: %d
+            # caught by pool, which will retry with a new connection
+            raise DisconnectionError()
+        else:
+            raise
 
 
 def main(is_main_module):
@@ -29,5 +49,5 @@ def main(is_main_module):
             eventlet.wsgi.server(eventlet.listen(('', port)),
                                  stand_socket_io.socket_app)
 
-main(__name__ == '__main__')
 
+main(__name__ == '__main__')

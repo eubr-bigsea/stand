@@ -2,6 +2,8 @@
 import json
 import logging
 
+import datetime
+
 import requests
 import stand.util
 from stand.models import db, StatusExecution, JobException, Job
@@ -72,6 +74,7 @@ class JobService:
 
         # Initial job status must be WAITING
         job.status = StatusExecution.WAITING
+        job.started = datetime.datetime.utcnow()
         db.session.add(job)
         db.session.flush()  # Flush is needed to get the value of job.id
 
