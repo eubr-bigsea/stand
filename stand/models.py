@@ -125,6 +125,7 @@ class Job(db.Model):
     status = Column(Enum(*StatusExecution.values(),
                          name='StatusExecutionEnumType'),
                     default=StatusExecution.WAITING, nullable=False)
+    status_text = Column(Text)
     workflow_id = Column(Integer, nullable=False)
     workflow_name = Column(String(200), nullable=False)
     workflow_definition = Column(Text)

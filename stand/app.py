@@ -1,13 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import json
 import logging
+import urlparse
 
 import eventlet
 from factory import create_app, create_babel_i18n, create_redis_store
 from pymysql import OperationalError
+from redis import StrictRedis
 from sqlalchemy import event
 from sqlalchemy.exc import DisconnectionError
 from sqlalchemy.pool import Pool
+from stand.models import Job
 from stand.socketio_events import StandSocketIO
 
 eventlet.monkey_patch(all=True)
@@ -34,6 +38,17 @@ def check_connection(dbapi_con, con_record, con_proxy):
             raise
 
 
+def handle_updates(app_, redis_url):
+    parsed = urlparse.urlparse(redis_url)
+    redis_conn = StrictRedis(host=parsed.hostname, port=parsed.port)
+    with app_.app_context():
+        while True:
+            _, msg = redis_conn.blpop('stand_updates')
+            msg = json.loads(msg)
+            job = Job.query.get(msg.get('id'))
+            print msg, job
+
+
 def main(is_main_module):
     logger = logging.getLogger(__name__)
     config = app.config['STAND_CONFIG']
@@ -46,6 +61,8 @@ def main(is_main_module):
             # admin.add_view(StorageModelView(Storage, db.session))
             app.run(debug=True, port=port)
         else:
+            # eventlet.spawn(handle_updates, app,
+            #                config.get('servers').get('redis_url'))
             eventlet.wsgi.server(eventlet.listen(('', port)),
                                  stand_socket_io.socket_app)
 

@@ -16,8 +16,8 @@ class StandSocketIO:
         self.redis_store = create_redis_store(_app)
 
         handlers = {
-            'connect': self.on_connect,
-            'disconnect': self.on_disconnect,
+            # 'connect': self.on_connect,
+            # 'disconnect': self.on_disconnect,
             'disconnect request': self.on_disconnect_request,
 
             'join': self.on_join_room,

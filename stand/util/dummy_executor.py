@@ -12,6 +12,7 @@ import time
 import datetime
 
 import eventlet
+import requests
 import socketio
 from flask_script import Manager
 
@@ -54,6 +55,12 @@ def simulate():
                 # StatusExecution.CANCELED, StatusExecution.ERROR,
                 # StatusExecution.PENDING, StatusExecution.INTERRUPTED,
                 StatusExecution.WAITING, StatusExecution.COMPLETED]
+
+    api_url = 'http://localhost:{port}'.format(
+        port=app.config['STAND_CONFIG']['port'])
+    headers = {'X-Auth-Token': '123456',
+               'Content-Type': 'application/json'}
+
     while True:
         try:
             _, job_json = redis_store.blpop('queue_start')
@@ -70,9 +77,8 @@ def simulate():
                                    'status': StatusExecution.RUNNING,
                                    'id': job['workflow_id']},
                              room=room, namespace="/stand")
-
             for task in job.get('workflow', {}).get('tasks', []):
-                if task['operation']['id'] == 25: # comment
+                if task['operation']['id'] == 25:  # comment
                     continue
                 for k in ['job_id', 'workflow_id', 'user_id', 'app_id']:
                     if k in job:
@@ -85,7 +91,7 @@ def simulate():
                                        'id': task.get('id')}, room=room,
                                  namespace="/stand")
                 eventlet.sleep(random.randint(2, 8))
-                for k in ['job_id', 'workflow_id', 'user_id', 'app_id']:
+                for k in ['job_id']:  # , 'workflow_id', 'user_id', 'app_id']:
                     if k in job:
                         room = str(job[k])
                         mgr.emit('update task',
@@ -93,39 +99,64 @@ def simulate():
                                        'status': StatusExecution.COMPLETED,
                                        'id': task.get('id')}, room=room,
                                  namespace="/stand")
-
-                # Updates task in database
-                job_step_entity = JobStep.query.filter(and_(
-                    JobStep.job_id == job.get('job_id'),
-                    JobStep.task_id == task['id'])).first()
-
-                try:
-                    job_step_entity.status = StatusExecution.COMPLETED
-                    job_step_entity.logs.append(JobStepLog(
-                        level='WARNING', date=datetime.datetime.now(),
-                        message=random.choice(MESSAGES)))
-                    db.session.add(job_step_entity)
-                except Exception as ex:
-                    logger.error(ex)
+                        status_url = '{api_url}/jobs/{job_id}/{task_id}/status'.format(
+                            api_url=api_url, job_id=job.get('job_id'),
+                            task_id=task.get('id'))
+                        # r = requests.post(
+                        #     status_url,
+                        #     data=json.dumps(
+                        #         {'status': StatusExecution.COMPLETED,
+                        #          'message': random.choice(MESSAGES)}),
+                        #     headers=headers)
+                        # if r.status_code != 200:
+                        #     logger.error('Invalid status %d %s', r.status_code,
+                        #                  r.text)
 
             # eventlet.sleep(5)
-            job_entity = Job.query.get(job.get('job_id'))
-            job_entity.finished = datetime.datetime.utcnow()
-            job_entity.status = StatusExecution.COMPLETED
 
-            for k in ['job_id', 'workflow_id', 'user_id', 'app_id']:
+            # Updates task in database
+
+            # job_step_entity = JobStep.query.filter(and_(
+            #     JobStep.job_id == job.get('job_id'),
+            #     JobStep.task_id == task['id'])).first()
+            #
+            # try:
+            #     job_step_entity.status = StatusExecution.COMPLETED
+            #     job_step_entity.logs.append(JobStepLog(
+            #         level='WARNING', date=datetime.datetime.now(),
+            #         message=random.choice(MESSAGES)))
+            #     # db.session.add(job_step_entity)
+            # except Exception as ex:
+            #     logger.error(ex)
+            # job_entity = Job.query.get(job.get('job_id'))
+            # job_entity.finished = datetime.datetime.utcnow()
+            # job_entity.status = StatusExecution.COMPLETED
+
+            for k in ['job_id']:  # , 'workflow_id', 'user_id', 'app_id']:
                 if k in job:
                     logger.info('Room for %s', k)
                     room = str(job[k])
-                    mgr.emit('update job',
-                             data={'message': random.choice(MESSAGES),
-                                   'status': StatusExecution.COMPLETED,
-                                   'finished': job_entity.finished.isoformat(),
-                                   'id': job['job_id']},
-                             room=room, namespace="/stand")
+                    mgr.emit(
+                        'update job',
+                        data={
+                            'message': random.choice(MESSAGES),
+                            'status': StatusExecution.COMPLETED,
+                            'finished': datetime.datetime.utcnow().isoformat(),
+                            'id': job['job_id']},
+                        room=room, namespace="/stand")
 
-            db.session.add(job_entity)
-            db.session.commit()
+                    status_url = '{api_url}/jobs/{job_id}/status'.format(
+                        api_url=api_url, job_id=job.get('job_id'))
+                    # r = requests.post(
+                    #     status_url,
+                    #     data=json.dumps({'status': StatusExecution.COMPLETED,
+                    #                      'message': random.choice(MESSAGES)}),
+                    #     headers=headers)
+                    # if r.status_code != 200:
+                    #     logger.error('Invalid status %d %s', r.status_code,
+                    #                  r.text)
+                    # db.session.add(job_entity)
+                    # db.session.commit()
 
         except KeyError as ke:
             logger.error('Invalid json? KeyError: %s', ke)

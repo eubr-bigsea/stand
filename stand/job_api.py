@@ -5,6 +5,7 @@ from app_auth import requires_auth
 from flask import request, current_app
 from flask_restful import Resource
 from schema import *
+from sqlalchemy import and_
 from stand.services.job_services import JobService
 
 
@@ -87,7 +88,7 @@ class JobListApi(Resource):
                 try:
                     job = form.data
                     JobService.start(job, request_json['workflow'],
-                            request_json.get('app_configs', {}))
+                                     request_json.get('app_configs', {}))
                     result_code = 200
                     result = dict(data=response_schema.dump(job).data,
                                   message='', status='OK')
@@ -250,6 +251,7 @@ class JobUnlockActionApi(Resource):
     """ RPC API for action that unlocks a Job for edition"""
     pass
 
+
 class JobSampleActionApi(Resource):
     """ RPC API for action that retrieves sample results from backend """
 
@@ -268,14 +270,66 @@ class JobSampleActionApi(Resource):
                         {}
                     ]
                 )
-                result, result_code = dict(status="OK", message="", fieds=fields,
-                    data=data), 200
+                result, result_code = dict(status="OK", message="",
+                                           fieds=fields,
+                                           data=data), 200
             except JobException as je:
                 result, result_code = dict(
                     status="ERROR", message=je.message, code=je.error_code), 401
                 if je.error_code == JobException.ALREADY_LOCKED:
                     result_code = 409
 
+            except Exception as e:
+                result, result_code = dict(status="ERROR",
+                                           message="Internal error"), 500
+                if current_app.debug:
+                    result['debug_detail'] = e.message
+                db.session.rollback()
+        return result, result_code
+
+
+class UpdateJobStatusActionApi(Resource):
+    """ RPC API for action that updates a Job status """
+
+    @staticmethod
+    @requires_auth
+    def post(job_id):
+        result, result_code = dict(status="ERROR", message="Not found"), 404
+
+        job = Job.query.get(int(job_id))
+        if job is not None:
+            try:
+                job.status = request.json.get('status')
+                db.session.add(job)
+                db.session.commit()
+                result, result_code = dict(status="OK", message=""), 200
+            except Exception as e:
+                result, result_code = dict(status="ERROR",
+                                           message="Internal error"), 500
+                if current_app.debug:
+                    result['debug_detail'] = e.message
+                db.session.rollback()
+        return result, result_code
+
+
+class UpdateJobStepStatusActionApi(Resource):
+    """ RPC API for action that updates a job step status """
+
+    @staticmethod
+    @requires_auth
+    def post(job_id, task_id):
+        result, result_code = dict(status="ERROR", message="Not found"), 404
+
+        step = JobStep.query.filter(and_(
+            JobStep.job_id == int(job_id),
+            JobStep.task_id == task_id)).first()
+        if step is not None:
+            try:
+                step.status = request.json.get('status')
+                step.message = request.json.get('message')
+                db.session.add(step)
+                db.session.commit()
+                result, result_code = dict(status="OK", message=""), 200
             except Exception as e:
                 result, result_code = dict(status="ERROR",
                                            message="Internal error"), 500
