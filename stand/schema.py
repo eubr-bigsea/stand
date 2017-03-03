@@ -151,6 +151,10 @@ class JobItemResponseSchema(Schema):
         'stand.schema.JobStepItemResponseSchema',
         required=True,
         many=True)
+    results = fields.Nested(
+        'stand.schema.JobResultItemResponseSchema',
+        required=True,
+        many=True)
     user = fields.Function(
         lambda x: {
             "id": x.user_id,
@@ -176,6 +180,10 @@ class JobListResponseSchema(Schema):
     cluster = fields.Nested(
         'stand.schema.ClusterListResponseSchema',
         required=True)
+    results = fields.Nested(
+        'stand.schema.JobResultListResponseSchema',
+        required=True,
+        many=True)
     user = fields.Function(
         lambda x: {
             "id": x.user_id,
@@ -249,6 +257,10 @@ class JobExecuteResponseSchema(Schema):
         'stand.schema.JobStepExecuteResponseSchema',
         required=True,
         many=True)
+    results = fields.Nested(
+        'stand.schema.JobResultExecuteResponseSchema',
+        required=True,
+        many=True)
 
     class Meta:
         ordered = True
@@ -257,6 +269,28 @@ class JobExecuteResponseSchema(Schema):
 class JobStatusRequestSchema(Schema):
     """ JSON schema for executing tasks """
     token = fields.String(allow_none=True)
+
+    class Meta:
+        ordered = True
+
+
+class JobResultItemResponseSchema(Schema):
+    """ JSON serialization schema """
+    type = fields.String(required=True,
+                         validate=[OneOf(ResultType.__dict__.keys())])
+    task = fields.Function(lambda x: {"id": x.task_id})
+    operation = fields.Function(lambda x: {"id": x.operation_id})
+
+    class Meta:
+        ordered = True
+
+
+class JobResultListResponseSchema(Schema):
+    """ JSON serialization schema """
+    task_id = fields.String(required=True)
+    operation_id = fields.Integer(required=True)
+    type = fields.String(required=True,
+                         validate=[OneOf(ResultType.__dict__.keys())])
 
     class Meta:
         ordered = True

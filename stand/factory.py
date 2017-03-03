@@ -16,7 +16,8 @@ from stand.cluster_api import ClusterListApi
 from stand.job_api import JobListApi, JobDetailApi, \
     JobStopActionApi, JobLockActionApi, JobUnlockActionApi, \
     UpdateJobStatusActionApi, UpdateJobStepStatusActionApi
-from stand.models import db, Job, JobStep, JobStepLog, StatusExecution
+from stand.models import db, Job, JobStep, JobStepLog, StatusExecution, \
+    JobResult
 from stand.services.redis_service import connect_redis_store
 
 
@@ -107,70 +108,87 @@ def mocked_emit(original_emit, app_):
     def new_emit(self, event, data, namespace, room=None, skip_sid=None,
                  callback=None):
         use_callback = callback
-        with app_.app_context():
-            if event == 'update job':
-                job_id = int(room)
-                job = Job.query.get(job_id)
-                if job is not None:
-                    final_states = [StatusExecution.COMPLETED,
-                                    StatusExecution.CANCELED,
-                                    StatusExecution.ERROR]
-                    job.status = data.get('status')
-                    job.status_text = data.get('msg', data.get('message', ''))
-                    if job.status in final_states:
-                        job.finished = datetime.datetime.utcnow()
 
-                    if job.status == StatusExecution.ERROR:
-                        for job_step in job.steps:
-                            if job_step.status == StatusExecution.RUNNING:
-                                job_step.status = StatusExecution.ERROR
-                                msg = {'id': job_step.task_id,
-                                       'msg': 'Error',
-                                       'status': StatusExecution.ERROR},
-                                original_emit(self, 'update task', msg,
-                                              namespace, room,
-                                              skip_sid)
-                            elif job_step.status not in final_states:
-                                job_step.status = StatusExecution.CANCELED
-                                msg = {'id': job_step.task_id,
-                                       'msg': 'Canceled',
-                                       'status': StatusExecution.CANCELED},
-                                original_emit(self, 'update task', msg,
-                                              namespace, room,
-                                              skip_sid)
-                            db.session.add(job_step)
-
-                    elif job.status == StatusExecution.CANCELED:
-                        for job_step in job.steps:
-                            if job_step.status not in final_states:
-                                job_step.status = StatusExecution.CANCELED
-                            db.session.add(job_step)
-
-                    db.session.add(job)
-                    db.session.commit()
-                    use_callback = wait_client
-            elif event == 'update task':
-                job_id = int(room)
-                job_step = JobStep.query.filter(and_(
-                    JobStep.job_id == job_id,
-                    JobStep.task_id == data.get('id'))).first()
-                if job_step is not None:
-                    job_step.status = data.get('status')
-                    if job_step.status == StatusExecution.COMPLETED:
-                        level = 'INFO'
-                    else:
-                        level = StatusExecution.WAITING
-                    job_step.logs.append(JobStepLog(
-                        level=level, date=datetime.datetime.now(),
-                        message=data.get('message',
-                                         data.get('msg', 'no message'))))
-                    db.session.add(job_step)
-                    db.session.commit()
-                    use_callback = wait_client
-
+        try:
             print '-' * 20
             print data, room, event, namespace
             print '-' * 20
+
+            with app_.app_context():
+                if event == 'update job':
+                    job_id = int(room)
+                    job = Job.query.get(job_id)
+                    if job is not None:
+                        final_states = [StatusExecution.COMPLETED,
+                                        StatusExecution.CANCELED,
+                                        StatusExecution.ERROR]
+                        job.status = data.get('status')
+                        job.status_text = data.get('msg', data.get('message', ''))
+                        if job.status in final_states:
+                            job.finished = datetime.datetime.utcnow()
+
+                        if job.status == StatusExecution.ERROR:
+                            for job_step in job.steps:
+                                if job_step.status == StatusExecution.RUNNING:
+                                    job_step.status = StatusExecution.ERROR
+                                    msg = {'id': job_step.task_id,
+                                           'msg': 'Error',
+                                           'status': StatusExecution.ERROR},
+                                    original_emit(self, 'update task', msg,
+                                                  namespace, room,
+                                                  skip_sid)
+                                elif job_step.status not in final_states:
+                                    job_step.status = StatusExecution.CANCELED
+                                    msg = {'id': job_step.task_id,
+                                           'msg': 'Canceled',
+                                           'status': StatusExecution.CANCELED},
+                                    original_emit(self, 'update task', msg,
+                                                  namespace, room,
+                                                  skip_sid)
+                                db.session.add(job_step)
+
+                        elif job.status == StatusExecution.CANCELED:
+                            for job_step in job.steps:
+                                if job_step.status not in final_states:
+                                    job_step.status = StatusExecution.CANCELED
+                                db.session.add(job_step)
+
+                        db.session.add(job)
+                        db.session.commit()
+                        use_callback = wait_client
+                elif event == 'update task':
+                    job_id = int(room)
+                    job_step = JobStep.query.filter(and_(
+                        JobStep.job_id == job_id,
+                        JobStep.task_id == data.get('id'))).first()
+                    if job_step is not None:
+                        job_step.status = data.get('status')
+                        if job_step.status == StatusExecution.COMPLETED:
+                            level = 'INFO'
+                        else:
+                            level = StatusExecution.WAITING
+                        job_step.logs.append(JobStepLog(
+                            level=level, date=datetime.datetime.now(),
+                            message=data.get('message',
+                                             data.get('msg', 'no message'))))
+                        db.session.add(job_step)
+                        db.session.commit()
+                        use_callback = wait_client
+                elif event == 'task result':
+                    job_id = int(room)
+                    job = Job.query.get(job_id)
+                    if job is not None:
+                        op_id, task_id = data.get('id').split('/')
+                        job.results.append(JobResult(task_id=task_id,
+                                                     operation_id=op_id,
+                                                     type=data.get('msg')))
+                        db.session.add(job)
+                        db.session.commit()
+                    return
+        except Exception as ex:
+            logger = logging.getLogger(__name__)
+            logger.exception(ex)
+
         return original_emit(self, event, data, namespace, room=room,
                              skip_sid=skip_sid,
                              callback=use_callback)

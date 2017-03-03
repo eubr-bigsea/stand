@@ -33,6 +33,18 @@ class StatusExecution:
 
 
 # noinspection PyClassHasNoInit
+class ResultType:
+    VISUALIZATION = 'VISUALIZATION'
+    MODEL = 'MODEL'
+    OTHER = 'OTHER'
+
+    @staticmethod
+    def values():
+        return [n for n in ResultType.__dict__.keys()
+                if n[0] != '_' and n != 'values']
+
+
+# noinspection PyClassHasNoInit
 class ClusterType:
     SPARK_LOCAL = 'SPARK_LOCAL'
     MESOS = 'MESOS'
@@ -138,9 +150,33 @@ class Job(db.Model):
                         ForeignKey("cluster.id"), nullable=False)
     cluster = relationship("Cluster", foreign_keys=[cluster_id])
     steps = relationship("JobStep", back_populates="job")
+    results = relationship("JobResult", back_populates="job")
 
     def __unicode__(self):
         return self.created
+
+    def __repr__(self):
+        return '<Instance {}: {}>'.format(self.__class__, self.id)
+
+
+class JobResult(db.Model):
+    """ Result of a job """
+    __tablename__ = 'job_result'
+
+    # Fields
+    id = Column(Integer, primary_key=True)
+    task_id = Column(String(200), nullable=False)
+    operation_id = Column(Integer, nullable=False)
+    type = Column(Enum(*ResultType.values(),
+                       name='ResultTypeEnumType'), nullable=False)
+
+    # Associations
+    job_id = Column(Integer,
+                    ForeignKey("job.id"), nullable=False)
+    job = relationship("Job", foreign_keys=[job_id])
+
+    def __unicode__(self):
+        return self.task_id
 
     def __repr__(self):
         return '<Instance {}: {}>'.format(self.__class__, self.id)
