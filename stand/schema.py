@@ -276,6 +276,7 @@ class JobStatusRequestSchema(Schema):
 
 class JobResultItemResponseSchema(Schema):
     """ JSON serialization schema """
+    title = fields.String(required=False, allow_none=True)
     type = fields.String(required=True,
                          validate=[OneOf(ResultType.__dict__.keys())])
     task = fields.Function(lambda x: {"id": x.task_id})
@@ -289,6 +290,7 @@ class JobResultListResponseSchema(Schema):
     """ JSON serialization schema """
     task_id = fields.String(required=True)
     operation_id = fields.Integer(required=True)
+    title = fields.String(required=False, allow_none=True)
     type = fields.String(required=True,
                          validate=[OneOf(ResultType.__dict__.keys())])
 

@@ -167,6 +167,7 @@ class JobResult(db.Model):
     id = Column(Integer, primary_key=True)
     task_id = Column(String(200), nullable=False)
     operation_id = Column(Integer, nullable=False)
+    title = Column(String(200))
     type = Column(Enum(*ResultType.values(),
                        name='ResultTypeEnumType'), nullable=False)
 

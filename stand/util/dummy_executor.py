@@ -18,7 +18,8 @@ from flask_script import Manager
 # Logging configuration
 from sqlalchemy import and_
 from stand.factory import create_app, create_redis_store
-from stand.models import Job, StatusExecution, db, JobStep, JobStepLog
+from stand.models import Job, StatusExecution, db, JobStep, JobStepLog, \
+    JobResult, ResultType
 
 app = create_app(log_level=logging.WARNING)
 redis_store = create_redis_store(app)
@@ -78,7 +79,7 @@ def simulate():
             db.session.commit()
 
             for task in job.get('workflow', {}).get('tasks', []):
-                if task['operation']['id'] == 25: # comment
+                if task['operation']['id'] == 25:  # comment
                     continue
 
                 job_step_entity = JobStep.query.filter(and_(
@@ -118,6 +119,14 @@ def simulate():
 
                 # Updates task in database
                 try:
+
+                    # Visualizations
+                    if task['operation']['id'] in [35, 68, 69, 70, 71]:
+                        result = JobResult(task_id=task['id'],
+                                           operation_id=task['operation']['id'],
+                                           type=ResultType.VISUALIZATION, )
+                        job_entity.results.append(result)
+
                     job_step_entity.status = StatusExecution.COMPLETED
                     job_step_entity.logs.append(JobStepLog(
                         level='WARNING', date=datetime.datetime.now(),

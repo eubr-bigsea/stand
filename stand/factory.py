@@ -178,13 +178,14 @@ def mocked_emit(original_emit, app_):
                     job_id = int(room)
                     job = Job.query.get(job_id)
                     if job is not None:
-                        op_id, task_id = data.get('id').split('/')
+                        task_id = data.get('id')
+                        op_id = data.get('operation_id')
                         job.results.append(JobResult(task_id=task_id,
                                                      operation_id=op_id,
-                                                     type=data.get('msg')))
+                                                     type=data.get('type'),
+                                                     title=data.get('title')))
                         db.session.add(job)
                         db.session.commit()
-                    return
         except Exception as ex:
             logger = logging.getLogger(__name__)
             logger.exception(ex)
