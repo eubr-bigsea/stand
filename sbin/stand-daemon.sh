@@ -4,7 +4,7 @@
 # and termination
 # TODO: rotate logs
 
-usage="Usage: stand-daemon.sh (start|stop|status)"
+usage="Usage: stand-daemon.sh (start|startf|stop|status)"
 
 # this sript requires the command parameter
 if [ $# -le 0 ]; then
@@ -49,6 +49,13 @@ case $cmd_option in
       echo $stand_server_pid > $pid
 
       echo "Stand server started, logging to $log (pid=$stand_server_pid)"
+      ;;
+
+   (startf)
+      trap "$0 stop" SIGINT SIGTERM
+      $0 start
+      sleep infinity &
+      wait
       ;;
 
    (stop)

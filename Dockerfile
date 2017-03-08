@@ -1,9 +1,20 @@
-FROM python:2.7-onbuild
-MAINTAINER Guilherme Maluf <guimalufb@gmail.com>
+FROM ubuntu:16.04
+MAINTAINER Vinicius Dias <viniciusvdias@dcc.ufmg.br>
 
-EXPOSE 3321
-ENV LIMONERO_CONFIG="./stand.yaml"
-ENV PYTHONPATH="."
-RUN chmod a+x "./run.sh"
+# Install python and jdk
+RUN apt-get update \
+   && apt-get install -qy python-pip
 
-CMD [ "./run.sh" ]
+# Install juicer
+ENV STAND_HOME /usr/local/stand
+RUN mkdir -p $STAND_HOME/conf
+RUN mkdir -p $STAND_HOME/sbin
+RUN mkdir -p $STAND_HOME/stand
+ADD sbin $STAND_HOME/sbin
+ADD stand $STAND_HOME/stand
+
+# Install juicer requirements and entrypoint
+ADD requirements.txt $STAND_HOME
+RUN pip install -r $STAND_HOME/requirements.txt
+EXPOSE 5000
+CMD ["/usr/local/stand/sbin/stand-daemon.sh", "startf"]
