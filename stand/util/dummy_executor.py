@@ -62,7 +62,9 @@ def simulate():
             logger.debug('Simulating workflow %s with job %s',
                          job.get('workflow_id'), job.get('job_id'))
 
-            for k in ['job_id', 'workflow_id', 'user_id', 'app_id']:
+            eventlet.sleep(3)
+
+            for k in ['job_id']:
                 if k in job:
                     logger.info('Room for %s', k)
                     room = str(job[k])
@@ -97,7 +99,7 @@ def simulate():
                 except Exception as ex:
                     logger.error(ex)
 
-                for k in ['job_id', 'workflow_id', 'user_id', 'app_id']:
+                for k in ['job_id']:
                     if k in job:
                         logger.info('Room for %s and task %s', k,
                                     task.get('id'))
@@ -107,8 +109,8 @@ def simulate():
                                        'status': random.choice(statuses[:-2]),
                                        'id': task.get('id')}, room=room,
                                  namespace="/stand")
-                eventlet.sleep(random.randint(2, 8))
-                for k in ['job_id', 'workflow_id', 'user_id', 'app_id']:
+                eventlet.sleep(random.randint(2, 5))
+                for k in ['job_id']:
                     if k in job:
                         room = str(job[k])
                         mgr.emit('update task',
@@ -119,13 +121,32 @@ def simulate():
 
                 # Updates task in database
                 try:
-
                     # Visualizations
                     if task['operation']['id'] in [35, 68, 69, 70, 71]:
-                        result = JobResult(task_id=task['id'],
-                                           operation_id=task['operation']['id'],
-                                           type=ResultType.VISUALIZATION, )
-                        job_entity.results.append(result)
+                        # import pdb
+                        # pdb.set_trace()
+                        for k in ['job_id']:
+                            room = str(job[k])
+                            mgr.emit('task result',
+                                     data={'msg': 'Result generated',
+                                           'status': StatusExecution.COMPLETED,
+                                           'id': task['id'],
+                                           'task': {'id': task['id']},
+                                           'title': 'Table with results',
+                                           'type': 'VISUALIZATION',
+                                           'operation': {
+                                               'id': task['operation']['id']},
+                                           'operation_id':
+                                               task['operation']['id']},
+                                     room=room,
+                                     namespace="/stand")
+                        #
+                        # result = JobResult(task_id=task['id'],
+                        #                    title="Table with results",
+                        #                    operation_id=task['operation']['id'],
+                        #                    type=ResultType.VISUALIZATION, )
+                        # logger.info('Result created for job %s', job['job_id'])
+                        # job_entity.results.append(result)
 
                     job_step_entity.status = StatusExecution.COMPLETED
                     job_step_entity.logs.append(JobStepLog(
@@ -137,9 +158,7 @@ def simulate():
 
             # eventlet.sleep(5)
 
-            job_entity.status = StatusExecution.COMPLETED
-
-            for k in ['job_id', 'workflow_id', 'user_id', 'app_id']:
+            for k in ['job_id']:
                 if k in job:
                     logger.info('Room for %s', k)
                     room = str(job[k])
@@ -150,7 +169,10 @@ def simulate():
                                    'id': job['job_id']},
                              room=room, namespace="/stand")
 
-            db.session.add(job_entity)
+            if job_entity:
+                job_entity.status = StatusExecution.COMPLETED
+                db.session.add(job_entity)
+
             db.session.commit()
 
         except KeyError as ke:

@@ -36,7 +36,9 @@ class StatusExecution:
 class ResultType:
     VISUALIZATION = 'VISUALIZATION'
     MODEL = 'MODEL'
+    HTML = 'HTML'
     OTHER = 'OTHER'
+    TEXT = 'TEXT'
 
     @staticmethod
     def values():
@@ -170,6 +172,7 @@ class JobResult(db.Model):
     title = Column(String(200))
     type = Column(Enum(*ResultType.values(),
                        name='ResultTypeEnumType'), nullable=False)
+    content = Column(Text)
 
     # Associations
     job_id = Column(Integer,

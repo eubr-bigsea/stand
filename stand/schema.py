@@ -279,6 +279,7 @@ class JobResultItemResponseSchema(Schema):
     title = fields.String(required=False, allow_none=True)
     type = fields.String(required=True,
                          validate=[OneOf(ResultType.__dict__.keys())])
+    content = fields.String(required=False, allow_none=True)
     task = fields.Function(lambda x: {"id": x.task_id})
     operation = fields.Function(lambda x: {"id": x.operation_id})
 
@@ -293,6 +294,7 @@ class JobResultListResponseSchema(Schema):
     title = fields.String(required=False, allow_none=True)
     type = fields.String(required=True,
                          validate=[OneOf(ResultType.__dict__.keys())])
+    content = fields.String(required=False, allow_none=True)
 
     class Meta:
         ordered = True

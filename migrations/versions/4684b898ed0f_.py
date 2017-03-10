@@ -21,7 +21,7 @@ def upgrade():
     op.create_table('job_result',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('task_id', sa.String(length=200), nullable=False),
-    sa.Column('type', sa.Enum('VISUALIZATION', 'OTHER', 'MODEL', name='ResultTypeEnumType'), nullable=False),
+    sa.Column('type', sa.Enum('VISUALIZATION', 'HTML', 'TEXT', 'OTHER', 'MODEL', name='ResultTypeEnumType'), nullable=False),
     sa.Column('job_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['job_id'], ['job.id'], ),
     sa.PrimaryKeyConstraint('id')

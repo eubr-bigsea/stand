@@ -123,7 +123,8 @@ def mocked_emit(original_emit, app_):
                                         StatusExecution.CANCELED,
                                         StatusExecution.ERROR]
                         job.status = data.get('status')
-                        job.status_text = data.get('msg', data.get('message', ''))
+                        job.status_text = data.get('msg',
+                                                   data.get('message', ''))
                         if job.status in final_states:
                             job.finished = datetime.datetime.utcnow()
 
@@ -180,10 +181,12 @@ def mocked_emit(original_emit, app_):
                     if job is not None:
                         task_id = data.get('id')
                         op_id = data.get('operation_id')
-                        job.results.append(JobResult(task_id=task_id,
-                                                     operation_id=op_id,
-                                                     type=data.get('type'),
-                                                     title=data.get('title')))
+                        job.results.append(JobResult(
+                            task_id=task_id,
+                            operation_id=op_id,
+                            type=data.get('type'),
+                            title=data.get('title'),
+                            content=data.get('content')))
                         db.session.add(job)
                         db.session.commit()
         except Exception as ex:
