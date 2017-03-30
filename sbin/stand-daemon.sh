@@ -53,8 +53,15 @@ case $cmd_option in
 
    (startf)
       trap "$0 stop" SIGINT SIGTERM
-      $0 start
-      sleep infinity &
+      # set python path
+      PYTHONPATH=$STAND_HOME:$PYTHONPATH python $STAND_HOME/stand/runner/stand_server.py \
+         -c $STAND_HOME/conf/stand-config.yaml &
+      stand_server_pid=$!
+
+      # persist the pid
+      echo $stand_server_pid > $pid
+
+      echo "Stand server started, logging to $log (pid=$stand_server_pid)"
       wait
       ;;
 
