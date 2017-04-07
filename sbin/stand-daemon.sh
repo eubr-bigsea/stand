@@ -4,7 +4,7 @@
 # and termination
 # TODO: rotate logs
 
-usage="Usage: stand-daemon.sh (start|stop|status)"
+usage="Usage: stand-daemon.sh (start|startf|stop|status)"
 
 # this sript requires the command parameter
 if [ $# -le 0 ]; then
@@ -41,6 +41,8 @@ case $cmd_option in
 
    (start)
       # set python path
+      PYTHONPATH=$STAND_HOME:$PYTHONPATH python $STAND_HOME/stand/manage.py \
+         db upgrade || true
       PYTHONPATH=$STAND_HOME:$PYTHONPATH nohup -- python $STAND_HOME/stand/runner/stand_server.py \
          -c $STAND_HOME/conf/stand-config.yaml >> $log 2>&1 < /dev/null &
       stand_server_pid=$!
@@ -49,6 +51,22 @@ case $cmd_option in
       echo $stand_server_pid > $pid
 
       echo "Stand server started, logging to $log (pid=$stand_server_pid)"
+      ;;
+
+   (startf)
+      trap "$0 stop" SIGINT SIGTERM
+      # set python path
+      PYTHONPATH=$STAND_HOME:$PYTHONPATH python $STAND_HOME/stand/manage.py \
+         db upgrade || true
+      PYTHONPATH=$STAND_HOME:$PYTHONPATH python $STAND_HOME/stand/runner/stand_server.py \
+         -c $STAND_HOME/conf/stand-config.yaml &
+      stand_server_pid=$!
+
+      # persist the pid
+      echo $stand_server_pid > $pid
+
+      echo "Stand server started, logging to $log (pid=$stand_server_pid)"
+      wait
       ;;
 
    (stop)

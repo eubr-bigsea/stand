@@ -30,7 +30,8 @@ class MockRedisWrapper(MockRedis):
 
 
 def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
-    os.environ['STAND_CONFIG_FILE'] = config_file
+    if config_file:
+        os.environ['STAND_CONFIG_FILE'] = config_file
 
     from stand.configuration import stand_configuration
     app = Flask(__name__)
