@@ -2,6 +2,8 @@
 import json
 import logging
 
+import datetime
+
 import requests
 import stand.util
 from stand.models import db, StatusExecution, JobException, Job
@@ -14,6 +16,7 @@ logging.basicConfig(
     datefmt='%H:%M:%S')
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
+
 
 class JobService:
     def __init__(self, session, config):
@@ -64,13 +67,14 @@ class JobService:
         # Validate if workflow is already running
         jobs_running = Job.query.filter(Job.status.in_(invalid_statuses)) \
             .filter(Job.workflow_id == job.workflow_id).first()
-        if jobs_running > 0:
+        if jobs_running:
             raise JobException(
                 'Workflow is already being run by another job ({})'.format(
                     jobs_running.id), JobException.ALREADY_RUNNING)
 
         # Initial job status must be WAITING
         job.status = StatusExecution.WAITING
+        job.started = datetime.datetime.utcnow()
         db.session.add(job)
         db.session.flush()  # Flush is needed to get the value of job.id
 
@@ -86,7 +90,6 @@ class JobService:
                               app_configs=app_configs,
                               workflow=workflow))
         redis_store.rpush("queue_start", msg)
-
 
         # This hash controls the status of job. Used for prevent starting
         # jobs in invalid states
@@ -120,15 +123,18 @@ class JobService:
 
             # @FIXME Each workflow has only one app. In future, we may support N
             msg = json.dumps(dict(workflow_id=job.workflow_id,
-                              app_id=job.workflow_id,
-                              job_id=job.id,
-                              type='terminate'))
-            redis_store.rpush("queue_start", msg)
+                                  app_id=job.workflow_id,
+                                  job_id=job.id,
+                                  type='terminate'))
+            redis_store.rpush("queue_stop", msg)
 
-            # This hash controls the status of job. Used for prevent starting
-            # a canceled job be started by Juicer.
-            redis_store.hset('record_workflow_{}'.format(job.workflow_id),
-                             'status', StatusExecution.CANCELED)
+            # # This hash controls the status of job. Used for prevent starting
+            # # a canceled job be started by Juicer (FIXME: is it used?).
+            # redis_store.hset('record_workflow_{}'.format(job.workflow_id),
+            #                  'status', StatusExecution.CANCELED)
+            #
+            # redis_store.hset('job_{}'.format(job.id),
+            #                  'status', StatusExecution.CANCELED)
 
             db.session.commit()
 

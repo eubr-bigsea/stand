@@ -69,7 +69,7 @@ def test_list_filter_jobs_by_workflow_returns_2_of_3(client, model_factories):
             {'id': workflow_id - 1000, 'name': 'WS'}))
 
     data = {
-        'workflow': workflow_id
+        'workflow_id': workflow_id
     }
     response = client.get(job_list_url(), headers=HEADERS, query_string=data)
     jobs = response.json['data']
@@ -86,7 +86,7 @@ def test_list_filter_jobs_by_user_returns_1_of_3(client, model_factories):
     model_factories.job_factory.create(id=3003, user_id=user_id * 4)
 
     data = {
-        'user': user_id
+        'user_id': user_id
     }
     response = client.get(job_list_url(), headers=HEADERS, query_string=data)
     jobs = response.json['data']
@@ -145,7 +145,7 @@ def test_list_jobs_paged_out_of_bounds_return_404(client, model_factories):
     assert response.status_code == 404
 
 
-def test_create_job_ok_result_success(client, model_factories, tahiti_service):
+def test_create_job_ok_result_success(client, model_factories, redis_store):
     model_factories.cluster_factory.create(id=999, )
     workflow_id = 281
     data = {
@@ -194,10 +194,9 @@ def test_create_job_ok_result_success(client, model_factories, tahiti_service):
     assert response.status_code == 200, response.json
     job_id = response.json['data']['id']
     assert job_id is not None
-    redis_store = connect_redis_store(None, True)
 
     queued = redis_store.get('queue_start')[0]
-    assert json.loads(queued)['workflow']['id'] == \
+    assert json.loads(queued)['workflow_id'] == \
            response.json['data']['workflow']['id']
 
     status = redis_store.hget('record_workflow_{}'.format(workflow_id),

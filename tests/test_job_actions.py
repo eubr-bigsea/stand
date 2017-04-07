@@ -47,9 +47,8 @@ def test_stop_job_workflow_not_running_success(client, model_factories):
     response = client.post(job_stop_url(job_id=fake_job.id), headers=headers,
                            data=json.dumps(data))
     result = response.json
-    assert response.status_code == 200
-    assert result['data']['status'] == fake_job.status
-    assert result['status'] == 'OK'
+    assert response.status_code == 401
+    assert result['status'] == 'ERROR'
     assert result['code'] == JobException.ALREADY_FINISHED
 
 

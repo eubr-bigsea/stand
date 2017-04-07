@@ -18,7 +18,8 @@ from flask_script import Manager
 # Logging configuration
 from sqlalchemy import and_
 from stand.factory import create_app, create_redis_store
-from stand.models import Job, StatusExecution, db, JobStep, JobStepLog
+from stand.models import Job, StatusExecution, db, JobStep, JobStepLog, \
+    JobResult, ResultType
 
 app = create_app(log_level=logging.WARNING)
 redis_store = create_redis_store(app)
@@ -61,7 +62,9 @@ def simulate():
             logger.debug('Simulating workflow %s with job %s',
                          job.get('workflow_id'), job.get('job_id'))
 
-            for k in ['job_id', 'workflow_id', 'user_id', 'app_id']:
+            eventlet.sleep(3)
+
+            for k in ['job_id']:
                 if k in job:
                     logger.info('Room for %s', k)
                     room = str(job[k])
@@ -71,10 +74,32 @@ def simulate():
                                    'id': job['workflow_id']},
                              room=room, namespace="/stand")
 
+            job_entity = Job.query.get(job.get('job_id'))
+            job_entity.status = StatusExecution.RUNNING
+            job_entity.finished = datetime.datetime.utcnow()
+            db.session.add(job_entity)
+            db.session.commit()
+
             for task in job.get('workflow', {}).get('tasks', []):
-                if task['operation']['id'] == 25: # comment
+                if task['operation']['id'] == 25:  # comment
                     continue
-                for k in ['job_id', 'workflow_id', 'user_id', 'app_id']:
+
+                job_step_entity = JobStep.query.filter(and_(
+                    JobStep.job_id == job.get('job_id'),
+                    JobStep.task_id == task['id'])).first()
+
+                # Updates task in database
+                try:
+                    job_step_entity.status = StatusExecution.RUNNING
+                    job_step_entity.logs.append(JobStepLog(
+                        level='WARNING', date=datetime.datetime.now(),
+                        message=random.choice(MESSAGES)))
+                    db.session.add(job_step_entity)
+                    db.session.commit()
+                except Exception as ex:
+                    logger.error(ex)
+
+                for k in ['job_id']:
                     if k in job:
                         logger.info('Room for %s and task %s', k,
                                     task.get('id'))
@@ -84,8 +109,8 @@ def simulate():
                                        'status': random.choice(statuses[:-2]),
                                        'id': task.get('id')}, room=room,
                                  namespace="/stand")
-                eventlet.sleep(random.randint(2, 8))
-                for k in ['job_id', 'workflow_id', 'user_id', 'app_id']:
+                eventlet.sleep(random.randint(2, 5))
+                for k in ['job_id']:
                     if k in job:
                         room = str(job[k])
                         mgr.emit('update task',
@@ -95,31 +120,59 @@ def simulate():
                                  namespace="/stand")
 
                 # Updates task in database
-                job_step_entity = JobStep.query.filter(and_(
-                    JobStep.job_id == job.get('job_id'),
-                    JobStep.task_id == task['id'])).first()
+                try:
+                    # Visualizations
+                    if task['operation']['id'] in [35, 68, 69, 70, 71]:
+                        # import pdb
+                        # pdb.set_trace()
+                        for k in ['job_id']:
+                            room = str(job[k])
+                            mgr.emit('task result',
+                                     data={'msg': 'Result generated',
+                                           'status': StatusExecution.COMPLETED,
+                                           'id': task['id'],
+                                           'task': {'id': task['id']},
+                                           'title': 'Table with results',
+                                           'type': 'VISUALIZATION',
+                                           'operation': {
+                                               'id': task['operation']['id']},
+                                           'operation_id':
+                                               task['operation']['id']},
+                                     room=room,
+                                     namespace="/stand")
+                        #
+                        # result = JobResult(task_id=task['id'],
+                        #                    title="Table with results",
+                        #                    operation_id=task['operation']['id'],
+                        #                    type=ResultType.VISUALIZATION, )
+                        # logger.info('Result created for job %s', job['job_id'])
+                        # job_entity.results.append(result)
 
-                job_step_entity.status = StatusExecution.COMPLETED
-                job_step_entity.logs.append(JobStepLog(
-                    level='WARNING', date=datetime.datetime.now(),
-                    message=random.choice(MESSAGES)))
-
-                db.session.add(job_step_entity)
+                    job_step_entity.status = StatusExecution.COMPLETED
+                    job_step_entity.logs.append(JobStepLog(
+                        level='WARNING', date=datetime.datetime.now(),
+                        message=random.choice(MESSAGES)))
+                    db.session.add(job_step_entity)
+                except Exception as ex:
+                    logger.error(ex)
 
             # eventlet.sleep(5)
-            for k in ['job_id', 'workflow_id', 'user_id', 'app_id']:
+
+            for k in ['job_id']:
                 if k in job:
                     logger.info('Room for %s', k)
                     room = str(job[k])
                     mgr.emit('update job',
                              data={'message': random.choice(MESSAGES),
                                    'status': StatusExecution.COMPLETED,
-                                   'id': job['workflow_id']},
+                                   'finished': job_entity.finished.isoformat(),
+                                   'id': job['job_id']},
                              room=room, namespace="/stand")
 
-            job_entity = Job.query.get(job.get('job_id'))
-            job_entity.status = StatusExecution.COMPLETED
-            db.session.add(job_entity)
+            if job_entity:
+                job_entity.status = StatusExecution.COMPLETED
+                db.session.add(job_entity)
+
             db.session.commit()
 
         except KeyError as ke:

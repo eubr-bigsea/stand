@@ -96,12 +96,6 @@ class ClusterSimpleListResponseSchema(Schema):
     """ JSON simple """
     id = fields.Integer(required=True)
 
-    # noinspection PyUnresolvedReferences
-    @post_load
-    def make_object(self, data):
-        """ Deserializes data into an instance of Cluster"""
-        return Cluster(**data)
-
     class Meta:
         ordered = True
 
@@ -111,12 +105,6 @@ class ClusterListResponseSchema(Schema):
     id = fields.Integer(required=True)
     name = fields.String(required=True)
 
-    # noinspection PyUnresolvedReferences
-    @post_load
-    def make_object(self, data):
-        """ Deserializes data into an instance of Cluster"""
-        return Cluster(**data)
-
     class Meta:
         ordered = True
 
@@ -125,12 +113,6 @@ class ClusterItemResponseSchema(Schema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
     name = fields.String(required=True)
-
-    # noinspection PyUnresolvedReferences
-    @post_load
-    def make_object(self, data):
-        """ Deserializes data into an instance of Cluster"""
-        return Cluster(**data)
 
     class Meta:
         ordered = True
@@ -147,12 +129,6 @@ class ClusterCreateRequestSchema(Schema):
                          validate=[OneOf(ClusterType.__dict__.keys())])
     address = fields.String(required=True)
 
-    # noinspection PyUnresolvedReferences
-    @post_load
-    def make_object(self, data):
-        """ Deserializes data into an instance of Cluster"""
-        return Cluster(**data)
-
     class Meta:
         ordered = True
 
@@ -161,25 +137,30 @@ class JobItemResponseSchema(Schema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
     created = fields.DateTime(required=True, missing=func.now(),
-                            default=func.now())
+                              default=func.now())
     started = fields.DateTime(required=False, allow_none=True)
     finished = fields.DateTime(required=False, allow_none=True)
     status = fields.String(required=True, missing=StatusExecution.WAITING,
                            default=StatusExecution.WAITING,
                            validate=[OneOf(StatusExecution.__dict__.keys())])
-    cluster = fields.Nested('stand.schema.ClusterItemResponseSchema',
-                            required=True)
-    steps = fields.Nested('stand.schema.JobStepItemResponseSchema',
-                          required=True,
-                          many=True)
-    user = fields.Function(lambda x: {"id": x.user_id, "name": x.user_name, "login": x.user_login})
+    status_text = fields.String(required=False, allow_none=True)
+    cluster = fields.Nested(
+        'stand.schema.ClusterItemResponseSchema',
+        required=True)
+    steps = fields.Nested(
+        'stand.schema.JobStepItemResponseSchema',
+        required=True,
+        many=True)
+    results = fields.Nested(
+        'stand.schema.JobResultItemResponseSchema',
+        required=True,
+        many=True)
+    user = fields.Function(
+        lambda x: {
+            "id": x.user_id,
+            "name": x.user_name,
+            "login": x.user_login})
     workflow = fields.Function(lambda x: json.loads(x.workflow_definition))
-
-    # noinspection PyUnresolvedReferences
-    @post_load
-    def make_object(self, data):
-        """ Deserializes data into an instance of Job"""
-        return Job(**data)
 
     class Meta:
         ordered = True
@@ -189,22 +170,26 @@ class JobListResponseSchema(Schema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
     created = fields.DateTime(required=True, missing=func.now(),
-                            default=func.now())
+                              default=func.now())
     started = fields.DateTime(required=False, allow_none=True)
     finished = fields.DateTime(required=False, allow_none=True)
     status = fields.String(required=True, missing=StatusExecution.WAITING,
                            default=StatusExecution.WAITING,
                            validate=[OneOf(StatusExecution.__dict__.keys())])
-    cluster = fields.Nested('stand.schema.ClusterListResponseSchema',
-                            required=True)
-    user = fields.Function(lambda x: {"id": x.user_id, "name": x.user_name, "login": x.user_login})
+    status_text = fields.String(required=False, allow_none=True)
+    cluster = fields.Nested(
+        'stand.schema.ClusterListResponseSchema',
+        required=True)
+    results = fields.Nested(
+        'stand.schema.JobResultListResponseSchema',
+        required=True,
+        many=True)
+    user = fields.Function(
+        lambda x: {
+            "id": x.user_id,
+            "name": x.user_name,
+            "login": x.user_login})
     workflow = fields.Function(lambda x: json.loads(x.workflow_definition))
-
-    # noinspection PyUnresolvedReferences
-    @post_load
-    def make_object(self, data):
-        """ Deserializes data into an instance of Job"""
-        return Job(**data)
 
     class Meta:
         ordered = True
@@ -225,8 +210,8 @@ class JobCreateRequestSchema(Schema):
     # noinspection PyUnresolvedReferences
     @post_load
     def make_object(self, data):
-        """ Deserializes data into an instance of Job"""
-        
+        """ Deserialize data into an instance of Job"""
+
         data['cluster_id'] = data['cluster']['id']
         data['user_id'] = data['user']['id']
         data['user_name'] = data['user']['name']
@@ -234,18 +219,18 @@ class JobCreateRequestSchema(Schema):
         data['workflow_id'] = data['workflow']['id']
         data['workflow_name'] = data['workflow']['name']
         data['workflow_definition'] = json.dumps(data['workflow'])
-        
+
         now = datetime.datetime.now()
         data['steps'] = [JobStep(date=now, status=StatusExecution.PENDING,
-                             task_id=t['id'],
-                             operation_id=t['operation']['id'],
-                             operation_name="EMPTY")
-                     for t in data['workflow'].get('tasks', [])]
-        
+                                 task_id=t['id'],
+                                 operation_id=t['operation']['id'],
+                                 operation_name="EMPTY")
+                         for t in data['workflow'].get('tasks', [])]
+
         data.pop('cluster')
         data.pop('workflow')
         data.pop('user')
-        
+
         return Job(**data)
 
     class Meta:
@@ -256,25 +241,26 @@ class JobExecuteResponseSchema(Schema):
     """ JSON schema for response """
     id = fields.Integer(required=True)
     created = fields.DateTime(required=True, missing=func.now(),
-                            default=func.now())
+                              default=func.now())
     started = fields.DateTime(required=False, allow_none=True)
     status = fields.String(required=True, missing=StatusExecution.WAITING,
                            default=StatusExecution.WAITING,
                            validate=[OneOf(StatusExecution.__dict__.keys())])
+    status_text = fields.String(required=False, allow_none=True)
     workflow_id = fields.Integer(required=True)
     message = fields.String(allow_none=True)
     status_url = fields.Url(required=True)
-    cluster = fields.Nested('stand.schema.ClusterExecuteResponseSchema',
-                            required=True)
-    steps = fields.Nested('stand.schema.JobStepExecuteResponseSchema',
-                          required=True,
-                          many=True)
-
-    # noinspection PyUnresolvedReferences
-    @post_load
-    def make_object(self, data):
-        """ Deserializes data into an instance of Job"""
-        return Job(**data)
+    cluster = fields.Nested(
+        'stand.schema.ClusterExecuteResponseSchema',
+        required=True)
+    steps = fields.Nested(
+        'stand.schema.JobStepExecuteResponseSchema',
+        required=True,
+        many=True)
+    results = fields.Nested(
+        'stand.schema.JobResultExecuteResponseSchema',
+        required=True,
+        many=True)
 
     class Meta:
         ordered = True
@@ -284,11 +270,31 @@ class JobStatusRequestSchema(Schema):
     """ JSON schema for executing tasks """
     token = fields.String(allow_none=True)
 
-    # noinspection PyUnresolvedReferences
-    @post_load
-    def make_object(self, data):
-        """ Deserializes data into an instance of Job"""
-        return Job(**data)
+    class Meta:
+        ordered = True
+
+
+class JobResultItemResponseSchema(Schema):
+    """ JSON serialization schema """
+    title = fields.String(required=False, allow_none=True)
+    type = fields.String(required=True,
+                         validate=[OneOf(ResultType.__dict__.keys())])
+    content = fields.String(required=False, allow_none=True)
+    task = fields.Function(lambda x: {"id": x.task_id})
+    operation = fields.Function(lambda x: {"id": x.operation_id})
+
+    class Meta:
+        ordered = True
+
+
+class JobResultListResponseSchema(Schema):
+    """ JSON serialization schema """
+    task_id = fields.String(required=True)
+    operation_id = fields.Integer(required=True)
+    title = fields.String(required=False, allow_none=True)
+    type = fields.String(required=True,
+                         validate=[OneOf(ResultType.__dict__.keys())])
+    content = fields.String(required=False, allow_none=True)
 
     class Meta:
         ordered = True
@@ -303,17 +309,15 @@ class JobStepItemResponseSchema(Schema):
     std_out = fields.String(allow_none=True)
     std_err = fields.String(allow_none=True)
     exit_code = fields.Integer(allow_none=True)
-    logs = fields.Nested('stand.schema.JobStepLogItemResponseSchema',
-                         required=True,
-                         many=True)
-    operation = fields.Function(lambda x: {"id": x.operation_id, "name": x.operation_name})
+    logs = fields.Nested(
+        'stand.schema.JobStepLogItemResponseSchema',
+        required=True,
+        many=True)
+    operation = fields.Function(
+        lambda x: {
+            "id": x.operation_id,
+            "name": x.operation_name})
     task = fields.Function(lambda x: {"id": x.task_id})
-
-    # noinspection PyUnresolvedReferences
-    @post_load
-    def make_object(self, data):
-        """ Deserializes data into an instance of JobStep"""
-        return JobStep(**data)
 
     class Meta:
         ordered = True
@@ -324,18 +328,13 @@ class JobStepListResponseSchema(Schema):
     date = fields.DateTime(required=True)
     status = fields.String(required=True,
                            validate=[OneOf(StatusExecution.__dict__.keys())])
-    task_id = fields.Integer(required=True)
+    task_id = fields.String(required=True)
     operation_id = fields.Integer(required=True)
     operation_name = fields.String(required=True)
-    logs = fields.Nested('stand.schema.JobStepLogListResponseSchema',
-                         required=True,
-                         many=True)
-
-    # noinspection PyUnresolvedReferences
-    @post_load
-    def make_object(self, data):
-        """ Deserializes data into an instance of JobStep"""
-        return JobStep(**data)
+    logs = fields.Nested(
+        'stand.schema.JobStepLogListResponseSchema',
+        required=True,
+        many=True)
 
     class Meta:
         ordered = True
@@ -346,18 +345,13 @@ class JobStepCreateRequestSchema(Schema):
     date = fields.DateTime(required=True)
     status = fields.String(required=True,
                            validate=[OneOf(StatusExecution.__dict__.keys())])
-    task_id = fields.Integer(required=True)
+    task_id = fields.String(required=True)
     operation_id = fields.Integer(required=True)
     operation_name = fields.String(required=True)
-    logs = fields.Nested('stand.schema.JobStepLogCreateRequestSchema',
-                         required=True,
-                         many=True)
-
-    # noinspection PyUnresolvedReferences
-    @post_load
-    def make_object(self, data):
-        """ Deserializes data into an instance of JobStep"""
-        return JobStep(**data)
+    logs = fields.Nested(
+        'stand.schema.JobStepLogCreateRequestSchema',
+        required=True,
+        many=True)
 
     class Meta:
         ordered = True
@@ -370,12 +364,6 @@ class JobStepLogListResponseSchema(Schema):
     date = fields.DateTime(required=True)
     message = fields.String(required=True)
 
-    # noinspection PyUnresolvedReferences
-    @post_load
-    def make_object(self, data):
-        """ Deserializes data into an instance of JobStepLog"""
-        return JobStepLog(**data)
-
     class Meta:
         ordered = True
 
@@ -387,12 +375,6 @@ class JobStepLogItemResponseSchema(Schema):
     date = fields.DateTime(required=True)
     message = fields.String(required=True)
 
-    # noinspection PyUnresolvedReferences
-    @post_load
-    def make_object(self, data):
-        """ Deserializes data into an instance of JobStepLog"""
-        return JobStepLog(**data)
-
     class Meta:
         ordered = True
 
@@ -403,12 +385,6 @@ class JobStepLogCreateRequestSchema(Schema):
     level = fields.String(required=True)
     date = fields.DateTime(required=True)
     message = fields.String(required=True)
-
-    # noinspection PyUnresolvedReferences
-    @post_load
-    def make_object(self, data):
-        """ Deserializes data into an instance of JobStepLog"""
-        return JobStepLog(**data)
 
     class Meta:
         ordered = True

@@ -1,3 +1,4 @@
+import json
 import logging
 
 import datetime
@@ -15,8 +16,8 @@ class StandSocketIO:
         self.redis_store = create_redis_store(_app)
 
         handlers = {
-            'connect': self.on_connect,
-            'disconnect': self.on_disconnect,
+            # 'connect': self.on_connect,
+            # 'disconnect': self.on_disconnect,
             'disconnect request': self.on_disconnect_request,
 
             'join': self.on_join_room,
@@ -42,7 +43,8 @@ class StandSocketIO:
     def on_leave_room(self, sid, message):
         room = str(message.get('room'))
 
-        info = self.redis_store.hget('room_{}'.format(room), sid) or {}
+        info = json.loads(
+            self.redis_store.hget('room_{}'.format(room), sid) or '{}')
         info['left'] = datetime.datetime.utcnow()
         self.redis_store.hset('room_{}'.format(room), sid, info)
 
@@ -68,9 +70,10 @@ class StandSocketIO:
                             room=sid, namespace=self.namespace)
 
     def on_disconnect(self, sid):
-        self.socket_io.disconnect(sid, namespace=self.namespace)
         self.logger.info('%s disconnected', sid)
 
     def on_disconnect_request(self, sid):
+        import pdb
+        pdb.set_trace()
         self.logger.info('%s asked for disconnection', sid)
         self.socket_io.disconnect(sid, namespace=self.namespace)
