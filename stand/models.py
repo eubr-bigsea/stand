@@ -69,6 +69,19 @@ class ClusterPermission:
 
 
 # noinspection PyClassHasNoInit
+class PermissionType:
+    STOP = 'STOP'
+    EXECUTE = 'EXECUTE'
+    MANAGE = 'MANAGE'
+    LIST = 'LIST'
+
+    @staticmethod
+    def values():
+        return [n for n in PermissionType.__dict__.keys()
+                if n[0] != '_' and n != 'values']
+
+
+# noinspection PyClassHasNoInit
 class JobException(BaseException):
     ALREADY_FINISHED = 'ALREADY_FINISHED'
     ALREADY_LOCKED = 'ALREADY_LOCKED'
@@ -118,6 +131,23 @@ class ClusterAccess(db.Model):
     cluster_id = Column(Integer,
                         ForeignKey("cluster.id"), nullable=False)
     cluster = relationship("Cluster", foreign_keys=[cluster_id])
+
+    def __unicode__(self):
+        return self.permission
+
+    def __repr__(self):
+        return '<Instance {}: {}>'.format(self.__class__, self.id)
+
+
+class ExecutionPermission(db.Model):
+    """ Associates permissions to a user """
+    __tablename__ = 'execution_permission'
+
+    # Fields
+    id = Column(Integer, primary_key=True)
+    permission = Column(Enum(*PermissionType.values(),
+                             name='PermissionTypeEnumType'), nullable=False)
+    user_id = Column(Integer, nullable=False)
 
     def __unicode__(self):
         return self.permission

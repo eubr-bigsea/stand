@@ -2,6 +2,7 @@
 import math
 
 from app_auth import requires_auth
+from flask import g
 from flask import request, current_app
 from flask_restful import Resource
 from schema import *
@@ -19,19 +20,29 @@ def apply_filter(query, args, name, transform=None, transform_name=None):
     return result
 
 
+def _get_jobs(jobs, permissions):
+    if g.user.id != 0:  # It is not a inter service call
+        any_permission = ExecutionPermission.query.filter(
+            ExecutionPermission.permission.in_(permissions)).all()
+        if len(any_permission) == 0:
+            jobs = jobs.filter(Job.user_id == g.user.id)
+    return jobs
+
+
 class JobListApi(Resource):
     """ REST API for listing class Job """
 
     @staticmethod
     @requires_auth
     def get():
-        only = None
+        only = None if request.args.get('simple') != 'true' else ('id',)
         if request.args.get('fields'):
             only = tuple(
                 [x.strip() for x in request.args.get('fields').split(',')])
 
-        jobs = Job.query
-        for name in ['workflow_id', 'user_id']:
+        jobs = _get_jobs(Job.query, [PermissionType.LIST, PermissionType.STOP,
+                                     PermissionType.MANAGE])
+        for name in ['workflow_id']:
             jobs = apply_filter(jobs, request.args, name, int,
                                 lambda field: field)
 
@@ -45,7 +56,7 @@ class JobListApi(Resource):
 
         jobs = jobs.order_by(sort_option)
 
-        page = request.args.get('page')
+        page = request.args.get('page') or '1'
 
         if page is not None and page.isdigit():
             page_size = int(request.args.get('size', 20))
@@ -112,9 +123,11 @@ class JobDetailApi(Resource):
     @staticmethod
     @requires_auth
     def get(job_id):
-        job = Job.query.get(job_id)
-        if job is not None:
-            return JobItemResponseSchema().dump(job).data
+        jobs = _get_jobs(Job.query.filter(Job.id == job_id),
+                         [PermissionType.LIST, PermissionType.STOP,
+                          PermissionType.MANAGE]).all()
+        if len(jobs) == 1:
+            return JobItemResponseSchema().dump(jobs[0]).data
         else:
             return dict(status="ERROR", message="Not found"), 404
 
@@ -296,19 +309,20 @@ class UpdateJobStatusActionApi(Resource):
     def post(job_id):
         result, result_code = dict(status="ERROR", message="Not found"), 404
 
-        job = Job.query.get(int(job_id))
-        if job is not None:
-            try:
-                job.status = request.json.get('status')
-                db.session.add(job)
-                db.session.commit()
-                result, result_code = dict(status="OK", message=""), 200
-            except Exception as e:
-                result, result_code = dict(status="ERROR",
-                                           message="Internal error"), 500
-                if current_app.debug:
-                    result['debug_detail'] = e.message
-                db.session.rollback()
+        if g.user.id == 0:  # Only inter service requests
+            job = Job.query.get(int(job_id))
+            if job is not None:
+                try:
+                    job.status = request.json.get('status')
+                    db.session.add(job)
+                    db.session.commit()
+                    result, result_code = dict(status="OK", message=""), 200
+                except Exception as e:
+                    result, result_code = dict(status="ERROR",
+                                               message="Internal error"), 500
+                    if current_app.debug:
+                        result['debug_detail'] = e.message
+                    db.session.rollback()
         return result, result_code
 
 
@@ -320,20 +334,21 @@ class UpdateJobStepStatusActionApi(Resource):
     def post(job_id, task_id):
         result, result_code = dict(status="ERROR", message="Not found"), 404
 
-        step = JobStep.query.filter(and_(
-            JobStep.job_id == int(job_id),
-            JobStep.task_id == task_id)).first()
-        if step is not None:
-            try:
-                step.status = request.json.get('status')
-                step.message = request.json.get('message')
-                db.session.add(step)
-                db.session.commit()
-                result, result_code = dict(status="OK", message=""), 200
-            except Exception as e:
-                result, result_code = dict(status="ERROR",
-                                           message="Internal error"), 500
-                if current_app.debug:
-                    result['debug_detail'] = e.message
-                db.session.rollback()
+        if g.user.id == 0:  # Only inter service requests
+            step = JobStep.query.filter(and_(
+                JobStep.job_id == int(job_id),
+                JobStep.task_id == task_id)).first()
+            if step is not None:
+                try:
+                    step.status = request.json.get('status')
+                    step.message = request.json.get('message')
+                    db.session.add(step)
+                    db.session.commit()
+                    result, result_code = dict(status="OK", message=""), 200
+                except Exception as e:
+                    result, result_code = dict(status="ERROR",
+                                               message="Internal error"), 500
+                    if current_app.debug:
+                        result['debug_detail'] = e.message
+                    db.session.rollback()
         return result, result_code

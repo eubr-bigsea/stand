@@ -126,15 +126,15 @@ class JobService:
                                   app_id=job.workflow_id,
                                   job_id=job.id,
                                   type='terminate'))
-            redis_store.rpush("queue_start", msg)
+            redis_store.rpush("queue_stop", msg)
 
-            # This hash controls the status of job. Used for prevent starting
-            # a canceled job be started by Juicer (FIXME: is it used?).
-            redis_store.hset('record_workflow_{}'.format(job.workflow_id),
-                             'status', StatusExecution.CANCELED)
-
-            redis_store.hset('job_{}'.format(job.id),
-                             'status', StatusExecution.CANCELED)
+            # # This hash controls the status of job. Used for prevent starting
+            # # a canceled job be started by Juicer (FIXME: is it used?).
+            # redis_store.hset('record_workflow_{}'.format(job.workflow_id),
+            #                  'status', StatusExecution.CANCELED)
+            #
+            # redis_store.hset('job_{}'.format(job.id),
+            #                  'status', StatusExecution.CANCELED)
 
             db.session.commit()
 
