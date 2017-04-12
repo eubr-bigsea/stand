@@ -1,7 +1,7 @@
 import datetime
 import logging
 import logging.config
-
+import os
 import socketio
 from flask import Flask
 from flask_admin import Admin
@@ -32,7 +32,7 @@ class MockRedisWrapper(MockRedis):
 
 def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
     if config_file:
-        os.environ['STAND_CONFIG_FILE'] = config_file
+        os.environ['STAND_CONFIG'] = config_file
 
     from stand.configuration import stand_configuration
     app = Flask(__name__)
@@ -64,8 +64,10 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
     # Flask Admin
     admin = Admin(app, name='Stand', template_mode='bootstrap3')
 
+    os.chdir(os.environ.get('STAND_HOME', '.'))
     # Logging configuration
     logging.config.fileConfig('logging_config.ini')
+
     # logging.getLogger('sqlalchemy.engine').setLevel(log_level)
     # logging.getLogger('werkzeug').setLevel(log_level)
 
