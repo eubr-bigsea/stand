@@ -275,23 +275,17 @@ class JobSampleActionApi(Resource):
 
         job = Job.query.get(job_id)
         if job is not None:
-            data = json.loads(request.data)
             try:
-                fields = ['id', 'name', 'salary', 'birthday']
-                data = json.dumps(
-                    [
-                        {}
-                    ]
-                )
+                data = json.loads(request.data)
+                JobService.retrieve_sample(data['user'], job, task_id,
+                                           data['port'], wait=30)
+
                 result, result_code = dict(status="OK", message="",
                                            fieds=fields,
                                            data=data), 200
             except JobException as je:
                 result, result_code = dict(
                     status="ERROR", message=je.message, code=je.error_code), 401
-                if je.error_code == JobException.ALREADY_LOCKED:
-                    result_code = 409
-
             except Exception as e:
                 result, result_code = dict(status="ERROR",
                                            message="Internal error"), 500
