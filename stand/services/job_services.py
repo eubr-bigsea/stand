@@ -175,3 +175,19 @@ class JobService:
             return json.loads(already_locked)
         else:
             return None
+
+    @staticmethod
+    def retrieve_sample(user, job, task_id, port_name, wait):
+        queue_name = "queue_app_{}".format(job.workflow_id)
+        redis_store = connect_redis_store(None, testing=False)
+        msg = {
+            'workflow_id': job.workflow_id,
+            'app_id': job.workflow_id,
+            'job_id': job.id,
+            'type': 'deliver',
+            'task_id': task_id,
+            'output': port_name,
+            'port': port_name
+        }
+        redis_store.rpush(queue_name, msg)
+        # DELIVER messages request the delivery of a result (task_id)
