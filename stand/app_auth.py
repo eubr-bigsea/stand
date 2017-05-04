@@ -27,7 +27,8 @@ def requires_auth(f):
     @wraps(f)
     def decorated(*_args, **kwargs):
         access_token = request.headers.get('access-token')
-        user_id = request.headers.get('user_id') or (
+        user_id = request.args.get('user_id') or \
+            request.headers.get('user_id') or (
             request.json and request.json.get('user_id'))
         client = request.headers.get('client')
 
