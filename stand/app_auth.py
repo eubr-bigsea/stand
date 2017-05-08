@@ -52,7 +52,7 @@ def requires_auth(f):
                                         locale=user_data['locale']))
                 return f(*_args, **kwargs)
         elif request.args.get('token'):
-            if request.args.get('token') == config['secret']:
+            if request.args.get('token') == str(config['secret']):
                 setattr(g, 'user',
                         User(0, '', '', '', '', ''))  # System user
                 return f(*_args, **kwargs)

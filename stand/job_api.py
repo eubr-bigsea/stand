@@ -277,21 +277,26 @@ class JobSampleActionApi(Resource):
         if job is not None:
             try:
                 data = json.loads(request.data)
-                JobService.retrieve_sample(data['user'], job, task_id,
+                resp = JobService.retrieve_sample(data['user'], job, task_id,
                                            data['port'], wait=30)
 
-                result, result_code = dict(status="OK", message="",
-                                           fieds=fields,
-                                           data=data), 200
+
+                result, result_code = dict(status=resp['status'],
+                        message=resp['message'],
+                        data=data,
+                        sample=resp['sample']), 200
+
             except JobException as je:
                 result, result_code = dict(
                     status="ERROR", message=je.message, code=je.error_code), 401
+
             except Exception as e:
                 result, result_code = dict(status="ERROR",
                                            message="Internal error"), 500
                 if current_app.debug:
                     result['debug_detail'] = e.message
                 db.session.rollback()
+
         return result, result_code
 
 
