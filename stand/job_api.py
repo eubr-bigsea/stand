@@ -8,7 +8,9 @@ from flask_restful import Resource
 from schema import *
 from sqlalchemy import and_
 from stand.services.job_services import JobService
+import logging
 
+log = logging.getLogger(__name__)
 
 def apply_filter(query, args, name, transform=None, transform_name=None):
     result = query
@@ -104,10 +106,12 @@ class JobListApi(Resource):
                     result = dict(data=response_schema.dump(job).data,
                                   message='', status='OK')
                 except JobException as je:
+                    log.exception('Error in POST')
                     result = dict(status="ERROR", message=je.message,
                                   code=je.error_code)
                     result_code = 401
                 except Exception as e:
+                    log.exception('Error in POST')
                     result, result_code = dict(status="ERROR",
                                                message="Internal error"), 500
                     if current_app.debug or True:
@@ -171,6 +175,7 @@ class JobDetailApi(Resource):
                         else:
                             result = dict(status="ERROR", message="Not found")
                     except Exception, e:
+                        log.exception('Error in PATCH')
                         result, result_code = dict(
                             status="ERROR", message="Internal error"), 500
                         if current_app.debug:
@@ -180,6 +185,7 @@ class JobDetailApi(Resource):
                     result = dict(status="ERROR", message="Invalid data",
                                   errors=form.errors)
         except Exception as e:
+            log.exception('Error in PATCH')
             result_code = 500
             import sys
             result = {'status': "ERROR", 'message': sys.exc_info()[1]}
@@ -203,6 +209,7 @@ class JobStopActionApi(Resource):
                     status="OK", message="Deleted",
                     data=response_schema.dump(job).data), 200
             except JobException as je:
+                log.exception('Error in POST')
                 result, result_code = dict(status="ERROR",
                                            message=je.message,
                                            code=je.error_code), 401
@@ -211,6 +218,7 @@ class JobStopActionApi(Resource):
                 #     result['data'] = response_schema.dump(job).data
                 #     result_code = 200
             except Exception as e:
+                log.exception('Error in POST')
                 result, result_code = dict(status="ERROR",
                                            message="Internal error"), 500
                 if current_app.debug:
@@ -246,12 +254,14 @@ class JobLockActionApi(Resource):
                 JobService.lock(job, data['user'], data['computer'])
                 result, result_code = dict(status="OK", message="Locked"), 200
             except JobException as je:
+                log.exception('Error in POST')
                 result, result_code = dict(
                     status="ERROR", message=je.message, code=je.error_code), 401
                 if je.error_code == JobException.ALREADY_LOCKED:
                     result_code = 409
 
             except Exception as e:
+                log.exception('Error in POST')
                 result, result_code = dict(status="ERROR",
                                            message="Internal error"), 500
                 if current_app.debug:
@@ -284,9 +294,11 @@ class JobSampleActionApi(Resource):
                                            fieds=fields,
                                            data=data), 200
             except JobException as je:
+                log.exception('Error in POST')
                 result, result_code = dict(
                     status="ERROR", message=je.message, code=je.error_code), 401
             except Exception as e:
+                log.exception('Error in POST')
                 result, result_code = dict(status="ERROR",
                                            message="Internal error"), 500
                 if current_app.debug:
@@ -312,6 +324,7 @@ class UpdateJobStatusActionApi(Resource):
                     db.session.commit()
                     result, result_code = dict(status="OK", message=""), 200
                 except Exception as e:
+                    log.exception('Error in POST')
                     result, result_code = dict(status="ERROR",
                                                message="Internal error"), 500
                     if current_app.debug:
@@ -340,6 +353,7 @@ class UpdateJobStepStatusActionApi(Resource):
                     db.session.commit()
                     result, result_code = dict(status="OK", message=""), 200
                 except Exception as e:
+                    log.exception('Error in POST')
                     result, result_code = dict(status="ERROR",
                                                message="Internal error"), 500
                     if current_app.debug:

@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-}
+import logging
+
 from app_auth import requires_auth
 from flask import request, current_app
 from flask_restful import Resource
 from schema import *
+
+log = logging.getLogger(__name__)
 
 
 class ClusterListApi(Resource):
@@ -48,6 +52,7 @@ class ClusterListApi(Resource):
                     result, result_code = response_schema.dump(
                         cluster).data, 200
                 except Exception, e:
+                    log.exception('Error in POST')
                     result, result_code = dict(status="ERROR",
                                                message="Internal error"), 500
                     if current_app.debug:
