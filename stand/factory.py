@@ -15,7 +15,7 @@ from stand.cluster_api import ClusterDetailApi
 from stand.cluster_api import ClusterListApi
 from stand.job_api import JobListApi, JobDetailApi, \
     JobStopActionApi, JobLockActionApi, JobUnlockActionApi, \
-    UpdateJobStatusActionApi, UpdateJobStepStatusActionApi
+    UpdateJobStatusActionApi, UpdateJobStepStatusActionApi, JobSampleActionApi
 from stand.models import db, Job, JobStep, JobStepLog, StatusExecution, \
     JobResult
 from stand.services.redis_service import connect_redis_store
@@ -84,7 +84,7 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
         '/jobs/<int:job_id>/unlock': JobUnlockActionApi,
         '/jobs/<int:job_id>/status': UpdateJobStatusActionApi,
         '/jobs/<int:job_id>/<task_id>/status': UpdateJobStepStatusActionApi,
-        # '/jobs/<int:job_id>/sample/<str:task_id>': JobSampleActionApi,
+        '/jobs/<int:job_id>/sample/<str:task_id>': JobSampleActionApi,
         '/clusters': ClusterListApi,
         '/clusters/<int:cluster_id>': ClusterDetailApi,
     }
