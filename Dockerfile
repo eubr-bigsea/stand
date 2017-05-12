@@ -9,7 +9,9 @@ RUN apt-get update && apt-get install -y  \
    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR $STAND_HOME
-COPY . $STAND_HOME
+COPY requirements.txt $STAND_HOM
 RUN pip install -r $STAND_HOME/requirements.txt
+
+COPY . $STAND_HOME
 
 CMD ["/usr/local/stand/sbin/stand-daemon.sh", "startf"]

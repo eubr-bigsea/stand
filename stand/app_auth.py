@@ -36,7 +36,8 @@ def requires_auth(f):
         client = request.headers.get('client')
 
         config = current_app.config[CONFIG_KEY]
-        internal_token = request.args.get('token', request.headers.get('x-auth-token'))
+        internal_token = request.args.get('token',
+                                          request.headers.get('x-auth-token'))
         if access_token and user_id and client:
             # It is using Thorn
             url = '{}/users/valid_token'.format(
@@ -55,8 +56,8 @@ def requires_auth(f):
                                         last_name=user_data['lastname'],
                                         locale=user_data['locale']))
                 return f(*_args, **kwargs)
-        elif request.args.get('token'):
-            if request.args.get('token') == str(config['secret']):
+        elif internal_token:
+            if internal_token == str(config['secret']):
                 setattr(g, 'user',
                         User(0, '', '', '', '', ''))  # System user
                 return f(*_args, **kwargs)

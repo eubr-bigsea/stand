@@ -93,3 +93,6 @@ ENV/
 
 # Idea
 .idea/
+
+# Tests
+tests/test_project.db
