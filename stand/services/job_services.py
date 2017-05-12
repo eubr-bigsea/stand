@@ -126,7 +126,7 @@ class JobService:
                                   app_id=job.workflow_id,
                                   job_id=job.id,
                                   type='terminate'))
-            redis_store.rpush("queue_stop", msg)
+            redis_store.rpush("queue_start", msg)
 
             # # This hash controls the status of job. Used for prevent starting
             # # a canceled job be started by Juicer (FIXME: is it used?).
@@ -178,16 +178,18 @@ class JobService:
 
     @staticmethod
     def retrieve_sample(user, job, task_id, port_name, wait):
-        queue_name = "queue_app_{}".format(job.workflow_id)
+        # DELIVER messages request the delivery of a result (task_id)
         redis_store = connect_redis_store(None, testing=False)
-        msg = {
+        output = 'queue_delivery_app_{app_id}_{port_name}'.format(
+                app_id=job.workflow_id, port_name=port_name)
+        msg = json.dumps ({
             'workflow_id': job.workflow_id,
             'app_id': job.workflow_id,
             'job_id': job.id,
             'type': 'deliver',
             'task_id': task_id,
-            'output': port_name,
+            'output': output,
             'port': port_name
-        }
-        redis_store.rpush(queue_name, msg)
-        # DELIVER messages request the delivery of a result (task_id)
+        })
+        redis_store.rpush("queue_start", msg)
+        return json.loads(redis_store.blpop(output)[1])

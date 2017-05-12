@@ -55,8 +55,8 @@ def requires_auth(f):
                                         last_name=user_data['lastname'],
                                         locale=user_data['locale']))
                 return f(*_args, **kwargs)
-        elif internal_token:
-            if internal_token  == config['secret']:
+        elif request.args.get('token'):
+            if request.args.get('token') == str(config['secret']):
                 setattr(g, 'user',
                         User(0, '', '', '', '', ''))  # System user
                 return f(*_args, **kwargs)

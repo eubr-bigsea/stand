@@ -15,7 +15,8 @@ from stand.cluster_api import ClusterDetailApi
 from stand.cluster_api import ClusterListApi
 from stand.job_api import JobListApi, JobDetailApi, \
     JobStopActionApi, JobLockActionApi, JobUnlockActionApi, \
-    UpdateJobStatusActionApi, UpdateJobStepStatusActionApi, JobSampleActionApi
+    UpdateJobStatusActionApi, UpdateJobStepStatusActionApi, \
+    JobSampleActionApi
 from stand.models import db, Job, JobStep, JobStepLog, StatusExecution, \
     JobResult
 from stand.services.redis_service import connect_redis_store
