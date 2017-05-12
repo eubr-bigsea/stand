@@ -84,7 +84,7 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
         '/jobs/<int:job_id>/unlock': JobUnlockActionApi,
         '/jobs/<int:job_id>/status': UpdateJobStatusActionApi,
         '/jobs/<int:job_id>/<task_id>/status': UpdateJobStepStatusActionApi,
-        '/jobs/<int:job_id>/sample/<str:task_id>': JobSampleActionApi,
+        '/jobs/<int:job_id>/sample/<task_id>': JobSampleActionApi,
         '/clusters': ClusterListApi,
         '/clusters/<int:cluster_id>': ClusterDetailApi,
     }
