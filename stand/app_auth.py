@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-}
 import json
+import logging 
 from collections import namedtuple
 from functools import wraps
 
 import requests
 from flask import request, Response, g, current_app
-
+logger = logging.getLogger(__name__)
 User = namedtuple("User", "id, login, email, first_name, last_name, locale")
 
 MSG1 = 'Could not verify your access level for that URL. ' \
@@ -17,8 +18,9 @@ MSG2 = 'Could not verify your access level for that URL. ' \
 CONFIG_KEY = 'STAND_CONFIG'
 
 
-def authenticate(msg):
+def authenticate(msg, extra_info):
     """Sends a 401 response that enables basic auth"""
+    logging.info('User parameters: %s', json.dumps(extra_info))
     return Response(json.dumps({'status': 'ERROR', 'message': msg}), 401,
                     mimetype="application/json")
 
@@ -28,11 +30,13 @@ def requires_auth(f):
     def decorated(*_args, **kwargs):
         access_token = request.headers.get('access-token')
         user_id = request.args.get('user_id') or \
-            request.headers.get('user_id') or (
-            request.json and request.json.get('user_id'))
+            request.headers.get('x-user-id') or (
+            request.json and (request.json.get('user_id') or 
+                              request.json.get('user', {}).get('id')))
         client = request.headers.get('client')
 
         config = current_app.config[CONFIG_KEY]
+        internal_token = request.args.get('token', request.headers.get('x-auth-token'))
         if access_token and user_id and client:
             # It is using Thorn
             url = '{}/users/valid_token'.format(
@@ -57,8 +61,12 @@ def requires_auth(f):
                         User(0, '', '', '', '', ''))  # System user
                 return f(*_args, **kwargs)
             else:
-                return authenticate(MSG2)
+                return authenticate(MSG2, {'client': client, 
+                                       'access_token': access_token,
+                                       'user_id': user_id })
         else:
-            return authenticate(MSG1)
+            return authenticate(MSG1, {'client': client, 
+                                       'access_token': access_token,
+                                       'user_id': user_id })
 
     return decorated
