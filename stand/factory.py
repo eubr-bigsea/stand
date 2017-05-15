@@ -101,8 +101,9 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
 
 
 def wait_client():
-    import pdb
-    pdb.set_trace()
+    print '#' * 20 
+    print 'Client ACK'
+    print '#' * 20 
 
 
 def mocked_emit(original_emit, app_):
