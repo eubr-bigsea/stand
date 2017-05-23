@@ -73,7 +73,5 @@ class StandSocketIO:
         self.logger.info('%s disconnected', sid)
 
     def on_disconnect_request(self, sid):
-        import pdb
-        pdb.set_trace()
         self.logger.info('%s asked for disconnection', sid)
         self.socket_io.disconnect(sid, namespace=self.namespace)

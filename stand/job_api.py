@@ -83,7 +83,7 @@ class JobListApi(Resource):
     def post():
 
         result, result_code = dict(
-            status="ERROR", message="Missing json in the request body"), 401
+            status="ERROR", message="Missing json in the request body"), 400
         if request.data is not None:
             request_json = json.loads(request.data)
             request_schema = JobCreateRequestSchema()
@@ -96,7 +96,7 @@ class JobListApi(Resource):
             if form.errors:
                 result, result_code = dict(
                     status="ERROR", message="Validation error",
-                    errors=form.errors), 401
+                    errors=form.errors), 400
             else:
                 try:
                     job = form.data
@@ -109,7 +109,7 @@ class JobListApi(Resource):
                     log.exception('Error in POST')
                     result = dict(status="ERROR", message=je.message,
                                   code=je.error_code)
-                    result_code = 401
+                    result_code = 400
                 except Exception as e:
                     log.exception('Error in POST')
                     result, result_code = dict(status="ERROR",
@@ -212,7 +212,7 @@ class JobStopActionApi(Resource):
                 log.exception('Error in POST')
                 result, result_code = dict(status="ERROR",
                                            message=je.message,
-                                           code=je.error_code), 401
+                                           code=je.error_code), 400
                 # if je.error_code == JobException.ALREADY_FINISHED:
                 #     result['status'] = 'OK'
                 #     result['data'] = response_schema.dump(job).data
@@ -256,7 +256,7 @@ class JobLockActionApi(Resource):
             except JobException as je:
                 log.exception('Error in POST')
                 result, result_code = dict(
-                    status="ERROR", message=je.message, code=je.error_code), 401
+                    status="ERROR", message=je.message, code=je.error_code), 400
                 if je.error_code == JobException.ALREADY_LOCKED:
                     result_code = 409
 
@@ -299,7 +299,7 @@ class JobSampleActionApi(Resource):
             except JobException as je:
                 log.exception('Error in POST')
                 result, result_code = dict(
-                    status="ERROR", message=je.message, code=je.error_code), 401
+                    status="ERROR", message=je.message, code=je.error_code), 400
 
             except Exception as e:
                 log.exception('Error in POST')
