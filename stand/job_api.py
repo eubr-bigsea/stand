@@ -45,7 +45,7 @@ class JobListApi(Resource):
 
         jobs = _get_jobs(Job.query, [PermissionType.LIST, PermissionType.STOP,
                                      PermissionType.MANAGE])
-        for name in ['workflow_id']:
+        for name in ['workflow_id', 'user_id']:
             jobs = apply_filter(jobs, request.args, name, int,
                                 lambda field: field)
 
