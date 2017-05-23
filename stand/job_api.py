@@ -105,6 +105,8 @@ class JobListApi(Resource):
                     result_code = 200
                     result = dict(data=response_schema.dump(job).data,
                                   message='', status='OK')
+            except KeyError as ke:
+                result['detail'] = 'Missing information in JSON'
             except ValueError as ve:
                 pass  # default return value
             except JobException as je:
