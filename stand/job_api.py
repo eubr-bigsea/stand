@@ -99,6 +99,7 @@ class JobListApi(Resource):
                     result, result_code = dict(
                         status="ERROR", message="Validation error",
                         errors=form.errors), 400
+                else:
                     job = form.data
                     JobService.start(job, request_json['workflow'],
                                      request_json.get('app_configs', {}))
