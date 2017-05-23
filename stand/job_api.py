@@ -12,6 +12,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 def apply_filter(query, args, name, transform=None, transform_name=None):
     result = query
     if name in args and args[name].strip() != '':
@@ -83,40 +84,44 @@ class JobListApi(Resource):
     def post():
 
         result, result_code = dict(
-            status="ERROR", message="Missing json in the request body"), 401
+            status="ERROR", message="Missing json in the request body"), 400
         if request.data is not None:
-            request_json = json.loads(request.data)
-            request_schema = JobCreateRequestSchema()
-            response_schema = JobItemResponseSchema()
+            try:
+                request_json = json.loads(request.data)
+                request_schema = JobCreateRequestSchema()
+                response_schema = JobItemResponseSchema()
 
-            request_json['status'] = StatusExecution.WAITING
+                request_json['status'] = StatusExecution.WAITING
 
-            form = request_schema.load(request_json)
+                form = request_schema.load(request_json)
 
-            if form.errors:
-                result, result_code = dict(
-                    status="ERROR", message="Validation error",
-                    errors=form.errors), 401
-            else:
-                try:
+                if form.errors:
+                    result, result_code = dict(
+                        status="ERROR", message="Validation error",
+                        errors=form.errors), 400
+                else:
                     job = form.data
                     JobService.start(job, request_json['workflow'],
                                      request_json.get('app_configs', {}))
                     result_code = 200
                     result = dict(data=response_schema.dump(job).data,
                                   message='', status='OK')
-                except JobException as je:
-                    log.exception('Error in POST')
-                    result = dict(status="ERROR", message=je.message,
-                                  code=je.error_code)
-                    result_code = 401
-                except Exception as e:
-                    log.exception('Error in POST')
-                    result, result_code = dict(status="ERROR",
-                                               message="Internal error"), 500
-                    if current_app.debug or True:
-                        result['debug_detail'] = e.message
-                    db.session.rollback()
+            except KeyError as ke:
+                result['detail'] = 'Missing information in JSON'
+            except ValueError as ve:
+                pass  # default return value
+            except JobException as je:
+                log.exception('Error in POST')
+                result = dict(status="ERROR", message=je.message,
+                              code=je.error_code)
+                result_code = 400
+            except Exception as e:
+                log.exception('Error in POST')
+                result, result_code = dict(status="ERROR",
+                                           message="Internal error"), 500
+                if current_app.debug or True:
+                    result['debug_detail'] = e.message
+                db.session.rollback()
 
         return result, result_code
 
@@ -212,7 +217,7 @@ class JobStopActionApi(Resource):
                 log.exception('Error in POST')
                 result, result_code = dict(status="ERROR",
                                            message=je.message,
-                                           code=je.error_code), 401
+                                           code=je.error_code), 400
                 # if je.error_code == JobException.ALREADY_FINISHED:
                 #     result['status'] = 'OK'
                 #     result['data'] = response_schema.dump(job).data
@@ -256,7 +261,7 @@ class JobLockActionApi(Resource):
             except JobException as je:
                 log.exception('Error in POST')
                 result, result_code = dict(
-                    status="ERROR", message=je.message, code=je.error_code), 401
+                    status="ERROR", message=je.message, code=je.error_code), 400
                 if je.error_code == JobException.ALREADY_LOCKED:
                     result_code = 409
 
@@ -288,18 +293,17 @@ class JobSampleActionApi(Resource):
             try:
                 data = json.loads(request.data)
                 resp = JobService.retrieve_sample(data['user'], job, task_id,
-                                           data['port'], wait=30)
-
+                                                  data['port'], wait=30)
 
                 result, result_code = dict(status=resp['status'],
-                        message=resp['message'],
-                        data=data,
-                        sample=resp['sample']), 200
+                                           message=resp['message'],
+                                           data=data,
+                                           sample=resp['sample']), 200
 
             except JobException as je:
                 log.exception('Error in POST')
                 result, result_code = dict(
-                    status="ERROR", message=je.message, code=je.error_code), 401
+                    status="ERROR", message=je.message, code=je.error_code), 400
 
             except Exception as e:
                 log.exception('Error in POST')
