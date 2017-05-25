@@ -37,8 +37,18 @@ def requires_auth(f):
 
         config = current_app.config[CONFIG_KEY]
         internal_token = request.args.get('token',
-                                          request.headers.get('x-auth-token'))
-        if access_token and user_id and client:
+            request.headers.get('x-auth-token'))
+        
+        if internal_token:
+            if internal_token == str(config['secret']):
+                setattr(g, 'user',
+                        User(0, '', '', '', '', ''))  # System user
+                return f(*_args, **kwargs)
+            else:
+                return authenticate(MSG2, {'client': client, 
+                                       'access_token': access_token,
+                                       'user_id': user_id })
+        elif access_token and user_id and client:
             # It is using Thorn
             url = '{}/users/valid_token'.format(
                 config['services']['thorn']['url'])
@@ -46,7 +56,7 @@ def requires_auth(f):
                                               'user_id': user_id,
                                               'client': client})
             if result.status_code != 200:
-                return authenticate(MSG2)
+                return authenticate(MSG2, {})
             else:
                 user_data = json.loads(result.text)
                 setattr(g, 'user', User(id=user_data['id'],
@@ -56,15 +66,6 @@ def requires_auth(f):
                                         last_name=user_data['lastname'],
                                         locale=user_data['locale']))
                 return f(*_args, **kwargs)
-        elif internal_token:
-            if internal_token == str(config['secret']):
-                setattr(g, 'user',
-                        User(0, '', '', '', '', ''))  # System user
-                return f(*_args, **kwargs)
-            else:
-                return authenticate(MSG2, {'client': client, 
-                                       'access_token': access_token,
-                                       'user_id': user_id })
         else:
             return authenticate(MSG1, {'client': client, 
                                        'access_token': access_token,
