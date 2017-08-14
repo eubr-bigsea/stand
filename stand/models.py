@@ -7,6 +7,7 @@ from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, \
 from sqlalchemy import event
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship, backref
+from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy_i18n import make_translatable, translation_base, Translatable
 
 make_translatable(options={'locales': ['pt', 'en', 'es'],
@@ -130,7 +131,9 @@ class ClusterAccess(db.Model):
     # Associations
     cluster_id = Column(Integer,
                         ForeignKey("cluster.id"), nullable=False)
-    cluster = relationship("Cluster", foreign_keys=[cluster_id])
+    cluster = relationship(
+        "Cluster",
+        foreign_keys=[cluster_id])
 
     def __unicode__(self):
         return self.permission
@@ -180,7 +183,9 @@ class Job(db.Model):
     # Associations
     cluster_id = Column(Integer,
                         ForeignKey("cluster.id"), nullable=False)
-    cluster = relationship("Cluster", foreign_keys=[cluster_id])
+    cluster = relationship(
+        "Cluster",
+        foreign_keys=[cluster_id])
     steps = relationship("JobStep", back_populates="job")
     results = relationship("JobResult", back_populates="job")
 
@@ -207,7 +212,9 @@ class JobResult(db.Model):
     # Associations
     job_id = Column(Integer,
                     ForeignKey("job.id"), nullable=False)
-    job = relationship("Job", foreign_keys=[job_id])
+    job = relationship(
+        "Job",
+        foreign_keys=[job_id])
 
     def __unicode__(self):
         return self.task_id
@@ -232,7 +239,9 @@ class JobStep(db.Model):
     # Associations
     job_id = Column(Integer,
                     ForeignKey("job.id"), nullable=False)
-    job = relationship("Job", foreign_keys=[job_id])
+    job = relationship(
+        "Job",
+        foreign_keys=[job_id])
     logs = relationship("JobStepLog")
 
     def __unicode__(self):
@@ -251,11 +260,15 @@ class JobStepLog(db.Model):
     level = Column(String(200), nullable=False)
     date = Column(DateTime, nullable=False)
     message = Column(Text, nullable=False)
+    type = Column(String(50),
+                  default='TEXT', nullable=False)
 
     # Associations
     step_id = Column(Integer,
                      ForeignKey("job_step.id"), nullable=False)
-    step = relationship("JobStep", foreign_keys=[step_id])
+    step = relationship(
+        "JobStep",
+        foreign_keys=[step_id])
 
     def __unicode__(self):
         return self.level
@@ -297,10 +310,11 @@ class RoomParticipant(db.Model):
     # Associations
     room_id = Column(Integer,
                      ForeignKey("room.id"), nullable=False)
-    room = relationship("Room", foreign_keys=[room_id],
-                        backref=backref(
-                            "participants",
-                            cascade="all, delete-orphan"))
+    room = relationship(
+        "Room",
+        foreign_keys=[room_id],
+        backref=backref("participants",
+                        cascade="all, delete-orphan"))
 
     def __unicode__(self):
         return self.sid

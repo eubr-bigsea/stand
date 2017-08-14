@@ -133,6 +133,8 @@ def mocked_emit(original_emit, app_):
                                                    data.get('message', ''))
                         if job.status in final_states:
                             job.finished = datetime.datetime.utcnow()
+                            data['finished'] = job.finished.strftime(
+                                '%Y-%m-%dT%H:%m:%S')
 
                         if job.status == StatusExecution.ERROR:
                             for job_step in job.steps:
@@ -174,8 +176,11 @@ def mocked_emit(original_emit, app_):
                             level = 'INFO'
                         else:
                             level = StatusExecution.WAITING
+                        data['date'] = datetime.datetime.now().strftime(
+                            '%Y-%m-%dT%H:%m:%S')
                         job_step.logs.append(JobStepLog(
                             level=level, date=datetime.datetime.now(),
+                            type=data.get('type', 'TEXT'),
                             message=data.get('message',
                                              data.get('msg', 'no message'))))
                         db.session.add(job_step)
