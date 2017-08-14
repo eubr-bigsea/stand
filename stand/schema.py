@@ -77,8 +77,6 @@ class FlowDefinitionCreateRequestSchema(Schema):
     """ JSON schema for new instance """
     source_port = fields.Integer(required=True)
     target_port = fields.Integer(required=True)
-    source_port_name = fields.String(required=True)
-    target_port_name = fields.String(required=True)
     source_id = fields.String(required=True)
     target_id = fields.String(required=True)
 
@@ -450,6 +448,12 @@ class JobStepLogListResponseSchema(Schema):
         """ Deserialize data into an instance of JobStepLog"""
         return JobStepLog(**data)
 
+    # noinspection PyUnresolvedReferences
+    @post_load
+    def make_object(self, data):
+        """ Deserialize data into an instance of JobStepLog"""
+        return JobStepLog(**data)
+
     class Meta:
         ordered = True
 
@@ -469,6 +473,12 @@ class JobStepLogItemResponseSchema(Schema):
         """ Deserialize data into an instance of JobStepLog"""
         return JobStepLog(**data)
 
+    # noinspection PyUnresolvedReferences
+    @post_load
+    def make_object(self, data):
+        """ Deserialize data into an instance of JobStepLog"""
+        return JobStepLog(**data)
+
     class Meta:
         ordered = True
 
@@ -481,6 +491,12 @@ class JobStepLogCreateRequestSchema(Schema):
     message = fields.String(required=True)
     type = fields.String(required=True, missing='TEXT',
                          default='TEXT')
+
+    # noinspection PyUnresolvedReferences
+    @post_load
+    def make_object(self, data):
+        """ Deserialize data into an instance of JobStepLog"""
+        return JobStepLog(**data)
 
     # noinspection PyUnresolvedReferences
     @post_load
