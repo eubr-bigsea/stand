@@ -186,6 +186,7 @@ def mocked_emit(original_emit, app_):
                         db.session.add(job_step)
                         db.session.commit()
                         use_callback = wait_client
+                        data['type'] = data.get('type', 'TEXT') or 'TEXT'
                 elif event == 'task result':
                     job_id = int(room)
                     job = Job.query.get(job_id)
