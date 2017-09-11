@@ -448,12 +448,6 @@ class JobStepLogListResponseSchema(Schema):
         """ Deserialize data into an instance of JobStepLog"""
         return JobStepLog(**data)
 
-    # noinspection PyUnresolvedReferences
-    @post_load
-    def make_object(self, data):
-        """ Deserialize data into an instance of JobStepLog"""
-        return JobStepLog(**data)
-
     class Meta:
         ordered = True
 
@@ -473,12 +467,6 @@ class JobStepLogItemResponseSchema(Schema):
         """ Deserialize data into an instance of JobStepLog"""
         return JobStepLog(**data)
 
-    # noinspection PyUnresolvedReferences
-    @post_load
-    def make_object(self, data):
-        """ Deserialize data into an instance of JobStepLog"""
-        return JobStepLog(**data)
-
     class Meta:
         ordered = True
 
@@ -491,12 +479,6 @@ class JobStepLogCreateRequestSchema(Schema):
     message = fields.String(required=True)
     type = fields.String(required=True, missing='TEXT',
                          default='TEXT')
-
-    # noinspection PyUnresolvedReferences
-    @post_load
-    def make_object(self, data):
-        """ Deserialize data into an instance of JobStepLog"""
-        return JobStepLog(**data)
 
     # noinspection PyUnresolvedReferences
     @post_load

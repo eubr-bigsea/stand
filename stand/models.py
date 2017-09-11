@@ -179,6 +179,7 @@ class Job(db.Model):
     user_id = Column(Integer, nullable=False)
     user_login = Column(String(50), nullable=False)
     user_name = Column(String(200), nullable=False)
+    source_code = Column(Text)
 
     # Associations
     cluster_id = Column(Integer,
