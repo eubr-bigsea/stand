@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-}
+import logging
 import math
 
 from app_auth import requires_auth
@@ -8,7 +9,6 @@ from flask_restful import Resource
 from schema import *
 from sqlalchemy import and_
 from stand.services.job_services import JobService
-import logging
 
 log = logging.getLogger(__name__)
 
@@ -369,3 +369,18 @@ class UpdateJobStepStatusActionApi(Resource):
                         result['debug_detail'] = e.message
                     db.session.rollback()
         return result, result_code
+
+
+class JobSourceCodeApi(Resource):
+    """ RPC API for action that returns generated source code
+    for a job
+    """
+
+    @staticmethod
+    @requires_auth
+    def get(job_id):
+        job = Job.query.get_or_404(ident=job_id)
+
+        return {
+            'lang': 'python',
+            'code': job.source_code}, 200
