@@ -382,5 +382,21 @@ class JobSourceCodeApi(Resource):
         job = Job.query.get_or_404(ident=job_id)
 
         return {
-            'lang': 'python',
-            'code': job.source_code}, 200
+                   'lang': 'python',
+                   'code': job.source_code}, 200
+
+    @staticmethod
+    @requires_auth
+    def patch(job_id):
+        """ Updates the job source code """
+        job = Job.query.get_or_404(ident=job_id)
+        params = json.loads(request.data)
+        if str(params.get('secret')) == str(
+                current_app.config['STAND_CONFIG']['secret']):
+            job.source_code = params.get('source')
+            db.session.add(job)
+            db.session.commit()
+            return {'status': 'OK'}
+        else:
+            db.session.rollback()
+            return {'status': 'FORBIDDEN'}, 403
