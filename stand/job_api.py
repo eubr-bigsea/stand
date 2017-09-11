@@ -383,7 +383,7 @@ class JobSourceCodeApi(Resource):
 
         return {
                    'lang': 'python',
-                   'code': job.source_code}, 200
+                   'source': job.source_code}, 200
 
     @staticmethod
     @requires_auth
