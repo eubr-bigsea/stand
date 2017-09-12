@@ -1,7 +1,6 @@
+import datetime
 import json
 import logging
-
-import datetime
 
 from stand.factory import create_socket_io_app, create_redis_store
 
@@ -16,8 +15,8 @@ class StandSocketIO:
         self.redis_store = create_redis_store(_app)
 
         handlers = {
-            # 'connect': self.on_connect,
-            # 'disconnect': self.on_disconnect,
+            'connect': self.on_connect,
+            'disconnect': self.on_disconnect,
             'disconnect request': self.on_disconnect_request,
 
             'join': self.on_join_room,
@@ -31,29 +30,37 @@ class StandSocketIO:
     def on_join_room(self, sid, message):
         room = str(message.get('room'))
 
-        self.redis_store.hset('room_{}'.format(room), sid,
-                              {'joined': datetime.datetime.utcnow()})
+        self.redis_store.hset(
+            'room_{}'.format(room), sid,
+            json.dumps({'joined': datetime.datetime.utcnow().isoformat()}))
 
-        self.logger.info('%s joined room %s', sid, room)
+        self.redis_store.expire('room_{}'.format(room), 3600)
+
+        self.logger.info('[%s] joined room %s', sid, room)
         self.socket_io.enter_room(sid, room, namespace=self.namespace)
         self.socket_io.emit(
             'response', {'msg': 'Entered room: *{}*'.format(room)},
             room=sid, namespace=self.namespace)
 
-    def on_leave_room(self, sid, message):
+    def on_leave_room(self, sid, message, connected=True):
         room = str(message.get('room'))
 
         info = json.loads(
             self.redis_store.hget('room_{}'.format(room), sid) or '{}')
-        info['left'] = datetime.datetime.utcnow()
-        self.redis_store.hset('room_{}'.format(room), sid, info)
+        try:
+            info['left'] = datetime.datetime.utcnow().isoformat()
+            # self.redis_store.hset('room_{}'.format(room), sid, info)
 
-        self.logger.info('%s left room %s', sid, room)
-        self.socket_io.leave_room(sid, room,
-                                  namespace=self.namespace)
-        self.socket_io.emit(
-            'response', {'msg': 'Left room: {}'.format(room)},
-            room=sid, namespace=self.namespace)
+            self.logger.info('[%s] left room %s', sid, room)
+            self.socket_io.leave_room(sid, room,
+                                      namespace=self.namespace)
+            if connected:
+                self.socket_io.emit(
+                    'response', {'msg': 'Left room: {}'.format(room)},
+                    room=sid, namespace=self.namespace)
+            self.redis_store.expire('room_{}'.format(room), 10)
+        except Exception as e:
+            print 'ERROR!!!!!', e.message
 
     def on_close_room(self, sid, message):
         room = str(message.get('room'))
@@ -70,6 +77,9 @@ class StandSocketIO:
                             room=sid, namespace=self.namespace)
 
     def on_disconnect(self, sid):
+        for room_id in self.socket_io.rooms(sid, self.namespace):
+            if room_id.isdigit():
+                self.on_leave_room(sid, {'room': room_id}, False)
         self.logger.info('%s disconnected', sid)
 
     def on_disconnect_request(self, sid):

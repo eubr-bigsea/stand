@@ -1,6 +1,7 @@
 import datetime
 import logging
 import logging.config
+
 import os
 import socketio
 from flask import Flask
@@ -30,6 +31,7 @@ class MockRedisWrapper(MockRedis):
     @classmethod
     def from_url(cls, *args, **kwargs):
         return cls()
+
 
 def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
     if config_file:
@@ -102,9 +104,9 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
 
 
 def wait_client():
-    print '#' * 20 
+    print '#' * 20
     print 'Client ACK'
-    print '#' * 20 
+    print '#' * 20
 
 
 def mocked_emit(original_emit, app_):
@@ -117,10 +119,9 @@ def mocked_emit(original_emit, app_):
         use_callback = callback
 
         try:
-            print '-' * 20
-            print data, room, event, namespace
-            print '-' * 20
-
+            # print '-' * 20
+            # print data, room, event, namespace
+            # print '-' * 20
             with app_.app_context():
                 if event == 'update job':
                     job_id = int(room)
@@ -225,6 +226,7 @@ def create_socket_io_app(_app):
     mgr = socketio.RedisManager(socket_io_config['redis_url'], 'job_output')
     sio = socketio.Server(engineio_options={'logger': True},
                           client_manager=mgr,
+                          ping_timeout=10,
                           allow_upgrades=True)
 
     return sio, socketio.Middleware(sio, _app)
