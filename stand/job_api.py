@@ -82,7 +82,6 @@ class JobListApi(Resource):
     @staticmethod
     @requires_auth
     def post():
-
         result, result_code = dict(
             status="ERROR", message="Missing json in the request body"), 400
         if request.data is not None:
@@ -91,6 +90,8 @@ class JobListApi(Resource):
                 request_schema = JobCreateRequestSchema()
                 response_schema = JobItemResponseSchema()
 
+                request_json['workflow']['locale'] = request.headers.get(
+                    'Locale', 'en') or 'en'
                 request_json['status'] = StatusExecution.WAITING
 
                 form = request_schema.load(request_json)
