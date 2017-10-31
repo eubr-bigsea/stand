@@ -1,0 +1,145 @@
+# Portuguese translations for PROJECT.
+# Copyright (C) 2017 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2017.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2017-10-31 14:27-0200\n"
+"PO-Revision-Date: 2017-10-31 14:30-0200\n"
+"Last-Translator: \n"
+"Language-Team: pt <LL@li.org>\n"
+"Language: pt\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Generated-By: Babel 2.3.4\n"
+"X-Generator: Poedit 1.8.7.1\n"
+
+#: stand/app.py:67
+#, python-format
+msgid "Running in %s mode"
+msgstr "Executando no modo %s"
+
+#: stand/app_auth.py:13
+msgid ""
+"Could not verify your access level for that URL. You have to login with "
+"proper credentials provided by Lemonade Thorn."
+msgstr ""
+"Não foi possível verificar seu nível de acesso para esta URL. Você tem que "
+"se autenticar com as credenciais apropriadas fornecidas pelo Lemonade "
+"Thorn."
+
+#: stand/app_auth.py:16
+msgid ""
+"Could not verify your access level for that URL. Invalid authentication "
+"token."
+msgstr ""
+"Não foi possível verificar seu nível de acesso para esta URL. Token de "
+"autenticação inválido."
+
+#: stand/cluster_api.py:38 stand/job_api.py:86
+msgid "Missing json in the request body"
+msgstr "JSON ausente no corpo da requisição"
+
+#: stand/cluster_api.py:45 stand/job_api.py:101
+msgid "Validation error"
+msgstr "Erro de validação"
+
+#: stand/cluster_api.py:57 stand/job_api.py:122 stand/job_api.py:188
+#: stand/job_api.py:231 stand/job_api.py:275 stand/job_api.py:315
+#: stand/job_api.py:342 stand/job_api.py:371
+msgid "Internal error"
+msgstr "Erro interno"
+
+#: stand/job_api.py:111
+msgid "Missing information in JSON"
+msgstr "Informação faltante no JSON"
+
+#: stand/job_api.py:115 stand/job_api.py:120 stand/job_api.py:220
+#: stand/job_api.py:229
+msgid "Error in POST"
+msgstr "Erro no processamento da requisição do tipo POST"
+
+#: stand/job_api.py:142 stand/job_api.py:184 stand/job_api.py:209
+#: stand/job_api.py:244 stand/job_api.py:256 stand/job_api.py:293
+#: stand/job_api.py:329 stand/job_api.py:355
+msgid "Not found"
+msgstr "Não encontrado"
+
+#: stand/job_api.py:147
+msgid "Insufficient data"
+msgstr "Dados insuficientes"
+
+#: stand/job_api.py:186 stand/job_api.py:196
+msgid "Error in PATCH"
+msgstr "Erro no processamento da requisição do tipo PATCH"
+
+#: stand/job_api.py:193
+msgid "Invalid data"
+msgstr "Dados inválidos"
+
+#: stand/job_api.py:217
+msgid "Deleted"
+msgstr "Excluído"
+
+#: stand/job_api.py:264
+msgid "Locked"
+msgstr "Trancado"
+
+#: stand/socketio_events.py:39
+#, python-format
+msgid "[%s] joined room %s"
+msgstr "[%s] juntou-se à sala %s"
+
+#: stand/socketio_events.py:42
+msgid "Entered room: *{}*"
+msgstr "Entrou na sala: *{}*"
+
+#: stand/socketio_events.py:54
+#, python-format
+msgid "[%s] left room %s"
+msgstr "[%s] deixou a sala %s"
+
+#: stand/socketio_events.py:59
+msgid "Left room: {}"
+msgstr "Deixou a sala: {}"
+
+#: stand/socketio_events.py:67
+#, python-format
+msgid "%s is closing room %s"
+msgstr "%s está fechando a sala %s"
+
+#: stand/socketio_events.py:69
+msgid "Room closed: {}"
+msgstr "Sala fechada: {}"
+
+#: stand/socketio_events.py:74
+#, python-format
+msgid "%s connected"
+msgstr "%s conectou-se"
+
+#: stand/socketio_events.py:76
+msgid "Connected"
+msgstr "Conectado"
+
+#: stand/socketio_events.py:83
+#, python-format
+msgid "%s disconnected"
+msgstr "%s desconectou-se"
+
+#: stand/socketio_events.py:86
+#, python-format
+msgid "%s asked for disconnection"
+msgstr "%s solicitou a sua desconexão"
+
+#~ msgid ""
+#~ "Could not verify your access level for that URL. You have to login with "
+#~ "proper credentials provided by Lemonade Thorn"
+#~ msgstr ""
+#~ "Não foi possível verificar seu nível de acesso para esta URL. Você tem "
+#~ "que realizar o login com as credenciais apropriadas fornecidas pelo "
+#~ "Lemonade Thorn."

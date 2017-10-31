@@ -3,6 +3,7 @@ import logging
 
 from app_auth import requires_auth
 from flask import request, current_app
+from flask_babel import gettext
 from flask_restful import Resource
 from schema import *
 
@@ -35,14 +36,15 @@ class ClusterListApi(Resource):
     @requires_auth
     def post():
         result, result_code = dict(
-            status="ERROR", message="Missing json in the request body"), 401
+            status="ERROR",
+            message=gettext('Missing json in the request body')), 401
         if request.json is not None:
             request_schema = ClusterCreateRequestSchema()
             response_schema = ClusterItemResponseSchema()
             form = request_schema.load(request.json)
             if form.errors:
                 result, result_code = dict(
-                    status="ERROR", message="Validation error",
+                    status="ERROR", message=gettext('Validation error'),
                     errors=form.errors), 401
             else:
                 try:
@@ -54,7 +56,8 @@ class ClusterListApi(Resource):
                 except Exception, e:
                     log.exception('Error in POST')
                     result, result_code = dict(status="ERROR",
-                                               message="Internal error"), 500
+                                               message=gettext(
+                                                   'Internal error')), 500
                     if current_app.debug:
                         result['debug_detail'] = e.message
                     db.session.rollback()

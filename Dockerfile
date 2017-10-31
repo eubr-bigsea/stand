@@ -13,5 +13,6 @@ COPY requirements.txt $STAND_HOM
 RUN pip install -r $STAND_HOME/requirements.txt
 
 COPY . $STAND_HOME
+RUN pybabel compile -d STAND_HOME/stand/i18n/locales
 
 CMD ["/usr/local/stand/sbin/stand-daemon.sh", "startf"]

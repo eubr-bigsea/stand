@@ -2,20 +2,30 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import gettext
+
 import eventlet
-from stand.socketio_events import StandSocketIO
 import os
+from stand.socketio_events import StandSocketIO
+
+locales_path = os.path.join(os.path.dirname(__file__), '..', 'i18n', 'locales')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--config", type=str,
-            help="Config file", required=True)
+                        help="Config file", required=True)
+    parser.add_argument("--lang", help="Minion messages language (i18n)",
+                        required=False, default="en_US")
     args = parser.parse_args()
 
     eventlet.monkey_patch(all=True)
 
     from stand.factory import create_app, create_babel_i18n, \
-        create_socket_io_app, create_redis_store
+        create_redis_store
+
+    t = gettext.translation('messages', locales_path, [args.lang],
+                            fallback=True)
+    t.install(unicode=True)
 
     app = create_app(config_file=args.config)
     babel = create_babel_i18n(app)
@@ -25,9 +35,9 @@ if __name__ == '__main__':
 
     if app.debug:
         app.run(debug=True)
-    else:        
+    else:
         port = int(app.config['STAND_CONFIG'].get('port', 5000))
 
         # noinspection PyUnresolvedReferences
         eventlet.wsgi.server(eventlet.listen(('', port)),
-                         stand_socket_io.socket_app)
+                             stand_socket_io.socket_app)

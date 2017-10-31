@@ -5,6 +5,7 @@ import math
 from app_auth import requires_auth
 from flask import g
 from flask import request, current_app
+from flask_babel import gettext
 from flask_restful import Resource
 from schema import *
 from sqlalchemy import and_
@@ -83,7 +84,8 @@ class JobListApi(Resource):
     @requires_auth
     def post():
         result, result_code = dict(
-            status="ERROR", message="Missing json in the request body"), 400
+            status="ERROR",
+            message=gettext("Missing json in the request body")), 400
         if request.data is not None:
             try:
                 request_json = json.loads(request.data)
@@ -98,7 +100,7 @@ class JobListApi(Resource):
 
                 if form.errors:
                     result, result_code = dict(
-                        status="ERROR", message="Validation error",
+                        status="ERROR", message=gettext("Validation error"),
                         errors=form.errors), 400
                 else:
                     job = form.data
@@ -107,19 +109,20 @@ class JobListApi(Resource):
                     result_code = 200
                     result = dict(data=response_schema.dump(job).data,
                                   message='', status='OK')
-            except KeyError as ke:
-                result['detail'] = 'Missing information in JSON'
-            except ValueError as ve:
+            except KeyError:
+                result['detail'] = gettext('Missing information in JSON')
+            except ValueError:
                 pass  # default return value
             except JobException as je:
-                log.exception('Error in POST')
+                log.exception(gettext('Error in POST'))
                 result = dict(status="ERROR", message=je.message,
                               code=je.error_code)
                 result_code = 400
             except Exception as e:
-                log.exception('Error in POST')
+                log.exception(gettext('Error in POST'))
                 result, result_code = dict(status="ERROR",
-                                           message="Internal error"), 500
+                                           message=gettext(
+                                               "Internal error")), 500
                 if current_app.debug or True:
                     result['debug_detail'] = e.message
                 db.session.rollback()
@@ -139,20 +142,21 @@ class JobDetailApi(Resource):
         if len(jobs) == 1:
             return JobItemResponseSchema().dump(jobs[0]).data
         else:
-            return dict(status="ERROR", message="Not found"), 404
+            return dict(status="ERROR", message=gettext("Not found")), 404
 
     @staticmethod
     @requires_auth
     def patch(job_id):
-        result = dict(status="ERROR", message="Insufficient data")
+        result = dict(status="ERROR", message=gettext("Insufficient data"))
         result_code = 404
+        # noinspection PyBroadException
         try:
             if request.data:
                 request_json = json.loads(request.data)
                 request_schema = partial_schema_factory(
                     JobCreateRequestSchema)
                 for task in request_json.get('tasks', {}):
-                    task['forms'] = {k: v for k, v in task['forms'].iteritems() \
+                    task['forms'] = {k: v for k, v in task['forms'].iteritems()
                                      if v.get('value') is not None}
                 # Ignore missing fields to allow partial updates
                 params = {}
@@ -179,19 +183,22 @@ class JobDetailApi(Resource):
                                 status="OK", message="Updated",
                                 data=response_schema.dump(job).data), 200
                         else:
-                            result = dict(status="ERROR", message="Not found")
+                            result = dict(status="ERROR",
+                                          message=gettext("Not found"))
                     except Exception, e:
-                        log.exception('Error in PATCH')
+                        log.exception(gettext('Error in PATCH'))
                         result, result_code = dict(
-                            status="ERROR", message="Internal error"), 500
+                            status="ERROR",
+                            message=gettext("Internal error")), 500
                         if current_app.debug:
                             result['debug_detail'] = e.message
                         db.session.rollback()
                 else:
-                    result = dict(status="ERROR", message="Invalid data",
+                    result = dict(status="ERROR",
+                                  message=gettext("Invalid data"),
                                   errors=form.errors)
-        except Exception as e:
-            log.exception('Error in PATCH')
+        except Exception:
+            log.exception(gettext('Error in PATCH'))
             result_code = 500
             import sys
             result = {'status': "ERROR", 'message': sys.exc_info()[1]}
@@ -204,7 +211,8 @@ class JobStopActionApi(Resource):
     @staticmethod
     @requires_auth
     def post(job_id):
-        result, result_code = dict(status="ERROR", message="Not found"), 404
+        result, result_code = dict(status="ERROR",
+                                   message=gettext("Not found")), 404
 
         job = Job.query.get(job_id)
         if job is not None:
@@ -212,10 +220,10 @@ class JobStopActionApi(Resource):
             try:
                 JobService.stop(job)
                 result, result_code = dict(
-                    status="OK", message="Deleted",
+                    status="OK", message=gettext("Deleted"),
                     data=response_schema.dump(job).data), 200
             except JobException as je:
-                log.exception('Error in POST')
+                log.exception(gettext('Error in POST'))
                 result, result_code = dict(status="ERROR",
                                            message=je.message,
                                            code=je.error_code), 400
@@ -224,9 +232,10 @@ class JobStopActionApi(Resource):
                 #     result['data'] = response_schema.dump(job).data
                 #     result_code = 200
             except Exception as e:
-                log.exception('Error in POST')
+                log.exception(gettext('Error in POST'))
                 result, result_code = dict(status="ERROR",
-                                           message="Internal error"), 500
+                                           message=gettext(
+                                               "Internal error")), 500
                 if current_app.debug:
                     result['debug_detail'] = e.message
                 db.session.rollback()
@@ -239,7 +248,8 @@ class JobLockActionApi(Resource):
     @staticmethod
     @requires_auth
     def get(job_id):
-        result, result_code = dict(status="ERROR", message="Not found"), 404
+        result, result_code = dict(status="ERROR",
+                                   message=gettext('Not found')), 404
         job = Job.query.get(job_id)
         if job is not None:
             lock_status = JobService.get_lock_status(job)
@@ -251,14 +261,16 @@ class JobLockActionApi(Resource):
     @staticmethod
     @requires_auth
     def post(job_id):
-        result, result_code = dict(status="ERROR", message="Not found"), 404
+        result, result_code = dict(status="ERROR",
+                                   message=gettext('Not found')), 404
 
         job = Job.query.get(job_id)
         if job is not None:
             data = json.loads(request.data)
             try:
                 JobService.lock(job, data['user'], data['computer'])
-                result, result_code = dict(status="OK", message="Locked"), 200
+                result, result_code = dict(status="OK",
+                                           message=gettext('Locked')), 200
             except JobException as je:
                 log.exception('Error in POST')
                 result, result_code = dict(
@@ -269,7 +281,8 @@ class JobLockActionApi(Resource):
             except Exception as e:
                 log.exception('Error in POST')
                 result, result_code = dict(status="ERROR",
-                                           message="Internal error"), 500
+                                           message=gettext(
+                                               'Internal error')), 500
                 if current_app.debug:
                     result['debug_detail'] = e.message
                 db.session.rollback()
@@ -287,7 +300,8 @@ class JobSampleActionApi(Resource):
     @staticmethod
     @requires_auth
     def post(job_id, task_id):
-        result, result_code = dict(status="ERROR", message="Not found"), 404
+        result, result_code = dict(status="ERROR",
+                                   message=gettext('Not found')), 404
 
         job = Job.query.get(job_id)
         if job is not None:
@@ -309,7 +323,8 @@ class JobSampleActionApi(Resource):
             except Exception as e:
                 log.exception('Error in POST')
                 result, result_code = dict(status="ERROR",
-                                           message="Internal error"), 500
+                                           message=gettext(
+                                               'Internal error')), 500
                 if current_app.debug:
                     result['debug_detail'] = e.message
                 db.session.rollback()
@@ -323,7 +338,8 @@ class UpdateJobStatusActionApi(Resource):
     @staticmethod
     @requires_auth
     def post(job_id):
-        result, result_code = dict(status="ERROR", message="Not found"), 404
+        result, result_code = dict(status="ERROR",
+                                   message=gettext('Not found')), 404
 
         if g.user.id == 0:  # Only inter service requests
             job = Job.query.get(int(job_id))
@@ -336,7 +352,8 @@ class UpdateJobStatusActionApi(Resource):
                 except Exception as e:
                     log.exception('Error in POST')
                     result, result_code = dict(status="ERROR",
-                                               message="Internal error"), 500
+                                               message=gettext(
+                                                   'Internal error')), 500
                     if current_app.debug:
                         result['debug_detail'] = e.message
                     db.session.rollback()
@@ -349,7 +366,8 @@ class UpdateJobStepStatusActionApi(Resource):
     @staticmethod
     @requires_auth
     def post(job_id, task_id):
-        result, result_code = dict(status="ERROR", message="Not found"), 404
+        result, result_code = dict(status="ERROR",
+                                   message=gettext('Not found')), 404
 
         if g.user.id == 0:  # Only inter service requests
             step = JobStep.query.filter(and_(
@@ -365,7 +383,8 @@ class UpdateJobStepStatusActionApi(Resource):
                 except Exception as e:
                     log.exception('Error in POST')
                     result, result_code = dict(status="ERROR",
-                                               message="Internal error"), 500
+                                               message=gettext(
+                                                   'Internal error')), 500
                     if current_app.debug:
                         result['debug_detail'] = e.message
                     db.session.rollback()
