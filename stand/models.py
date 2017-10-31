@@ -142,6 +142,29 @@ class ClusterAccess(db.Model):
         return '<Instance {}: {}>'.format(self.__class__, self.id)
 
 
+class ClusterConfiguration(db.Model):
+    """ Permissions for cluster utilization """
+    __tablename__ = 'cluster_configuration'
+
+    # Fields
+    id = Column(Integer, primary_key=True)
+    name = Column(String(200), nullable=False)
+    value = Column(String(500), nullable=False)
+
+    # Associations
+    cluster_id = Column(Integer,
+                        ForeignKey("cluster.id"), nullable=False)
+    cluster = relationship(
+        "Cluster",
+        foreign_keys=[cluster_id])
+
+    def __unicode__(self):
+        return self.name
+
+    def __repr__(self):
+        return '<Instance {}: {}>'.format(self.__class__, self.id)
+
+
 class ExecutionPermission(db.Model):
     """ Associates permissions to a user """
     __tablename__ = 'execution_permission'
