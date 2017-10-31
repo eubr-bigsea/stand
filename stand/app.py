@@ -5,7 +5,10 @@ import logging
 import urlparse
 
 import eventlet
-from factory import create_app, create_babel_i18n, create_redis_store
+from babel import negotiate_locale
+from factory import create_app, create_redis_store, create_babel_i18n
+from flask import request, g
+from flask_babel import gettext, Babel
 from pymysql import OperationalError
 from redis import StrictRedis
 from sqlalchemy import event
@@ -17,9 +20,20 @@ from stand.socketio_events import StandSocketIO
 eventlet.monkey_patch(all=True)
 
 app = create_app()
-babel = create_babel_i18n(app)
+babel = Babel()
+# babel = create_babel_i18n(app)
+babel.init_app(app)
 stand_socket_io = StandSocketIO(app)
 redis_store = create_redis_store(app)
+
+
+@babel.localeselector
+def get_locale():
+    user = getattr(g, 'user', None)
+    if user is not None:
+        return user.locale
+    preferred = [x.replace('-', '_') for x in request.accept_languages.values()]
+    return negotiate_locale(preferred, ['pt_BR', 'en_US'])
 
 
 @event.listens_for(Pool, "checkout")
@@ -31,7 +45,7 @@ def check_connection(dbapi_con, con_record, con_proxy):
         if ex.args[0] in (
                 2006,  # MySQL server has gone away
                 2013,  # Lost connection to MySQL server during query
-                2055):  # Lost connection to MySQL server at '%s', system error: %d
+                2055):  # Lost connection to MySQL server
             # caught by pool, which will retry with a new connection
             raise DisconnectionError()
         else:
@@ -53,7 +67,7 @@ def main(is_main_module):
     logger = logging.getLogger(__name__)
     config = app.config['STAND_CONFIG']
     port = int(config.get('port', 5000))
-    logger.debug('Running in %s mode', config.get('environment'))
+    logger.debug(gettext('Running in %s mode'), config.get('environment'))
 
     if is_main_module:
         if config.get('environment', 'dev') == 'dev':
@@ -63,6 +77,7 @@ def main(is_main_module):
         else:
             # eventlet.spawn(handle_updates, app,
             #                config.get('servers').get('redis_url'))
+            # noinspection PyUnresolvedReferences
             eventlet.wsgi.server(eventlet.listen(('', port)),
                                  stand_socket_io.socket_app)
 

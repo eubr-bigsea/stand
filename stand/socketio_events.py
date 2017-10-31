@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 
+from flask_babel import gettext
 from stand.factory import create_socket_io_app, create_redis_store
 
 
@@ -36,10 +37,10 @@ class StandSocketIO:
 
         self.redis_store.expire('room_{}'.format(room), 3600)
 
-        self.logger.info('[%s] joined room %s', sid, room)
+        self.logger.info(gettext('[%s] joined room %s'), sid, room)
         self.socket_io.enter_room(sid, room, namespace=self.namespace)
         self.socket_io.emit(
-            'response', {'msg': 'Entered room: *{}*'.format(room)},
+            'response', {'msg': gettext('Entered room: *{}*').format(room)},
             room=sid, namespace=self.namespace)
 
     def on_leave_room(self, sid, message, connected=True):
@@ -51,12 +52,12 @@ class StandSocketIO:
             info['left'] = datetime.datetime.utcnow().isoformat()
             # self.redis_store.hset('room_{}'.format(room), sid, info)
 
-            self.logger.info('[%s] left room %s', sid, room)
+            self.logger.info(gettext('[%s] left room %s'), sid, room)
             self.socket_io.leave_room(sid, room,
                                       namespace=self.namespace)
             if connected:
                 self.socket_io.emit(
-                    'response', {'msg': 'Left room: {}'.format(room)},
+                    'response', {'msg': gettext('Left room: {}').format(room)},
                     room=sid, namespace=self.namespace)
             self.redis_store.expire('room_{}'.format(room), 10)
         except Exception as e:
@@ -64,24 +65,26 @@ class StandSocketIO:
 
     def on_close_room(self, sid, message):
         room = str(message.get('room'))
-        self.logger.info('%s is closing room %s', sid, room)
+        self.logger.info(gettext('%s is closing room %s'), sid, room)
         self.socket_io.emit(
-            'response', {'msg': 'Room closed: {}'.format(room)}, room=room,
+            'response', {'msg': gettext('Room closed: {}').format(room)},
+            room=room,
             namespace=self.namespace)
         self.socket_io.close_room(room, namespace=self.namespace)
 
     def on_connect(self, sid, message):
-        self.logger.info('%s connected', sid)
+        self.logger.info(gettext('%s connected'), sid)
         self.logger.info(message)
-        self.socket_io.emit('response', {'msg': 'Connected', 'count': 0},
+        self.socket_io.emit('response',
+                            {'msg': gettext('Connected'), 'count': 0},
                             room=sid, namespace=self.namespace)
 
     def on_disconnect(self, sid):
         for room_id in self.socket_io.rooms(sid, self.namespace):
             if room_id.isdigit():
                 self.on_leave_room(sid, {'room': room_id}, False)
-        self.logger.info('%s disconnected', sid)
+        self.logger.info(gettext('%s disconnected'), sid)
 
     def on_disconnect_request(self, sid):
-        self.logger.info('%s asked for disconnection', sid)
+        self.logger.info(gettext('%s asked for disconnection'), sid)
         self.socket_io.disconnect(sid, namespace=self.namespace)

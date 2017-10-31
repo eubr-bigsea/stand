@@ -57,7 +57,9 @@ class JobService:
         db.session.commit()
 
     @staticmethod
-    def start(job, workflow, app_configs={}):
+    def start(job, workflow, app_configs=None):
+        if app_configs is None:
+            app_configs = {}
         invalid_statuses = [StatusExecution.RUNNING, StatusExecution.PENDING,
                             StatusExecution.INTERRUPTED,
                             StatusExecution.WAITING]

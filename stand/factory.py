@@ -52,6 +52,10 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
     app.config['SQLALCHEMY_DATABASE_URI'] = server_config.get('database_url')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+    locales_path = os.path.join(os.path.dirname(__file__), 'i18n',
+                                'locales')
+    app.config['BABEL_TRANSLATION_DIRECTORIES'] = locales_path
+
     app.config['REDIS_URL'] = server_config.get('redis_url')
     app.config.update(config.get('config', {}))
     app.debug = config['stand'].get('debug', False)
