@@ -36,12 +36,22 @@ class StandSocketIO:
             json.dumps({'joined': datetime.datetime.utcnow().isoformat()}))
 
         self.redis_store.expire('room_{}'.format(room), 3600)
+        if room.isdigit():
+            self.redis_store.expire('cache_room_{}'.format(room), 600)
 
         self.logger.info(gettext('[%s] joined room %s'), sid, room)
         self.socket_io.enter_room(sid, room, namespace=self.namespace)
+
         self.socket_io.emit(
             'response', {'msg': gettext('Entered room: *{}*').format(room)},
             room=sid, namespace=self.namespace)
+
+        # # Resend all statuses
+        cached = self.redis_store.lrange('cache_room_{}'.format(room), 0, -1)
+        for msg in cached:
+            msg = json.loads(msg)
+            self.socket_io.emit(msg['event'], msg['data'], room=sid,
+                                namespace=self.namespace)
 
     def on_leave_room(self, sid, message, connected=True):
         room = str(message.get('room'))
