@@ -259,6 +259,7 @@ class JobStep(db.Model):
     task_id = Column(String(200), nullable=False)
     operation_id = Column(Integer, nullable=False)
     operation_name = Column(String(200), nullable=False)
+    task_name = Column(String(200))
 
     # Associations
     job_id = Column(Integer,
@@ -282,6 +283,8 @@ class JobStepLog(db.Model):
     # Fields
     id = Column(Integer, primary_key=True)
     level = Column(String(200), nullable=False)
+    status = Column(Enum(*StatusExecution.values(),
+                         name='StatusExecutionEnumType'), nullable=False)
     date = Column(DateTime, nullable=False)
     message = Column(Text, nullable=False)
     type = Column(String(50),

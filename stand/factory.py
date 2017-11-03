@@ -18,7 +18,7 @@ from stand.cluster_api import ClusterListApi
 from stand.job_api import JobListApi, JobDetailApi, \
     JobStopActionApi, JobLockActionApi, JobUnlockActionApi, \
     UpdateJobStatusActionApi, UpdateJobStepStatusActionApi, \
-    JobSampleActionApi, JobSourceCodeApi
+    JobSampleActionApi, JobSourceCodeApi, LatestJobDetailApi
 from stand.models import db, Job, JobStep, JobStepLog, StatusExecution, \
     JobResult
 from stand.services.redis_service import connect_redis_store
@@ -86,6 +86,7 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
     api = Api(app)
     mappings = {
         '/jobs': JobListApi,
+        '/jobs/latest': LatestJobDetailApi,
         '/jobs/<int:job_id>': JobDetailApi,
         '/jobs/<int:job_id>/source-code': JobSourceCodeApi,
         '/jobs/<int:job_id>/stop': JobStopActionApi,
@@ -187,6 +188,7 @@ def mocked_emit(original_emit, app_):
                                 '%Y-%m-%dT%H:%m:%S')
                             step_log = JobStepLog(
                                 level=level, date=datetime.datetime.now(),
+                                status=job_step.status,
                                 type=data.get('type', 'TEXT'),
                                 message=data.get('message',
                                                  data.get('msg',
