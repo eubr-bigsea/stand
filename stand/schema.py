@@ -69,7 +69,7 @@ class TaskDefinitionCreateRequestSchema(Schema):
     left = fields.Integer(required=False)
     top = fields.Integer(required=False)
     z_index = fields.Integer(required=False)
-    name = fields.String(required=False)
+    name = fields.String(required=False, allow_none=True)
     forms = fields.Dict(required=True)
     operation = fields.Nested(OperationIdCreateRequestSchema, required=True)
 
