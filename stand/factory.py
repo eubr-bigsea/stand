@@ -180,10 +180,12 @@ def mocked_emit(original_emit, app_):
                             JobStep.task_id == data.get('id'))).first()
                         if job_step is not None:
                             job_step.status = data.get('status')
-                            if job_step.status == StatusExecution.COMPLETED:
-                                level = 'INFO'
-                            else:
-                                level = StatusExecution.WAITING
+                            level = data.get('level')
+                            if level is None:
+                                if job_step.status == StatusExecution.ERROR:
+                                    level = 'WARN'
+                                else:
+                                    level = 'INFO'
                             data['date'] = datetime.datetime.now().strftime(
                                 '%Y-%m-%dT%H:%m:%S')
                             step_log = JobStepLog(
@@ -198,7 +200,9 @@ def mocked_emit(original_emit, app_):
                             db.session.commit()
                             use_callback = wait_client
                             data['type'] = data.get('type', 'TEXT') or 'TEXT'
-                            data['step_id'] = step_log.id
+                            data['id'] = step_log.id
+                            data['level'] = level
+                            data['task'] = {'id': job_step.task_id}
                     elif event == 'task result':
                         job_id = int(room)
                         job = Job.query.get(job_id)
@@ -214,7 +218,10 @@ def mocked_emit(original_emit, app_):
                             job.results.append(result)
                             db.session.add(job)
                             db.session.commit()
-                            data['result_id'] = result.id
+                            if 'operation_id' in data:
+                                del data['operation_id']
+                            data['id'] = result.id
+                            data['task'] = {'id': task_id}
             except Exception as ex:
                 logger = logging.getLogger(__name__)
                 logger.exception(ex)

@@ -43,7 +43,7 @@ class StandSocketIO:
         self.socket_io.enter_room(sid, room, namespace=self.namespace)
 
         self.socket_io.emit(
-            'response', {'msg': gettext('Entered room: *{}*').format(room)},
+            'response', {'message': gettext('Entered room: *{}*').format(room)},
             room=sid, namespace=self.namespace)
 
         # # Resend all statuses
@@ -67,7 +67,8 @@ class StandSocketIO:
                                       namespace=self.namespace)
             if connected:
                 self.socket_io.emit(
-                    'response', {'msg': gettext('Left room: {}').format(room)},
+                    'response',
+                    {'message': gettext('Left room: {}').format(room)},
                     room=sid, namespace=self.namespace)
             self.redis_store.expire('room_{}'.format(room), 10)
         except Exception as e:
@@ -77,7 +78,7 @@ class StandSocketIO:
         room = str(message.get('room'))
         self.logger.info(gettext('%s is closing room %s'), sid, room)
         self.socket_io.emit(
-            'response', {'msg': gettext('Room closed: {}').format(room)},
+            'response', {'message': gettext('Room closed: {}').format(room)},
             room=room,
             namespace=self.namespace)
         self.socket_io.close_room(room, namespace=self.namespace)
@@ -86,7 +87,7 @@ class StandSocketIO:
         self.logger.info(gettext('%s connected'), sid)
         self.logger.info(message)
         self.socket_io.emit('response',
-                            {'msg': gettext('Connected'), 'count': 0},
+                            {'message': gettext('Connected'), 'count': 0},
                             room=sid, namespace=self.namespace)
 
     def on_disconnect(self, sid):
