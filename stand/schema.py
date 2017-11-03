@@ -69,6 +69,7 @@ class TaskDefinitionCreateRequestSchema(Schema):
     left = fields.Integer(required=False)
     top = fields.Integer(required=False)
     z_index = fields.Integer(required=False)
+    name = fields.String(required=False)
     forms = fields.Dict(required=True)
     operation = fields.Nested(OperationIdCreateRequestSchema, required=True)
 
@@ -257,6 +258,7 @@ class JobCreateRequestSchema(Schema):
         now = datetime.datetime.now()
         data['steps'] = [JobStep(date=now, status=StatusExecution.PENDING,
                                  task_id=t['id'],
+                                 task_name=t.get('name'),
                                  operation_id=t['operation']['id'],
                                  operation_name="EMPTY")
                          for t in data['workflow'].get('tasks', [])]
@@ -395,6 +397,7 @@ class JobStepListResponseSchema(Schema):
     task_id = fields.String(required=True)
     operation_id = fields.Integer(required=True)
     operation_name = fields.String(required=True)
+    task_name = fields.String(required=False, allow_none=True)
     logs = fields.Nested(
         'stand.schema.JobStepLogListResponseSchema',
         required=True,
@@ -418,6 +421,7 @@ class JobStepCreateRequestSchema(Schema):
     task_id = fields.String(required=True)
     operation_id = fields.Integer(required=True)
     operation_name = fields.String(required=True)
+    task_name = fields.String(required=False, allow_none=True)
     logs = fields.Nested(
         'stand.schema.JobStepLogCreateRequestSchema',
         required=True,
@@ -437,6 +441,8 @@ class JobStepLogListResponseSchema(Schema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
     level = fields.String(required=True)
+    status = fields.String(required=True,
+                           validate=[OneOf(StatusExecution.__dict__.keys())])
     date = fields.DateTime(required=True)
     message = fields.String(required=True)
     type = fields.String(required=True, missing='TEXT',
@@ -456,6 +462,8 @@ class JobStepLogItemResponseSchema(Schema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
     level = fields.String(required=True)
+    status = fields.String(required=True,
+                           validate=[OneOf(StatusExecution.__dict__.keys())])
     date = fields.DateTime(required=True)
     message = fields.String(required=True)
     type = fields.String(required=True, missing='TEXT',
@@ -475,6 +483,8 @@ class JobStepLogCreateRequestSchema(Schema):
     """ JSON serialization schema """
     id = fields.Integer(allow_none=True)
     level = fields.String(required=True)
+    status = fields.String(required=True,
+                           validate=[OneOf(StatusExecution.__dict__.keys())])
     date = fields.DateTime(required=True)
     message = fields.String(required=True)
     type = fields.String(required=True, missing='TEXT',
