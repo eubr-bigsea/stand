@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import datetime
 import json
 import logging
@@ -7,7 +8,7 @@ import os
 import socketio
 from flask import Flask
 from flask_admin import Admin
-from flask_babel import Babel
+from flask_babel import Babel, gettext
 from flask_caching import Cache
 from flask_cors import CORS
 from flask_restful import Api
@@ -127,104 +128,8 @@ def mocked_emit(original_emit, app_):
         use_callback = callback
 
         if room.isdigit():
-            try:
-                with app_.app_context():
-                    if event == 'update job':
-                        job_id = int(room)
-                        job = Job.query.get(job_id)
-                        if job is not None:
-                            final_states = [StatusExecution.COMPLETED,
-                                            StatusExecution.CANCELED,
-                                            StatusExecution.ERROR]
-                            job.status = data.get('status')
-                            job.status_text = data.get('msg',
-                                                       data.get('message', ''))
-                            if job.status in final_states:
-                                job.finished = datetime.datetime.utcnow()
-                                data['finished'] = job.finished.strftime(
-                                    '%Y-%m-%dT%H:%m:%S')
-
-                            if job.status == StatusExecution.ERROR:
-                                for job_step in job.steps:
-                                    if job_step.status == StatusExecution.RUNNING:
-                                        job_step.status = StatusExecution.ERROR
-                                        msg = {'id': job_step.task_id,
-                                               'msg': 'Error',
-                                               'status': StatusExecution.ERROR}
-                                        original_emit(self, 'update task', msg,
-                                                      namespace, room,
-                                                      skip_sid)
-                                    elif job_step.status not in final_states:
-                                        job_step.status = StatusExecution.CANCELED
-                                        msg = {'id': job_step.task_id,
-                                               'msg': 'Canceled',
-                                               'status': StatusExecution.CANCELED}
-                                        original_emit(self, 'update task', msg,
-                                                      namespace, room,
-                                                      skip_sid)
-                                    db.session.add(job_step)
-
-                            elif job.status == StatusExecution.CANCELED:
-                                for job_step in job.steps:
-                                    if job_step.status not in final_states:
-                                        job_step.status = StatusExecution.CANCELED
-                                    db.session.add(job_step)
-
-                            db.session.add(job)
-                            db.session.commit()
-                            use_callback = wait_client
-                    elif event == 'update task':
-                        job_id = int(room)
-                        job_step = JobStep.query.filter(and_(
-                            JobStep.job_id == job_id,
-                            JobStep.task_id == data.get('id'))).first()
-                        if job_step is not None:
-                            job_step.status = data.get('status')
-                            level = data.get('level')
-                            if level is None:
-                                if job_step.status == StatusExecution.ERROR:
-                                    level = 'WARN'
-                                else:
-                                    level = 'INFO'
-                            data['date'] = datetime.datetime.now().strftime(
-                                '%Y-%m-%dT%H:%m:%S')
-                            step_log = JobStepLog(
-                                level=level, date=datetime.datetime.now(),
-                                status=job_step.status,
-                                type=data.get('type', 'TEXT'),
-                                message=data.get('message',
-                                                 data.get('msg',
-                                                          'no message')))
-                            job_step.logs.append(step_log)
-                            db.session.add(job_step)
-                            db.session.commit()
-                            use_callback = wait_client
-                            data['type'] = data.get('type', 'TEXT') or 'TEXT'
-                            data['id'] = step_log.id
-                            data['level'] = level
-                            data['task'] = {'id': job_step.task_id}
-                    elif event == 'task result':
-                        job_id = int(room)
-                        job = Job.query.get(job_id)
-                        if job is not None:
-                            task_id = data.get('id')
-                            op_id = data.get('operation_id')
-                            result = JobResult(
-                                task_id=task_id,
-                                operation_id=op_id,
-                                type=data.get('type'),
-                                title=data.get('title'),
-                                content=data.get('content'))
-                            job.results.append(result)
-                            db.session.add(job)
-                            db.session.commit()
-                            if 'operation_id' in data:
-                                del data['operation_id']
-                            data['id'] = result.id
-                            data['task'] = {'id': task_id}
-            except Exception as ex:
-                logger = logging.getLogger(__name__)
-                logger.exception(ex)
+            use_callback = handle_emit(data, event, namespace, room, self,
+                                       skip_sid, use_callback, redis_store)
 
             redis_store.rpush('cache_room_{}'.format(room), json.dumps(
                 {'event': event, 'data': data, 'namespace': namespace,
@@ -232,6 +137,145 @@ def mocked_emit(original_emit, app_):
         return original_emit(self, event, data, namespace, room=room,
                              skip_sid=skip_sid,
                              callback=use_callback)
+
+    def _gettext(title):
+        with app_.request_context(
+                {'wsgi.url_scheme': "", 'SERVER_PORT': "", 'SERVER_NAME': "",
+                 'REQUEST_METHOD': ""}):
+            return gettext(title)
+
+    def handle_emit(data, event, namespace, room, self, skip_sid, use_callback,
+                    redis_store):
+        try:
+            now = datetime.datetime.now().strftime(
+                '%Y-%m-%dT%H:%m:%S')
+            with app_.app_context():
+
+                if event == 'update job':
+                    job_id = int(room)
+                    job = Job.query.get(job_id)
+                    if job is not None:
+                        final_states = [StatusExecution.COMPLETED,
+                                        StatusExecution.CANCELED,
+                                        StatusExecution.ERROR]
+                        job.status = data.get('status')
+                        job.status_text = data.get('msg',
+                                                   data.get('message', ''))
+                        if job.status in final_states:
+                            job.finished = datetime.datetime.utcnow()
+                            data['finished'] = job.finished.strftime(
+                                '%Y-%m-%dT%H:%m:%S')
+
+                        if job.status == StatusExecution.ERROR:
+                            for job_step in job.steps:
+                                level = data.get('level', 'ERROR')
+
+                                step_log = JobStepLog(
+                                    level=level, date=datetime.datetime.now(),
+                                    status=job_step.status,
+                                    type=data.get('type', 'TEXT'),
+                                    message=_gettext('Canceled by error'))
+
+                                job_step.logs.append(step_log)
+                                db.session.add(job_step)
+                                db.session.commit()
+
+                                msg = {
+                                    'type': data.get('type', 'TEXT') or 'TEXT',
+                                    'task': {'id': job_step.task_id},
+                                    'id': step_log.id,
+                                    'level': level,
+                                    'date': now,
+                                }
+                                cache = False
+                                if job_step.status == StatusExecution.RUNNING:
+                                    job_step.status = StatusExecution.ERROR
+                                    msg['message'] = _gettext(
+                                        'Canceled by error')
+                                    msg['status'] = StatusExecution.ERROR
+                                    original_emit(self, 'update task', msg,
+                                                  namespace, room, skip_sid,
+                                                  use_callback)
+                                    cache = True
+                                elif job_step.status not in final_states:
+                                    job_step.status = StatusExecution.CANCELED
+                                    msg['message'] = _gettext('Skiped by error')
+                                    msg['status'] = StatusExecution.CANCELED
+
+                                    original_emit(self, 'update task', msg,
+                                                  namespace, room, skip_sid,
+                                                  use_callback)
+                                    cache = True
+                                if cache:
+                                    redis_store.rpush(
+                                        'cache_room_{}'.format(room),
+                                        json.dumps({'event': 'update task',
+                                                    'data': msg,
+                                                    'namespace': namespace,
+                                                    'room': room}))
+                                db.session.add(job_step)
+
+                        elif job.status == StatusExecution.CANCELED:
+                            for job_step in job.steps:
+                                if job_step.status not in final_states:
+                                    job_step.status = StatusExecution.CANCELED
+                                db.session.add(job_step)
+
+                        db.session.add(job)
+                        db.session.commit()
+                        use_callback = wait_client
+                elif event == 'update task':
+                    job_id = int(room)
+                    job_step = JobStep.query.filter(and_(
+                        JobStep.job_id == job_id,
+                        JobStep.task_id == data.get('id'))).first()
+                    if job_step is not None:
+                        job_step.status = data.get('status')
+                        level = data.get('level')
+                        if level is None:
+                            if job_step.status == StatusExecution.ERROR:
+                                level = 'WARN'
+                            else:
+                                level = 'INFO'
+                        data['date'] = now
+                        step_log = JobStepLog(
+                            level=level, date=datetime.datetime.now(),
+                            status=job_step.status,
+                            type=data.get('type', 'TEXT'),
+                            message=data.get('message',
+                                             data.get('msg',
+                                                      'no message')))
+                        job_step.logs.append(step_log)
+                        db.session.add(job_step)
+                        db.session.commit()
+                        use_callback = wait_client
+                        data['type'] = data.get('type', 'TEXT') or 'TEXT'
+                        data['id'] = step_log.id
+                        data['level'] = level
+                        data['task'] = {'id': job_step.task_id}
+                elif event == 'task result':
+                    job_id = int(room)
+                    job = Job.query.get(job_id)
+                    if job is not None:
+                        task_id = data.get('id')
+                        op_id = data.get('operation_id')
+                        result = JobResult(
+                            task_id=task_id,
+                            operation_id=op_id,
+                            type=data.get('type'),
+                            title=data.get('title'),
+                            content=data.get('content'))
+                        job.results.append(result)
+                        db.session.add(job)
+                        db.session.commit()
+                        if 'operation_id' in data:
+                            del data['operation_id']
+                        data['id'] = result.id
+                        data['task'] = {'id': task_id}
+        except Exception as ex:
+            logger = logging.getLogger(__name__)
+            logger.exception(ex)
+        return use_callback
 
     return new_emit
 
