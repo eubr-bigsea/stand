@@ -119,7 +119,7 @@ class JobListApi(Resource):
                 if form.errors:
                     result, result_code = dict(
                         status="ERROR", message=gettext("Validation error"),
-                        errors=form.errors), 400
+                        errors=form.errors), 422
                 else:
                     job = form.data
                     JobService.start(job, request_json['workflow'],
@@ -135,7 +135,7 @@ class JobListApi(Resource):
                 log.exception(gettext('Error in POST'))
                 result = dict(status="ERROR", message=je.message,
                               code=je.error_code)
-                result_code = 400
+                result_code = 422
             except Exception as e:
                 log.exception(gettext('Error in POST'))
                 result, result_code = dict(status="ERROR",
@@ -244,7 +244,7 @@ class JobStopActionApi(Resource):
                 log.exception(gettext('Error in POST'))
                 result, result_code = dict(status="ERROR",
                                            message=je.message,
-                                           code=je.error_code), 400
+                                           code=je.error_code), 422
                 # if je.error_code == JobException.ALREADY_FINISHED:
                 #     result['status'] = 'OK'
                 #     result['data'] = response_schema.dump(job).data
@@ -292,7 +292,7 @@ class JobLockActionApi(Resource):
             except JobException as je:
                 log.exception('Error in POST')
                 result, result_code = dict(
-                    status="ERROR", message=je.message, code=je.error_code), 400
+                    status="ERROR", message=je.message, code=je.error_code), 422
                 if je.error_code == JobException.ALREADY_LOCKED:
                     result_code = 409
 
@@ -336,7 +336,7 @@ class JobSampleActionApi(Resource):
             except JobException as je:
                 log.exception('Error in POST')
                 result, result_code = dict(
-                    status="ERROR", message=je.message, code=je.error_code), 400
+                    status="ERROR", message=je.message, code=je.error_code), 422
 
             except Exception as e:
                 log.exception('Error in POST')

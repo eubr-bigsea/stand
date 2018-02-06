@@ -37,7 +37,7 @@ class ClusterListApi(Resource):
     def post():
         result, result_code = dict(
             status="ERROR",
-            message=gettext('Missing json in the request body')), 401
+            message=gettext('Missing json in the request body')), 400
         if request.json is not None:
             request_schema = ClusterCreateRequestSchema()
             response_schema = ClusterItemResponseSchema()
@@ -53,7 +53,7 @@ class ClusterListApi(Resource):
                     db.session.commit()
                     result, result_code = response_schema.dump(
                         cluster).data, 200
-                except Exception, e:
+                except Exception as e:
                     log.exception('Error in POST')
                     result, result_code = dict(status="ERROR",
                                                message=gettext(
