@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
+import datetime
 import json
 import logging
-
-import datetime
 
 import requests
 import stand.util
 from stand.models import db, StatusExecution, JobException, Job
 from stand.services.redis_service import connect_redis_store
-from stand.services.tahiti_service import tahiti_service
 
 logging.basicConfig(
     format=('[%(levelname)s] %(asctime)s,%(msecs)05.1f '
@@ -85,10 +83,23 @@ class JobService:
         # what is pending.
 
         # @FIXME Each workflow has only one app. In future, we may support N
+        if not job.cluster.enabled:
+            raise JobException(
+                'Cluster {} is not enabled.'.format(job.cluster.name),
+                JobException.CLUSTER_DISABLED)
+
+        cluster_properties = ['id', 'type', 'address', 'executors',
+                              'executor_cores', 'executor_memory',
+                              'general_parameters']
+        cluster_info = {}
+        for p in cluster_properties:
+            cluster_info[p] = getattr(job.cluster, p)
+
         msg = json.dumps(dict(workflow_id=job.workflow_id,
                               app_id=job.workflow_id,
                               job_id=job.id,
                               type='execute',
+                              cluster=cluster_info,
                               app_configs=app_configs,
                               workflow=workflow))
         redis_store.rpush("queue_start", msg)
@@ -183,8 +194,8 @@ class JobService:
         # DELIVER messages request the delivery of a result (task_id)
         redis_store = connect_redis_store(None, testing=False)
         output = 'queue_delivery_app_{app_id}_{port_name}'.format(
-                app_id=job.workflow_id, port_name=port_name)
-        msg = json.dumps ({
+            app_id=job.workflow_id, port_name=port_name)
+        msg = json.dumps({
             'workflow_id': job.workflow_id,
             'app_id': job.workflow_id,
             'job_id': job.id,
