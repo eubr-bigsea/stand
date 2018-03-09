@@ -88,6 +88,7 @@ class JobException(BaseException):
     ALREADY_LOCKED = 'ALREADY_LOCKED'
     ALREADY_RUNNING = 'ALREADY_RUNNING'
     INVALID_STATE = 'INVALID_STATE'
+    CLUSTER_DISABLED = 'CLUSTER_DISABLED'
 
     def __init__(self, message, error_code):
         self.message = message
@@ -107,6 +108,13 @@ class Cluster(db.Model):
                        name='ClusterTypeEnumType'),
                   default=ClusterType.SPARK_LOCAL, nullable=False)
     address = Column(String(200), nullable=False)
+    executors = Column(Integer,
+                       default=1, nullable=False)
+    executor_cores = Column(Integer,
+                            default=1, nullable=False)
+    executor_memory = Column(String(15),
+                             default='1M', nullable=False)
+    general_parameters = Column(String(1000), nullable=False)
 
     def __unicode__(self):
         return self.name
