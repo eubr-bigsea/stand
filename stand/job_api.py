@@ -68,7 +68,7 @@ class JobListApi(Resource):
             jobs = apply_filter(jobs, request.args, name, int,
                                 lambda field: field)
         jobs = jobs.filter(
-            Job.name.like('%%{}%%'.format(request.args.get('name'))))
+            Job.name.like('%%{}%%'.format(request.args.get('name', '') or '')))
 
         sort = request.args.get('sort', 'name')
         if sort not in ['status', 'id', 'user_name', 'workflow_name',
