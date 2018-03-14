@@ -4,7 +4,6 @@ from functools import partial
 
 from flask import url_for
 from stand.models import StatusExecution
-from stand.services.redis_service import connect_redis_store
 from stand.services.tahiti_service import TahitiService
 
 job_list_url = partial(url_for, endpoint='joblistapi')

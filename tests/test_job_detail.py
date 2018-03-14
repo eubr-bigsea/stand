@@ -1,4 +1,3 @@
-import json
 from functools import partial
 
 from flask import url_for

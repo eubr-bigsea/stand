@@ -1,12 +1,11 @@
 import json
+from datetime import datetime
 from functools import partial
 
-from datetime import datetime
-
 import mock
+import stand.util
 from flask import url_for
 from stand.models import StatusExecution, JobException
-import stand.util
 
 job_stop_url = partial(url_for, endpoint='jobstopactionapi')
 job_lock_url = partial(url_for, endpoint='joblockactionapi')

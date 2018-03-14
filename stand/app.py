@@ -6,7 +6,7 @@ import urlparse
 
 import eventlet
 from babel import negotiate_locale
-from factory import create_app, create_redis_store, create_babel_i18n
+from factory import create_app, create_redis_store
 from flask import request, g
 from flask_babel import gettext, Babel
 from pymysql import OperationalError

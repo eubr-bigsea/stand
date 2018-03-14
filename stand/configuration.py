@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 import sys
 
-import yaml
-
 import os
+import yaml
 
 
 def load():
@@ -14,5 +13,6 @@ def load():
         print >> sys.stderr, 'Please, set STAND_CONFIG environment variable'
         sys.exit(1)
     return config
+
 
 stand_configuration = load()
