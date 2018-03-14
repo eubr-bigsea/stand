@@ -166,6 +166,26 @@ class JobDetailApi(Resource):
 
     @staticmethod
     @requires_auth
+    def delete(job_id):
+        result, result_code = dict(status="ERROR", message="Not found"), 404
+        job = Job.query.filter(Job.id == job_id).first()
+                               # Job.user_id == g.user.id).first()
+        if job is not None:
+            try:
+                db.session.delete(job)
+                db.session.commit()
+                result, result_code = dict(status="OK", message="Deleted"), 200
+            except Exception as e:
+                log.exception('Error in DELETE')
+                result, result_code = dict(status="ERROR",
+                                           message="Internal error"), 500
+                if current_app.debug:
+                    result['debug_detail'] = e.message
+                db.session.rollback()
+        return result, result_code
+
+    @staticmethod
+    @requires_auth
     def patch(job_id):
         result = dict(status="ERROR", message=gettext("Insufficient data"))
         result_code = 404
