@@ -3,9 +3,10 @@ import json
 import logging
 from collections import namedtuple
 from functools import wraps
-from flask_babel import gettext as _
+
 import requests
 from flask import request, Response, g, current_app
+from flask_babel import gettext as _
 
 logger = logging.getLogger(__name__)
 User = namedtuple("User", "id, login, email, first_name, last_name, locale")

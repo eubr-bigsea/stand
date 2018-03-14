@@ -67,6 +67,8 @@ class JobListApi(Resource):
         for name in ['workflow_id', 'user_id']:
             jobs = apply_filter(jobs, request.args, name, int,
                                 lambda field: field)
+        jobs = jobs.filter(
+            Job.name.like('%%{}%%'.format(request.args.get('name'))))
 
         sort = request.args.get('sort', 'name')
         if sort not in ['status', 'id', 'user_name', 'workflow_name',
@@ -113,6 +115,8 @@ class JobListApi(Resource):
                 request_json['workflow']['locale'] = request.headers.get(
                     'Locale', 'en') or 'en'
                 request_json['status'] = StatusExecution.WAITING
+                if not request_json['name']:
+                    request_json['name'] = request_json.get('workflow_name')
 
                 form = request_schema.load(request_json)
 
@@ -161,6 +165,27 @@ class JobDetailApi(Resource):
             return JobItemResponseSchema().dump(jobs[0]).data
         else:
             return dict(status="ERROR", message=gettext("Not found")), 404
+
+    @staticmethod
+    @requires_auth
+    def delete(job_id):
+        result, result_code = dict(status="ERROR", message="Not found"), 404
+        job = _get_jobs(Job.query.filter(Job.id == job_id),
+                        [PermissionType.LIST, PermissionType.STOP,
+                         PermissionType.MANAGE]).first()
+        if job is not None:
+            try:
+                db.session.delete(job)
+                db.session.commit()
+                result, result_code = dict(status="OK", message="Deleted"), 200
+            except Exception as e:
+                log.exception('Error in DELETE')
+                result, result_code = dict(status="ERROR",
+                                           message="Internal error"), 500
+                if current_app.debug:
+                    result['debug_detail'] = e.message
+                db.session.rollback()
+        return result, result_code
 
     @staticmethod
     @requires_auth

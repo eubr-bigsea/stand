@@ -1,9 +1,9 @@
 import random
 
 import factory
-from faker import Factory as FakerFactory
-from stand.models import StatusExecution, Job, db, Cluster, ClusterType
 from factory.alchemy import SQLAlchemyModelFactory
+from faker import Factory as FakerFactory
+from stand.models import StatusExecution, Job, Cluster, ClusterType
 
 faker = FakerFactory.create()
 

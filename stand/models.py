@@ -9,7 +9,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy_i18n import make_translatable, translation_base, Translatable
-
+from sqlalchemy.dialects.mysql import LONGTEXT
 make_translatable(options={'locales': ['pt', 'en', 'es'],
                            'auto_create_locales': True,
                            'fallback_locale': 'en'})
@@ -198,19 +198,21 @@ class Job(db.Model):
     id = Column(Integer, primary_key=True)
     created = Column(DateTime,
                      default=func.now(), nullable=False)
+    name = Column(String(50))
     started = Column(DateTime)
     finished = Column(DateTime)
     status = Column(Enum(*StatusExecution.values(),
                          name='StatusExecutionEnumType'),
                     default=StatusExecution.WAITING, nullable=False)
-    status_text = Column(Text)
+    status_text = Column(LONGTEXT)
+    exception_stack = Column(LONGTEXT)
     workflow_id = Column(Integer, nullable=False)
     workflow_name = Column(String(200), nullable=False)
-    workflow_definition = Column(Text)
+    workflow_definition = Column(LONGTEXT)
     user_id = Column(Integer, nullable=False)
     user_login = Column(String(50), nullable=False)
     user_name = Column(String(200), nullable=False)
-    source_code = Column(Text)
+    source_code = Column(LONGTEXT)
 
     # Associations
     cluster_id = Column(Integer,
@@ -218,8 +220,10 @@ class Job(db.Model):
     cluster = relationship(
         "Cluster",
         foreign_keys=[cluster_id])
-    steps = relationship("JobStep", back_populates="job")
-    results = relationship("JobResult", back_populates="job")
+    steps = relationship("JobStep", back_populates="job",
+                         cascade="all, delete-orphan")
+    results = relationship("JobResult", back_populates="job",
+                           cascade="all, delete-orphan")
 
     def __unicode__(self):
         return self.created
@@ -239,7 +243,7 @@ class JobResult(db.Model):
     title = Column(String(200))
     type = Column(Enum(*ResultType.values(),
                        name='ResultTypeEnumType'), nullable=False)
-    content = Column(Text)
+    content = Column(LONGTEXT)
 
     # Associations
     job_id = Column(Integer,
@@ -275,7 +279,8 @@ class JobStep(db.Model):
     job = relationship(
         "Job",
         foreign_keys=[job_id])
-    logs = relationship("JobStepLog")
+    logs = relationship("JobStepLog",
+                        cascade="all, delete-orphan")
 
     def __unicode__(self):
         return self.date
@@ -294,7 +299,7 @@ class JobStepLog(db.Model):
     status = Column(Enum(*StatusExecution.values(),
                          name='StatusExecutionEnumType'), nullable=False)
     date = Column(DateTime, nullable=False)
-    message = Column(Text, nullable=False)
+    message = Column(LONGTEXT, nullable=False)
     type = Column(String(50),
                   default='TEXT', nullable=False)
 

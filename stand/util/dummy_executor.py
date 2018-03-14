@@ -3,13 +3,11 @@
 A dummy executor that process Lemonade jobs and only returns fake statuses and
 data. Used to test Stand clients in an integration test.
 """
+import datetime
 import json
 import logging
 import logging.config
 import random
-import time
-
-import datetime
 
 import eventlet
 import socketio
@@ -18,8 +16,7 @@ from flask_script import Manager
 # Logging configuration
 from sqlalchemy import and_
 from stand.factory import create_app, create_redis_store
-from stand.models import Job, StatusExecution, db, JobStep, JobStepLog, \
-    JobResult, ResultType
+from stand.models import Job, StatusExecution, db, JobStep, JobStepLog
 
 app = create_app(log_level=logging.WARNING)
 redis_store = create_redis_store(app)
@@ -140,13 +137,13 @@ def simulate():
                                                task['operation']['id']},
                                      room=room,
                                      namespace="/stand")
-                        #
-                        # result = JobResult(task_id=task['id'],
-                        #                    title="Table with results",
-                        #                    operation_id=task['operation']['id'],
-                        #                    type=ResultType.VISUALIZATION, )
-                        # logger.info('Result created for job %s', job['job_id'])
-                        # job_entity.results.append(result)
+                            #
+                            # result = JobResult(task_id=task['id'],
+                            #                    title="Table with results",
+                            #                    operation_id=task['operation']['id'],
+                            #                    type=ResultType.VISUALIZATION, )
+                            # logger.info('Result created for job %s', job['job_id'])
+                            # job_entity.results.append(result)
 
                     job_step_entity.status = StatusExecution.COMPLETED
                     job_step_entity.logs.append(JobStepLog(
