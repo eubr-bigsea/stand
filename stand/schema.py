@@ -109,6 +109,13 @@ class ClusterListResponseSchema(Schema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
     name = fields.String(required=True)
+    executors = fields.Integer(required=True, missing=1,
+                               default=1)
+    executor_cores = fields.Integer(required=True, missing=1,
+                                    default=1)
+    executor_memory = fields.String(required=True, missing='1M',
+                                    default='1M')
+    general_parameters = fields.String(required=True)
 
     # noinspection PyUnresolvedReferences
     @post_load
@@ -124,6 +131,13 @@ class ClusterItemResponseSchema(Schema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
     name = fields.String(required=True)
+    executors = fields.Integer(required=True, missing=1,
+                               default=1)
+    executor_cores = fields.Integer(required=True, missing=1,
+                                    default=1)
+    executor_memory = fields.String(required=True, missing='1M',
+                                    default='1M')
+    general_parameters = fields.String(required=True)
 
     # noinspection PyUnresolvedReferences
     @post_load
@@ -145,6 +159,13 @@ class ClusterCreateRequestSchema(Schema):
                          default=ClusterType.SPARK_LOCAL,
                          validate=[OneOf(ClusterType.__dict__.keys())])
     address = fields.String(required=True)
+    executors = fields.Integer(required=True, missing=1,
+                               default=1)
+    executor_cores = fields.Integer(required=True, missing=1,
+                                    default=1)
+    executor_memory = fields.String(required=True, missing='1M',
+                                    default='1M')
+    general_parameters = fields.String(required=True)
 
     # noinspection PyUnresolvedReferences
     @post_load
@@ -161,12 +182,14 @@ class JobItemResponseSchema(Schema):
     id = fields.Integer(required=True)
     created = fields.DateTime(required=True, missing=func.now(),
                               default=func.now())
+    name = fields.String(required=False, allow_none=True)
     started = fields.DateTime(required=False, allow_none=True)
     finished = fields.DateTime(required=False, allow_none=True)
     status = fields.String(required=True, missing=StatusExecution.WAITING,
                            default=StatusExecution.WAITING,
                            validate=[OneOf(StatusExecution.__dict__.keys())])
     status_text = fields.String(required=False, allow_none=True)
+    exception_stack = fields.String(required=False, allow_none=True)
     cluster = fields.Nested(
         'stand.schema.ClusterItemResponseSchema',
         required=True)
@@ -200,12 +223,14 @@ class JobListResponseSchema(Schema):
     id = fields.Integer(required=True)
     created = fields.DateTime(required=True, missing=func.now(),
                               default=func.now())
+    name = fields.String(required=False, allow_none=True)
     started = fields.DateTime(required=False, allow_none=True)
     finished = fields.DateTime(required=False, allow_none=True)
     status = fields.String(required=True, missing=StatusExecution.WAITING,
                            default=StatusExecution.WAITING,
                            validate=[OneOf(StatusExecution.__dict__.keys())])
     status_text = fields.String(required=False, allow_none=True)
+    exception_stack = fields.String(required=False, allow_none=True)
     cluster = fields.Nested(
         'stand.schema.ClusterListResponseSchema',
         required=True)
@@ -232,6 +257,8 @@ class JobListResponseSchema(Schema):
 
 class JobCreateRequestSchema(Schema):
     """ JSON serialization schema """
+    name = fields.String(required=False, allow_none=True)
+    exception_stack = fields.String(required=False, allow_none=True)
     workflow = fields.Nested(
         'stand.schema.WorkflowDefinitionCreateRequestSchema',
         required=True)
@@ -278,11 +305,13 @@ class JobExecuteResponseSchema(Schema):
     id = fields.Integer(required=True)
     created = fields.DateTime(required=True, missing=func.now(),
                               default=func.now())
+    name = fields.String(required=False, allow_none=True)
     started = fields.DateTime(required=False, allow_none=True)
     status = fields.String(required=True, missing=StatusExecution.WAITING,
                            default=StatusExecution.WAITING,
                            validate=[OneOf(StatusExecution.__dict__.keys())])
     status_text = fields.String(required=False, allow_none=True)
+    exception_stack = fields.String(required=False, allow_none=True)
     workflow_id = fields.Integer(required=True)
     message = fields.String(allow_none=True)
     status_url = fields.Url(required=True)

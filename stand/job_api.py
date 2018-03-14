@@ -113,6 +113,8 @@ class JobListApi(Resource):
                 request_json['workflow']['locale'] = request.headers.get(
                     'Locale', 'en') or 'en'
                 request_json['status'] = StatusExecution.WAITING
+                if not request_json['name']:
+                    request_json['name'] = request_json.get('workflow_name')
 
                 form = request_schema.load(request_json)
 
