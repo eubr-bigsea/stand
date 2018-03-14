@@ -67,6 +67,8 @@ class JobListApi(Resource):
         for name in ['workflow_id', 'user_id']:
             jobs = apply_filter(jobs, request.args, name, int,
                                 lambda field: field)
+        jobs = jobs.filter(
+            Job.name.like('%%{}%%'.format(request.args.get('name'))))
 
         sort = request.args.get('sort', 'name')
         if sort not in ['status', 'id', 'user_name', 'workflow_name',
@@ -168,8 +170,9 @@ class JobDetailApi(Resource):
     @requires_auth
     def delete(job_id):
         result, result_code = dict(status="ERROR", message="Not found"), 404
-        job = Job.query.filter(Job.id == job_id).first()
-                               # Job.user_id == g.user.id).first()
+        job = _get_jobs(Job.query.filter(Job.id == job_id),
+                        [PermissionType.LIST, PermissionType.STOP,
+                         PermissionType.MANAGE]).first()
         if job is not None:
             try:
                 db.session.delete(job)
