@@ -109,6 +109,7 @@ class ClusterListResponseSchema(Schema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
     name = fields.String(required=True)
+    description = fields.String(required=True)
     executors = fields.Integer(required=True, missing=1,
                                default=1)
     executor_cores = fields.Integer(required=True, missing=1,
@@ -131,6 +132,7 @@ class ClusterItemResponseSchema(Schema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
     name = fields.String(required=True)
+    description = fields.String(required=True)
     executors = fields.Integer(required=True, missing=1,
                                default=1)
     executor_cores = fields.Integer(required=True, missing=1,
