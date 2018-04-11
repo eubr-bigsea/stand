@@ -67,6 +67,7 @@ class WorkflowDefinitionCreateRequestSchema(Schema):
 class TaskDefinitionCreateRequestSchema(Schema):
     id = fields.String(required=True)
     left = fields.Integer(required=False)
+    enabled = fields.Boolean(required=False)
     top = fields.Integer(required=False)
     z_index = fields.Integer(required=False)
     name = fields.String(required=False, allow_none=True)
