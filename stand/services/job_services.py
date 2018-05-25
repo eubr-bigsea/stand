@@ -75,6 +75,9 @@ class JobService:
         # Initial job status must be WAITING
         job.status = StatusExecution.WAITING
         job.started = datetime.datetime.utcnow()
+
+        # Limit the name of a job
+        job.name = job.name[:50]
         db.session.add(job)
         db.session.flush()  # Flush is needed to get the value of job.id
 
