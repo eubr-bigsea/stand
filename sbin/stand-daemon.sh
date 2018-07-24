@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 # This script controls the stand server daemon initialization, status reporting
 # and termination
@@ -16,7 +16,7 @@ fi
 cmd_option=$1
 
 # if unset set stand_home to stand root dir, without ./sbin
-export STAND_HOME=${STAND_HOME:-$(cd `dirname $0`/..; pwd)}
+export STAND_HOME=${STAND_HOME:-$(cd $(dirname $0)/..; pwd)}
 echo ${STAND_HOME}
 
 # get log directory
