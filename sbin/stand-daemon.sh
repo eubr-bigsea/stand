@@ -38,6 +38,7 @@ case $cmd_option in
     PYTHONPATH=${STAND_HOME}:${PYTHONPATH} \
       python ${STAND_HOME}/stand/manage.py \
       db upgrade
+
     PYTHONPATH=${STAND_HOME}:${PYTHONPATH} nohup -- \
       python ${STAND_HOME}/stand/runner/stand_server.py \
       -c ${STAND_HOME}/conf/stand-config.yaml \
@@ -56,6 +57,15 @@ case $cmd_option in
     PYTHONPATH=${STAND_HOME}:${PYTHONPATH} \
       python ${STAND_HOME}/stand/manage.py \
       db upgrade
+    # check if the db migration was successful
+    if [ $? -eq 0 ]
+    then
+      echo "DB migration: successful"
+    else
+      echo "Error on DB migration"
+      exit 1
+    fi
+
     PYTHONPATH=${STAND_HOME}:${PYTHONPATH} \
       python ${STAND_HOME}/stand/runner/stand_server.py \
       -c ${STAND_HOME}/conf/stand-config.yaml &
