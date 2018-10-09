@@ -57,6 +57,7 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
     locales_path = os.path.join(os.path.dirname(__file__), 'i18n',
                                 'locales')
     app.config['BABEL_TRANSLATION_DIRECTORIES'] = locales_path
+    app.config['BABEL_DEFAULT_LOCALE'] = 'en'
 
     app.config['REDIS_URL'] = server_config.get('redis_url')
     app.config.update(config.get('config', {}))
@@ -146,6 +147,11 @@ def mocked_emit(original_emit, app_):
 
     def handle_emit(data, event, namespace, room, self, skip_sid, use_callback,
                     redis_store):
+
+        print('-' * 40)
+        print(data, event, namespace, room, self, skip_sid, use_callback,
+              redis_store)
+        print('-' * 40)
         try:
             now = datetime.datetime.now().strftime(
                 '%Y-%m-%dT%H:%m:%S')
@@ -284,7 +290,6 @@ def create_socket_io_app(_app):
     """
     Creates websocket app
     :param _app: Flask app
-    :param redis_store Redis store
     """
     original_emit = socketio.base_manager.BaseManager.emit
     socketio.base_manager.BaseManager.emit = mocked_emit(original_emit, _app)

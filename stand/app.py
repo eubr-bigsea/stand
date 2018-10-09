@@ -31,7 +31,7 @@ redis_store = create_redis_store(app)
 def get_locale():
     user = getattr(g, 'user', None)
     if user is not None:
-        return user.locale
+        return user.locale or 'en'
     preferred = [x.replace('-', '_') for x in request.accept_languages.values()]
     return negotiate_locale(preferred, ['pt_BR', 'en_US'])
 
