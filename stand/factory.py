@@ -167,7 +167,7 @@ def mocked_emit(original_emit, app_):
                         job.status = data.get('status')
                         job.status_text = data.get('msg',
                                                    data.get('message', ''))
-                        job.exception_stack = data.get('exception')
+                        job.exception_stack = data.get('exception_stack')
                         if job.status in final_states:
                             job.finished = datetime.datetime.utcnow()
                             data['finished'] = job.finished.strftime(
