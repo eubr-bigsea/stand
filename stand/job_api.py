@@ -109,6 +109,11 @@ class JobListApi(Resource):
         if request.data is not None:
             try:
                 request_json = json.loads(request.data)
+                request_json['user']['id'] = g.user.id
+                request_json['user']['login'] = g.user.login
+                request_json['user']['name'] = ' '.join([g.user.first_name,
+                                                         g.user.last_name])
+
                 request_schema = JobCreateRequestSchema()
                 response_schema = JobItemResponseSchema()
 
