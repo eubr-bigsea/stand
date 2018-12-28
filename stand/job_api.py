@@ -39,13 +39,13 @@ class LatestJobDetailApi(Resource):
     def get():
         workflow_id = request.args.get('workflow_id')
 
-        jobs = _get_jobs(
-            Job.query.filter(Job.workflow_id == workflow_id).order_by(
-                Job.created.desc()).limit(1),
-            [PermissionType.LIST, PermissionType.STOP,
-             PermissionType.MANAGE]).all()
+        jobs = _get_jobs(Job.query, [PermissionType.LIST, PermissionType.STOP,
+                                     PermissionType.MANAGE])
+        jobs = jobs.filter(Job.workflow_id == workflow_id).order_by(
+            Job.created.desc()).limit(1).all()
+
         if len(jobs) == 1:
-            return JobItemResponseSchema(exclude=['workflow']).dump(
+            return JobItemResponseSchema(exclude=('workflow', )).dump(
                 jobs[0]).data
         else:
             return dict(status="ERROR", message=gettext("Not found")), 404
