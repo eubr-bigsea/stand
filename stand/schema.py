@@ -71,6 +71,7 @@ class TaskDefinitionCreateRequestSchema(Schema):
     top = fields.Integer(required=False)
     z_index = fields.Integer(required=False)
     name = fields.String(required=False, allow_none=True)
+    environment = fields.String(required=False, allow_none=True)
     forms = fields.Dict(required=True)
     operation = fields.Nested(OperationIdCreateRequestSchema, required=True)
 
@@ -81,6 +82,7 @@ class FlowDefinitionCreateRequestSchema(Schema):
     target_port = fields.Integer(required=True)
     source_id = fields.String(required=True)
     target_id = fields.String(required=True)
+    environment = fields.String(required=False, allow_none=True)
 
 
 class UserCreateRequestSchema(Schema):
