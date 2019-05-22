@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-}
-import urlparse
+import urllib.parse
 
 from flask import current_app
 from flask_redis import FlaskRedis
@@ -20,8 +20,8 @@ def connect_redis_store(url, testing=False):
     """ Connect to redis or FakeRedis if testing app """
 
     def _redis_from_url(url):
-        parsed = urlparse.urlparse(url)
-        parsed_qs = urlparse.parse_qs(parsed.query)
+        parsed = urllib.parse.urlparse(url)
+        parsed_qs = urllib.parse.parse_qs(parsed.query)
         redis_store = FlaskRedis(host=parsed.hostname, port=parsed.port,
                                  db=int(parsed_qs.get('db', 0)))
         return redis_store

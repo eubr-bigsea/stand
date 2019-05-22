@@ -100,7 +100,7 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
         '/clusters': ClusterListApi,
         '/clusters/<int:cluster_id>': ClusterDetailApi,
     }
-    for path, view in mappings.iteritems():
+    for path, view in mappings.items():
         api.add_resource(view, path)
 
     # Cache configuration for API
@@ -112,9 +112,9 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
 
 
 def wait_client():
-    print '#' * 20
-    print 'Client ACK'
-    print '#' * 20
+    print('#' * 20)
+    print('Client ACK')
+    print('#' * 20)
 
 
 def mocked_emit(original_emit, app_):
@@ -148,10 +148,10 @@ def mocked_emit(original_emit, app_):
     def handle_emit(data, event, namespace, room, self, skip_sid, use_callback,
                     redis_store):
 
-        print('-' * 40)
-        print(data, event, namespace, room, self, skip_sid, use_callback,
-              redis_store)
-        print('-' * 40)
+        print(('-' * 40))
+        print((data, event, namespace, room, self, skip_sid, use_callback,
+              redis_store))
+        print(('-' * 40))
         try:
             now = datetime.datetime.now().strftime(
                 '%Y-%m-%dT%H:%m:%S')

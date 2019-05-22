@@ -25,7 +25,7 @@ class StandSocketIO:
             'close': self.on_close_room,
 
         }
-        for event, handler in handlers.items():
+        for event, handler in list(handlers.items()):
             self.socket_io.on(event, namespace=self.namespace, handler=handler)
 
     def on_join_room(self, sid, message):
@@ -72,7 +72,7 @@ class StandSocketIO:
                     room=sid, namespace=self.namespace)
             self.redis_store.expire('room_{}'.format(room), 10)
         except Exception as e:
-            print 'ERROR!!!!!', e.message
+            print('ERROR!!!!!', e.message)
 
     def on_close_room(self, sid, message):
         room = str(message.get('room'))

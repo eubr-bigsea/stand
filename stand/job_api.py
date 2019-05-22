@@ -2,13 +2,13 @@
 import logging
 import math
 
-from app_auth import requires_auth
 from flask import g
 from flask import request, current_app
 from flask_babel import gettext
 from flask_restful import Resource
-from schema import *
 from sqlalchemy import and_
+from stand.app_auth import requires_auth
+from stand.schema import *
 from stand.services.job_services import JobService
 
 log = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ class LatestJobDetailApi(Resource):
             Job.created.desc()).limit(1).all()
 
         if len(jobs) == 1:
-            return JobItemResponseSchema(exclude=('workflow', )).dump(
+            return JobItemResponseSchema(exclude=('workflow',)).dump(
                 jobs[0]).data
         else:
             return dict(status="ERROR", message=gettext("Not found")), 404
@@ -204,7 +204,7 @@ class JobDetailApi(Resource):
                 request_schema = partial_schema_factory(
                     JobCreateRequestSchema)
                 for task in request_json.get('tasks', {}):
-                    task['forms'] = {k: v for k, v in task['forms'].iteritems()
+                    task['forms'] = {k: v for k, v in task['forms'].items()
                                      if v.get('value') is not None}
                 # Ignore missing fields to allow partial updates
                 params = {}
@@ -233,7 +233,7 @@ class JobDetailApi(Resource):
                         else:
                             result = dict(status="ERROR",
                                           message=gettext("Not found"))
-                    except Exception, e:
+                    except Exception as e:
                         log.exception(gettext('Error in PATCH'))
                         result, result_code = dict(
                             status="ERROR",

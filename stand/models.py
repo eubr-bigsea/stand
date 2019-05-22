@@ -29,7 +29,7 @@ class StatusExecution:
 
     @staticmethod
     def values():
-        return [n for n in StatusExecution.__dict__.keys()
+        return [n for n in list(StatusExecution.__dict__.keys())
                 if n[0] != '_' and n != 'values']
 
 
@@ -43,7 +43,7 @@ class ResultType:
 
     @staticmethod
     def values():
-        return [n for n in ResultType.__dict__.keys()
+        return [n for n in list(ResultType.__dict__.keys())
                 if n[0] != '_' and n != 'values']
 
 
@@ -55,7 +55,7 @@ class ClusterType:
 
     @staticmethod
     def values():
-        return [n for n in ClusterType.__dict__.keys()
+        return [n for n in list(ClusterType.__dict__.keys())
                 if n[0] != '_' and n != 'values']
 
 
@@ -65,7 +65,7 @@ class ClusterPermission:
 
     @staticmethod
     def values():
-        return [n for n in ClusterPermission.__dict__.keys()
+        return [n for n in list(ClusterPermission.__dict__.keys())
                 if n[0] != '_' and n != 'values']
 
 
@@ -78,7 +78,7 @@ class PermissionType:
 
     @staticmethod
     def values():
-        return [n for n in PermissionType.__dict__.keys()
+        return [n for n in list(PermissionType.__dict__.keys())
                 if n[0] != '_' and n != 'values']
 
 
@@ -104,7 +104,7 @@ class Cluster(db.Model):
     name = Column(String(200), nullable=False)
     description = Column(String(200), nullable=False)
     enabled = Column(String(200), nullable=False)
-    type = Column(Enum(*ClusterType.values(),
+    type = Column(Enum(*list(ClusterType.values()),
                        name='ClusterTypeEnumType'),
                   default=ClusterType.SPARK_LOCAL, nullable=False)
     address = Column(String(200), nullable=False)
@@ -129,7 +129,7 @@ class ClusterAccess(db.Model):
 
     # Fields
     id = Column(Integer, primary_key=True)
-    permission = Column(Enum(*ClusterPermission.values(),
+    permission = Column(Enum(*list(ClusterPermission.values()),
                              name='ClusterPermissionEnumType'),
                         default=ClusterPermission.EXECUTE, nullable=False)
     user_id = Column(Integer, nullable=False)
@@ -179,7 +179,7 @@ class ExecutionPermission(db.Model):
 
     # Fields
     id = Column(Integer, primary_key=True)
-    permission = Column(Enum(*PermissionType.values(),
+    permission = Column(Enum(*list(PermissionType.values()),
                              name='PermissionTypeEnumType'), nullable=False)
     user_id = Column(Integer, nullable=False)
 
@@ -201,7 +201,7 @@ class Job(db.Model):
     name = Column(String(50))
     started = Column(DateTime)
     finished = Column(DateTime)
-    status = Column(Enum(*StatusExecution.values(),
+    status = Column(Enum(*list(StatusExecution.values()),
                          name='StatusExecutionEnumType'),
                     default=StatusExecution.WAITING, nullable=False)
     status_text = Column(LONGTEXT)
@@ -241,7 +241,7 @@ class JobResult(db.Model):
     task_id = Column(String(200), nullable=False)
     operation_id = Column(Integer, nullable=False)
     title = Column(String(200))
-    type = Column(Enum(*ResultType.values(),
+    type = Column(Enum(*list(ResultType.values()),
                        name='ResultTypeEnumType'), nullable=False)
     content = Column(LONGTEXT)
 
@@ -266,7 +266,7 @@ class JobStep(db.Model):
     # Fields
     id = Column(Integer, primary_key=True)
     date = Column(DateTime, nullable=False)
-    status = Column(Enum(*StatusExecution.values(),
+    status = Column(Enum(*list(StatusExecution.values()),
                          name='StatusExecutionEnumType'), nullable=False)
     task_id = Column(String(200), nullable=False)
     operation_id = Column(Integer, nullable=False)
@@ -296,7 +296,7 @@ class JobStepLog(db.Model):
     # Fields
     id = Column(Integer, primary_key=True)
     level = Column(String(200), nullable=False)
-    status = Column(Enum(*StatusExecution.values(),
+    status = Column(Enum(*list(StatusExecution.values()),
                          name='StatusExecutionEnumType'), nullable=False)
     date = Column(DateTime, nullable=False)
     message = Column(LONGTEXT, nullable=False)

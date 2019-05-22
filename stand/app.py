@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 import json
 import logging
-import urlparse
+
+import urllib.parse
 
 import eventlet
 from babel import negotiate_locale
-from factory import create_app, create_redis_store
 from flask import request, g
 from flask_babel import gettext, Babel
 from pymysql import OperationalError
@@ -14,6 +14,7 @@ from redis import StrictRedis
 from sqlalchemy import event
 from sqlalchemy.exc import DisconnectionError
 from sqlalchemy.pool import Pool
+from stand.factory import create_app, create_redis_store
 from stand.models import Job
 from stand.socketio_events import StandSocketIO
 
@@ -32,7 +33,8 @@ def get_locale():
     user = getattr(g, 'user', None)
     if user is not None:
         return user.locale or 'en'
-    preferred = [x.replace('-', '_') for x in request.accept_languages.values()]
+    preferred = [x.replace('-', '_') for x in
+                 list(request.accept_languages.values())]
     return negotiate_locale(preferred, ['pt_BR', 'en_US'])
 
 
@@ -41,7 +43,7 @@ def check_connection(dbapi_con, con_record, con_proxy):
     cursor = dbapi_con.cursor()
     try:
         cursor.execute("SELECT 1")
-    except OperationalError, ex:
+    except OperationalError as ex:
         if ex.args[0] in (
                 2006,  # MySQL server has gone away
                 2013,  # Lost connection to MySQL server during query
@@ -53,14 +55,14 @@ def check_connection(dbapi_con, con_record, con_proxy):
 
 
 def handle_updates(app_, redis_url):
-    parsed = urlparse.urlparse(redis_url)
+    parsed = urllib.parse.urlparse(redis_url)
     redis_conn = StrictRedis(host=parsed.hostname, port=parsed.port)
     with app_.app_context():
         while True:
             _, msg = redis_conn.blpop('stand_updates')
             msg = json.loads(msg)
             job = Job.query.get(msg.get('id'))
-            print msg, job
+            print(msg, job)
 
 
 def main(is_main_module):

@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
     t = gettext.translation('messages', locales_path, [args.lang],
                             fallback=True)
-    t.install(unicode=True)
+    t.install(str=True)
 
     app = create_app(config_file=args.config)
     babel = create_babel_i18n(app)
