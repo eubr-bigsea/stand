@@ -5,12 +5,13 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, \
     Enum, DateTime, Numeric, Text, Unicode, UnicodeText
 from sqlalchemy import event
+from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy_i18n import make_translatable, translation_base, Translatable
-from sqlalchemy.dialects.mysql import LONGTEXT
-make_translatable(options={'locales': ['pt', 'en', 'es'],
+
+make_translatable(options={'locales': ['pt', 'en'],
                            'auto_create_locales': True,
                            'fallback_locale': 'en'})
 
@@ -20,12 +21,12 @@ db = SQLAlchemy()
 # noinspection PyClassHasNoInit
 class StatusExecution:
     COMPLETED = 'COMPLETED'
-    WAITING = 'WAITING'
-    INTERRUPTED = 'INTERRUPTED'
-    CANCELED = 'CANCELED'
-    RUNNING = 'RUNNING'
     ERROR = 'ERROR'
+    INTERRUPTED = 'INTERRUPTED'
     PENDING = 'PENDING'
+    RUNNING = 'RUNNING'
+    WAITING = 'WAITING'
+    CANCELED = 'CANCELED'
 
     @staticmethod
     def values():
@@ -38,8 +39,8 @@ class ResultType:
     VISUALIZATION = 'VISUALIZATION'
     MODEL = 'MODEL'
     HTML = 'HTML'
-    OTHER = 'OTHER'
     TEXT = 'TEXT'
+    OTHER = 'OTHER'
 
     @staticmethod
     def values():
@@ -50,8 +51,9 @@ class ResultType:
 # noinspection PyClassHasNoInit
 class ClusterType:
     SPARK_LOCAL = 'SPARK_LOCAL'
-    MESOS = 'MESOS'
     YARN = 'YARN'
+    MESOS = 'MESOS'
+    KUBERNETES = 'KUBERNETES'
 
     @staticmethod
     def values():
@@ -71,10 +73,10 @@ class ClusterPermission:
 
 # noinspection PyClassHasNoInit
 class PermissionType:
-    STOP = 'STOP'
     EXECUTE = 'EXECUTE'
-    MANAGE = 'MANAGE'
     LIST = 'LIST'
+    STOP = 'STOP'
+    MANAGE = 'MANAGE'
 
     @staticmethod
     def values():
@@ -84,12 +86,6 @@ class PermissionType:
 
 # noinspection PyClassHasNoInit
 class JobException(BaseException):
-    ALREADY_FINISHED = 'ALREADY_FINISHED'
-    ALREADY_LOCKED = 'ALREADY_LOCKED'
-    ALREADY_RUNNING = 'ALREADY_RUNNING'
-    INVALID_STATE = 'INVALID_STATE'
-    CLUSTER_DISABLED = 'CLUSTER_DISABLED'
-
     def __init__(self, message, error_code):
         self.message = message
         self.error_code = error_code
@@ -168,6 +164,29 @@ class ClusterConfiguration(db.Model):
 
     def __unicode__(self):
         return self.name
+
+    def __repr__(self):
+        return '<Instance {}: {}>'.format(self.__class__, self.id)
+
+
+class ClusterPlatform(db.Model):
+    """ Cluster platform """
+    __tablename__ = 'cluster_platform'
+
+    # Fields
+    id = Column(Integer, primary_key=True)
+    platform_id = Column(Integer,
+                         default=1, nullable=False)
+
+    # Associations
+    cluster_id = Column(Integer,
+                        ForeignKey("cluster.id"), nullable=False)
+    cluster = relationship(
+        "Cluster",
+        foreign_keys=[cluster_id])
+
+    def __unicode__(self):
+        return self.platform_id
 
     def __repr__(self):
         return '<Instance {}: {}>'.format(self.__class__, self.id)

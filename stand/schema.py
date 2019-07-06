@@ -9,7 +9,7 @@ from stand.models import *
 
 def partial_schema_factory(schema_cls):
     schema = schema_cls(partial=True)
-    for field_name, field in list(schema.fields.items()):
+    for field_name, field in schema.fields.items():
         if isinstance(field, fields.Nested):
             new_field = deepcopy(field)
             new_field.schema.partial = True
@@ -20,7 +20,7 @@ def partial_schema_factory(schema_cls):
 def load_json(str_value):
     try:
         return json.loads(str_value)
-    except:
+    except BaseException:
         return "Error loading JSON"
 
 
@@ -113,12 +113,9 @@ class ClusterListResponseSchema(Schema):
     id = fields.Integer(required=True)
     name = fields.String(required=True)
     description = fields.String(required=True)
-    executors = fields.Integer(required=True, missing=1,
-                               default=1)
-    executor_cores = fields.Integer(required=True, missing=1,
-                                    default=1)
-    executor_memory = fields.String(required=True, missing='1M',
-                                    default='1M')
+    executors = fields.Integer(required=True, missing=1)
+    executor_cores = fields.Integer(required=True, missing=1)
+    executor_memory = fields.String(required=True, missing='1M')
     general_parameters = fields.String(required=True)
 
     # noinspection PyUnresolvedReferences
@@ -136,12 +133,9 @@ class ClusterItemResponseSchema(Schema):
     id = fields.Integer(required=True)
     name = fields.String(required=True)
     description = fields.String(required=True)
-    executors = fields.Integer(required=True, missing=1,
-                               default=1)
-    executor_cores = fields.Integer(required=True, missing=1,
-                                    default=1)
-    executor_memory = fields.String(required=True, missing='1M',
-                                    default='1M')
+    executors = fields.Integer(required=True, missing=1)
+    executor_cores = fields.Integer(required=True, missing=1)
+    executor_memory = fields.String(required=True, missing='1M')
     general_parameters = fields.String(required=True)
 
     # noinspection PyUnresolvedReferences
@@ -161,15 +155,11 @@ class ClusterCreateRequestSchema(Schema):
     description = fields.String(required=True)
     enabled = fields.String(required=True)
     type = fields.String(required=True, missing=ClusterType.SPARK_LOCAL,
-                         default=ClusterType.SPARK_LOCAL,
-                         validate=[OneOf(list(ClusterType.__dict__.keys()))])
+                         validate=[OneOf(ClusterType.__dict__.keys())])
     address = fields.String(required=True)
-    executors = fields.Integer(required=True, missing=1,
-                               default=1)
-    executor_cores = fields.Integer(required=True, missing=1,
-                                    default=1)
-    executor_memory = fields.String(required=True, missing='1M',
-                                    default='1M')
+    executors = fields.Integer(required=True, missing=1)
+    executor_cores = fields.Integer(required=True, missing=1)
+    executor_memory = fields.String(required=True, missing='1M')
     general_parameters = fields.String(required=True)
 
     # noinspection PyUnresolvedReferences
@@ -182,17 +172,32 @@ class ClusterCreateRequestSchema(Schema):
         ordered = True
 
 
+class ClusterPlatformListResponseSchema(Schema):
+    """ JSON serialization schema """
+    platform_id = fields.Integer(required=True, missing=1)
+    cluster = fields.Nested(
+        'stand.schema.ClusterListResponseSchema',
+        required=True)
+
+    # noinspection PyUnresolvedReferences
+    @post_load
+    def make_object(self, data):
+        """ Deserialize data into an instance of ClusterPlatform"""
+        return ClusterPlatform(**data)
+
+    class Meta:
+        ordered = True
+
+
 class JobItemResponseSchema(Schema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
-    created = fields.DateTime(required=True, missing=func.now(),
-                              default=func.now())
+    created = fields.DateTime(required=True)
     name = fields.String(required=False, allow_none=True)
     started = fields.DateTime(required=False, allow_none=True)
     finished = fields.DateTime(required=False, allow_none=True)
     status = fields.String(required=True, missing=StatusExecution.WAITING,
-                           default=StatusExecution.WAITING,
-                           validate=[OneOf(list(StatusExecution.__dict__.keys()))])
+                           validate=[OneOf(StatusExecution.__dict__.keys())])
     status_text = fields.String(required=False, allow_none=True)
     exception_stack = fields.String(required=False, allow_none=True)
     cluster = fields.Nested(
@@ -226,14 +231,12 @@ class JobItemResponseSchema(Schema):
 class JobListResponseSchema(Schema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
-    created = fields.DateTime(required=True, missing=func.now(),
-                              default=func.now())
+    created = fields.DateTime(required=True)
     name = fields.String(required=False, allow_none=True)
     started = fields.DateTime(required=False, allow_none=True)
     finished = fields.DateTime(required=False, allow_none=True)
     status = fields.String(required=True, missing=StatusExecution.WAITING,
-                           default=StatusExecution.WAITING,
-                           validate=[OneOf(list(StatusExecution.__dict__.keys()))])
+                           validate=[OneOf(StatusExecution.__dict__.keys())])
     status_text = fields.String(required=False, allow_none=True)
     exception_stack = fields.String(required=False, allow_none=True)
     cluster = fields.Nested(
@@ -308,13 +311,11 @@ class JobCreateRequestSchema(Schema):
 class JobExecuteResponseSchema(Schema):
     """ JSON schema for response """
     id = fields.Integer(required=True)
-    created = fields.DateTime(required=True, missing=func.now(),
-                              default=func.now())
+    created = fields.DateTime(required=True)
     name = fields.String(required=False, allow_none=True)
     started = fields.DateTime(required=False, allow_none=True)
     status = fields.String(required=True, missing=StatusExecution.WAITING,
-                           default=StatusExecution.WAITING,
-                           validate=[OneOf(list(StatusExecution.__dict__.keys()))])
+                           validate=[OneOf(StatusExecution.__dict__.keys())])
     status_text = fields.String(required=False, allow_none=True)
     exception_stack = fields.String(required=False, allow_none=True)
     workflow_id = fields.Integer(required=True)
@@ -360,7 +361,7 @@ class JobResultItemResponseSchema(Schema):
     """ JSON serialization schema """
     title = fields.String(required=False, allow_none=True)
     type = fields.String(required=True,
-                         validate=[OneOf(list(ResultType.__dict__.keys()))])
+                         validate=[OneOf(ResultType.__dict__.keys())])
     content = fields.String(required=False, allow_none=True)
     task = fields.Function(lambda x: {"id": x.task_id})
     operation = fields.Function(lambda x: {"id": x.operation_id})
@@ -381,7 +382,7 @@ class JobResultListResponseSchema(Schema):
     operation_id = fields.Integer(required=True)
     title = fields.String(required=False, allow_none=True)
     type = fields.String(required=True,
-                         validate=[OneOf(list(ResultType.__dict__.keys()))])
+                         validate=[OneOf(ResultType.__dict__.keys())])
     content = fields.String(required=False, allow_none=True)
 
     # noinspection PyUnresolvedReferences
@@ -398,7 +399,7 @@ class JobStepItemResponseSchema(Schema):
     """ JSON serialization schema """
     date = fields.DateTime(required=True)
     status = fields.String(required=True,
-                           validate=[OneOf(list(StatusExecution.__dict__.keys()))])
+                           validate=[OneOf(StatusExecution.__dict__.keys())])
     message = fields.String(allow_none=True)
     std_out = fields.String(allow_none=True)
     std_err = fields.String(allow_none=True)
@@ -427,7 +428,7 @@ class JobStepListResponseSchema(Schema):
     """ JSON serialization schema """
     date = fields.DateTime(required=True)
     status = fields.String(required=True,
-                           validate=[OneOf(list(StatusExecution.__dict__.keys()))])
+                           validate=[OneOf(StatusExecution.__dict__.keys())])
     task_id = fields.String(required=True)
     operation_id = fields.Integer(required=True)
     operation_name = fields.String(required=True)
@@ -451,7 +452,7 @@ class JobStepCreateRequestSchema(Schema):
     """ JSON serialization schema """
     date = fields.DateTime(required=True)
     status = fields.String(required=True,
-                           validate=[OneOf(list(StatusExecution.__dict__.keys()))])
+                           validate=[OneOf(StatusExecution.__dict__.keys())])
     task_id = fields.String(required=True)
     operation_id = fields.Integer(required=True)
     operation_name = fields.String(required=True)
@@ -476,11 +477,10 @@ class JobStepLogListResponseSchema(Schema):
     id = fields.Integer(required=True)
     level = fields.String(required=True)
     status = fields.String(required=True,
-                           validate=[OneOf(list(StatusExecution.__dict__.keys()))])
+                           validate=[OneOf(StatusExecution.__dict__.keys())])
     date = fields.DateTime(required=True)
     message = fields.String(required=True)
-    type = fields.String(required=True, missing='TEXT',
-                         default='TEXT')
+    type = fields.String(required=True, missing='TEXT')
 
     # noinspection PyUnresolvedReferences
     @post_load
@@ -497,11 +497,10 @@ class JobStepLogItemResponseSchema(Schema):
     id = fields.Integer(required=True)
     level = fields.String(required=True)
     status = fields.String(required=True,
-                           validate=[OneOf(list(StatusExecution.__dict__.keys()))])
+                           validate=[OneOf(StatusExecution.__dict__.keys())])
     date = fields.DateTime(required=True)
     message = fields.String(required=True)
-    type = fields.String(required=True, missing='TEXT',
-                         default='TEXT')
+    type = fields.String(required=True, missing='TEXT')
 
     # noinspection PyUnresolvedReferences
     @post_load
@@ -518,11 +517,10 @@ class JobStepLogCreateRequestSchema(Schema):
     id = fields.Integer(allow_none=True)
     level = fields.String(required=True)
     status = fields.String(required=True,
-                           validate=[OneOf(list(StatusExecution.__dict__.keys()))])
+                           validate=[OneOf(StatusExecution.__dict__.keys())])
     date = fields.DateTime(required=True)
     message = fields.String(required=True)
-    type = fields.String(required=True, missing='TEXT',
-                         default='TEXT')
+    type = fields.String(required=True, missing='TEXT')
 
     # noinspection PyUnresolvedReferences
     @post_load

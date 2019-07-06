@@ -26,7 +26,7 @@ babel = Babel()
 babel.init_app(app)
 stand_socket_io = StandSocketIO(app)
 redis_store = create_redis_store(app)
-
+logger = logging.getLogger(__name__)
 
 @babel.localeselector
 def get_locale():
@@ -60,13 +60,13 @@ def handle_updates(app_, redis_url):
     with app_.app_context():
         while True:
             _, msg = redis_conn.blpop('stand_updates')
-            msg = json.loads(msg)
-            job = Job.query.get(msg.get('id'))
-            print(msg, job)
+            msg_json = json.loads(msg)
+            job = Job.query.get(msg_json.get('id'))
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(msg)
 
 
 def main(is_main_module):
-    logger = logging.getLogger(__name__)
     config = app.config['STAND_CONFIG']
     port = int(config.get('port', 5000))
     logger.debug(gettext('Running in %s mode'), config.get('environment'))
