@@ -100,7 +100,7 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
         '/clusters': ClusterListApi,
         '/clusters/<int:cluster_id>': ClusterDetailApi,
     }
-    for path, view in mappings.iteritems():
+    for path, view in mappings.items():
         api.add_resource(view, path)
 
     # Cache configuration for API
@@ -109,12 +109,6 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
     cache.init_app(app)
 
     return app
-
-
-def wait_client():
-    print '#' * 20
-    print 'Client ACK'
-    print '#' * 20
 
 
 def mocked_emit(original_emit, app_):
@@ -131,7 +125,8 @@ def mocked_emit(original_emit, app_):
         if room.isdigit():
             use_callback = handle_emit(data, event, namespace, room, self,
                                        skip_sid, use_callback, redis_store)
-
+            if isinstance(data.get('message', ''), bytes):
+                data['message'] = str(data['message'], 'utf-8')
             redis_store.rpush('cache_room_{}'.format(room), json.dumps(
                 {'event': event, 'data': data, 'namespace': namespace,
                  'room': room}))
@@ -148,10 +143,10 @@ def mocked_emit(original_emit, app_):
     def handle_emit(data, event, namespace, room, self, skip_sid, use_callback,
                     redis_store):
 
-        print('-' * 40)
-        print(data, event, namespace, room, self, skip_sid, use_callback,
-              redis_store)
-        print('-' * 40)
+        # print(('-' * 40))
+        # print((data, event, namespace, room, self, skip_sid, use_callback,
+        #      redis_store))
+        # print(('-' * 40))
         try:
             now = datetime.datetime.now().strftime(
                 '%Y-%m-%dT%H:%m:%S')
@@ -230,12 +225,15 @@ def mocked_emit(original_emit, app_):
 
                         db.session.add(job)
                         db.session.commit()
-                        use_callback = wait_client
                 elif event == 'update task':
                     job_id = int(room)
                     job_step = JobStep.query.filter(and_(
                         JobStep.job_id == job_id,
                         JobStep.task_id == data.get('id'))).first()
+                    print('=' * 20)
+                    print(data)
+                    print(job_step)
+                    print('=' * 20)
                     if job_step is not None:
                         job_step.status = data.get('status')
                         level = data.get('level')
@@ -255,7 +253,6 @@ def mocked_emit(original_emit, app_):
                         job_step.logs.append(step_log)
                         db.session.add(job_step)
                         db.session.commit()
-                        use_callback = wait_client
                         data['type'] = data.get('type', 'TEXT') or 'TEXT'
                         data['id'] = step_log.id
                         data['level'] = level

@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import sqlalchemy_utils
-from app import babel, app
 from flask import request, render_template
 from flask_babel import get_locale
+from stand.app import babel, app
 
 sqlalchemy_utils.i18n.get_locale = get_locale
 

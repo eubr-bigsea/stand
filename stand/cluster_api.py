@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-}
 import logging
 
-from app_auth import requires_auth
 from flask import request, current_app
 from flask_babel import gettext
 from flask_restful import Resource
-from schema import *
+from stand.schema import *
+from stand.app_auth import requires_auth
 
 log = logging.getLogger(__name__)
 

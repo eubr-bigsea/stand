@@ -2,13 +2,13 @@
 import logging
 import math
 
-from app_auth import requires_auth
 from flask import g
 from flask import request, current_app
 from flask_babel import gettext
 from flask_restful import Resource
-from schema import *
 from sqlalchemy import and_
+from stand.app_auth import requires_auth
+from stand.schema import *
 from stand.services.job_services import JobService
 
 log = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ class LatestJobDetailApi(Resource):
             Job.created.desc()).limit(1).all()
 
         if len(jobs) == 1:
-            return JobItemResponseSchema(exclude=('workflow', )).dump(
+            return JobItemResponseSchema(exclude=('workflow',)).dump(
                 jobs[0]).data
         else:
             return dict(status="ERROR", message=gettext("Not found")), 404
@@ -106,9 +106,9 @@ class JobListApi(Resource):
         result, result_code = dict(
             status="ERROR",
             message=gettext("Missing json in the request body")), 400
-        if request.data is not None:
+        if request.json is not None:
             try:
-                request_json = json.loads(request.data)
+                request_json = request.json
                 request_json['user']['id'] = g.user.id
                 request_json['user']['login'] = g.user.login
                 request_json['user']['name'] = ' '.join([g.user.first_name,
@@ -142,7 +142,7 @@ class JobListApi(Resource):
                 pass  # default return value
             except JobException as je:
                 log.exception(gettext('Error in POST'))
-                result = dict(status="ERROR", message=je.message,
+                result = dict(status="ERROR", message=str(je),
                               code=je.error_code)
                 result_code = 422
             except Exception as e:
@@ -151,7 +151,7 @@ class JobListApi(Resource):
                                            message=gettext(
                                                "Internal error")), 500
                 if current_app.debug or True:
-                    result['debug_detail'] = e.message
+                    result['debug_detail'] = str(e)
                 db.session.rollback()
 
         return result, result_code
@@ -188,7 +188,7 @@ class JobDetailApi(Resource):
                 result, result_code = dict(status="ERROR",
                                            message="Internal error"), 500
                 if current_app.debug:
-                    result['debug_detail'] = e.message
+                    result['debug_detail'] = str(e)
                 db.session.rollback()
         return result, result_code
 
@@ -204,7 +204,7 @@ class JobDetailApi(Resource):
                 request_schema = partial_schema_factory(
                     JobCreateRequestSchema)
                 for task in request_json.get('tasks', {}):
-                    task['forms'] = {k: v for k, v in task['forms'].iteritems()
+                    task['forms'] = {k: v for k, v in task['forms'].items()
                                      if v.get('value') is not None}
                 # Ignore missing fields to allow partial updates
                 params = {}
@@ -233,13 +233,13 @@ class JobDetailApi(Resource):
                         else:
                             result = dict(status="ERROR",
                                           message=gettext("Not found"))
-                    except Exception, e:
+                    except Exception as e:
                         log.exception(gettext('Error in PATCH'))
                         result, result_code = dict(
                             status="ERROR",
                             message=gettext("Internal error")), 500
                         if current_app.debug:
-                            result['debug_detail'] = e.message
+                            result['debug_detail'] = str(e)
                         db.session.rollback()
                 else:
                     result = dict(status="ERROR",
@@ -273,7 +273,7 @@ class JobStopActionApi(Resource):
             except JobException as je:
                 log.exception(gettext('Error in POST'))
                 result, result_code = dict(status="ERROR",
-                                           message=je.message,
+                                           message=jstr(e),
                                            code=je.error_code), 422
                 # if je.error_code == JobException.ALREADY_FINISHED:
                 #     result['status'] = 'OK'
@@ -285,7 +285,7 @@ class JobStopActionApi(Resource):
                                            message=gettext(
                                                "Internal error")), 500
                 if current_app.debug:
-                    result['debug_detail'] = e.message
+                    result['debug_detail'] = str(e)
                 db.session.rollback()
         return result, result_code
 
@@ -322,7 +322,7 @@ class JobLockActionApi(Resource):
             except JobException as je:
                 log.exception('Error in POST')
                 result, result_code = dict(
-                    status="ERROR", message=je.message, code=je.error_code), 422
+                    status="ERROR", message=jstr(e), code=je.error_code), 422
                 if je.error_code == JobException.ALREADY_LOCKED:
                     result_code = 409
 
@@ -332,7 +332,7 @@ class JobLockActionApi(Resource):
                                            message=gettext(
                                                'Internal error')), 500
                 if current_app.debug:
-                    result['debug_detail'] = e.message
+                    result['debug_detail'] = str(e)
                 db.session.rollback()
         return result, result_code
 
@@ -366,7 +366,7 @@ class JobSampleActionApi(Resource):
             except JobException as je:
                 log.exception('Error in POST')
                 result, result_code = dict(
-                    status="ERROR", message=je.message, code=je.error_code), 422
+                    status="ERROR", message=jstr(e), code=je.error_code), 422
 
             except Exception as e:
                 log.exception('Error in POST')
@@ -374,7 +374,7 @@ class JobSampleActionApi(Resource):
                                            message=gettext(
                                                'Internal error')), 500
                 if current_app.debug:
-                    result['debug_detail'] = e.message
+                    result['debug_detail'] = str(e)
                 db.session.rollback()
 
         return result, result_code
@@ -403,7 +403,7 @@ class UpdateJobStatusActionApi(Resource):
                                                message=gettext(
                                                    'Internal error')), 500
                     if current_app.debug:
-                        result['debug_detail'] = e.message
+                        result['debug_detail'] = str(e)
                     db.session.rollback()
         return result, result_code
 
@@ -434,7 +434,7 @@ class UpdateJobStepStatusActionApi(Resource):
                                                message=gettext(
                                                    'Internal error')), 500
                     if current_app.debug:
-                        result['debug_detail'] = e.message
+                        result['debug_detail'] = str(e)
                     db.session.rollback()
         return result, result_code
 
@@ -458,7 +458,7 @@ class JobSourceCodeApi(Resource):
     def patch(job_id):
         """ Updates the job source code """
         job = Job.query.get_or_404(ident=job_id)
-        params = json.loads(request.data)
+        params = request.json
         if str(params.get('secret')) == str(
                 current_app.config['STAND_CONFIG']['secret']):
             job.source_code = params.get('source')

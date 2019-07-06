@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-}
-import urlparse
+import urllib.parse
 
 from flask import current_app
 from flask_redis import FlaskRedis
@@ -19,12 +19,12 @@ class MockRedisWrapper(MockRedis):
 def connect_redis_store(url, testing=False):
     """ Connect to redis or FakeRedis if testing app """
 
-    def _redis_from_url(url):
-        parsed = urlparse.urlparse(url)
-        parsed_qs = urlparse.parse_qs(parsed.query)
-        redis_store = FlaskRedis(host=parsed.hostname, port=parsed.port,
-                                 db=int(parsed_qs.get('db', 0)))
-        return redis_store
+    def _redis_from_url(redis_url):
+        parsed = urllib.parse.urlparse(redis_url)
+        parsed_qs = urllib.parse.parse_qs(parsed.query)
+        return FlaskRedis(host=parsed.hostname, port=parsed.port,
+                          db=int(parsed_qs.get('db', 0)),
+                          decode_responses=True)
 
     if testing or (current_app and current_app.testing):
         redis_store = FlaskRedis.from_custom_provider(MockRedisWrapper)
