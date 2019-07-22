@@ -43,7 +43,7 @@ def upgrade():
                            'executor_cores': '1',
                            'executor_memory': '1G',
                            'executors': '1',
-                           'general_parameters': 'spark.kubernetes.namespace=lemonade-dev,spark.kubernetes.authenticate.driver.serviceAccountName=spark-sa,spark.driver.host=juicer.lemonade-dev.svc.cluster.local,spark.driver.port=29413,spark.kubernetes.container.image=lucasmsp/juicer:spark',
+                           'general_parameters': 'spark.kubernetes.namespace=lemonade-dev,spark.kubernetes.authenticate.driver.serviceAccountName=spark-sa,spark.driver.host=juicer.lemonade-dev.svc.cluster.local,spark.driver.port=29413,spark.kubernetes.container.image=eubrabigsea/juicer',
                        }
                    ])
 
