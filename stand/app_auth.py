@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-}
 import json
+import eventlet
 import logging
 import re
 from collections import namedtuple
 from functools import wraps
 
-import requests
+import re
 from flask import request, Response, current_app, g as flask_g
 
-User = namedtuple(
-    "User", "id, login, email, name, first_name, last_name, locale, roles")
+eventlet.monkey_patch(all=True)
+User = namedtuple("User", "id, login, email, first_name, last_name, locale")
 
 MSG1 = 'Could not verify your access level for that URL. ' \
        'You have to login with proper credentials provided by Lemonade Thorn'
@@ -53,6 +54,7 @@ def requires_auth(f):
                 'authorization': authorization,
                 'cache-control': "no-cache",
             }
+            import requests
             r = requests.request("POST", url, data=payload,
                                  headers=headers)
             if r.status_code != 200:

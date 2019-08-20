@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import eventlet
+eventlet.monkey_patch(all=True)
 import json
 import logging
 
 import urllib.parse
 
-import eventlet
 from babel import negotiate_locale
 from flask import request, g
 from flask_babel import gettext, Babel
@@ -18,7 +19,6 @@ from stand.factory import create_app, create_redis_store
 from stand.models import Job
 from stand.socketio_events import StandSocketIO
 
-eventlet.monkey_patch(all=True)
 
 app = create_app()
 babel = Babel()
