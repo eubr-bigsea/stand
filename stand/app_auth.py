@@ -10,7 +10,8 @@ import re
 from flask import request, Response, current_app, g as flask_g
 
 eventlet.monkey_patch(all=True)
-User = namedtuple("User", "id, login, email, first_name, last_name, locale")
+User = namedtuple(
+        "User", "id, login, email, first_name, last_name, locale, roles")
 
 MSG1 = 'Could not verify your access level for that URL. ' \
        'You have to login with proper credentials provided by Lemonade Thorn'
