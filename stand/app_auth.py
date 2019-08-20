@@ -11,7 +11,7 @@ from flask import request, Response, current_app, g as flask_g
 
 eventlet.monkey_patch(all=True)
 User = namedtuple(
-        "User", "id, login, email, first_name, last_name, locale, roles")
+        "User", "id, name, login, email, first_name, last_name, locale, roles")
 
 MSG1 = 'Could not verify your access level for that URL. ' \
        'You have to login with proper credentials provided by Lemonade Thorn'
@@ -74,10 +74,8 @@ def requires_auth(f):
                 setattr(flask_g, 'user', User(
                     id=int(user_id),
                     name='{} {}'.format(
-                        user_data['data']['attributes']['first_name'].encode(
-                            'utf8'),
-                        user_data['data']['attributes']['last_name'].encode(
-                            'utf8')),
+                        user_data['data']['attributes']['first_name'],
+                        user_data['data']['attributes']['last_name']),
                     login=user_data['data']['attributes']['email'],
                     email=user_data['data']['attributes']['email'],
                     first_name=user_data['data']['attributes']['first_name'],
