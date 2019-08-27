@@ -230,10 +230,10 @@ def mocked_emit(original_emit, app_):
                     job_step = JobStep.query.filter(and_(
                         JobStep.job_id == job_id,
                         JobStep.task_id == data.get('id'))).first()
-                    print('=' * 20)
-                    print(data)
-                    print(job_step)
-                    print('=' * 20)
+                    # print('=' * 20)
+                    # print(data)
+                    # print(job_step)
+                    # print('=' * 20)
                     if job_step is not None:
                         job_step.status = data.get('status')
                         level = data.get('level')
@@ -251,8 +251,9 @@ def mocked_emit(original_emit, app_):
                                              data.get('msg',
                                                       'no message')))
                         job_step.logs.append(step_log)
-                        db.session.add(job_step)
-                        db.session.commit()
+                        if data.get('type') != 'SILENT':
+                            db.session.add(job_step)
+                            db.session.commit()
                         data['type'] = data.get('type', 'TEXT') or 'TEXT'
                         data['id'] = step_log.id
                         data['level'] = level
