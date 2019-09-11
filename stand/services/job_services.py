@@ -7,6 +7,7 @@ import requests
 import stand.util
 from stand.models import db, StatusExecution, JobException, Job
 from stand.services.redis_service import connect_redis_store
+import rq
 
 logging.basicConfig(
     format=('[%(levelname)s] %(asctime)s,%(msecs)05.1f '
@@ -209,3 +210,22 @@ class JobService:
         })
         redis_store.rpush("queue_start", msg)
         return json.loads(redis_store.blpop(output)[1])
+    @staticmethod
+    def execute_performance_model(model_id, deadline, cores):
+        redis_store = connect_redis_store(
+                None, testing=False, decode_responses=False)
+        q = rq.Queue('juicer', connection=redis_store)
+        payload = {'model_id': model_id, 'deadline': deadline, 'cores': cores}
+        result = q.enqueue('juicer.jobs.estimate_time_with_performance_model', 
+                           payload)
+        return result.id
+    @staticmethod
+    def get_performance_model_result(job_id):
+        redis_store = connect_redis_store(
+                None, testing=False, decode_responses=False)
+        try:
+            rq_job = rq.job.Job(job_id, connection=redis_store)
+            return {'status': 'OK', 'result': rq_job.result}
+        except rq.exceptions.NoSuchJobError as nsje:
+            return {'status': 'ERROR', 'message': 'Job not found'}
+
