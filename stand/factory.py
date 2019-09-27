@@ -14,7 +14,8 @@ from flask_cors import CORS
 from flask_restful import Api
 from mockredis import MockRedis
 from sqlalchemy import and_
-from stand.cluster_api import ClusterDetailApi
+from stand.cluster_api import ClusterDetailApi, PerformanceModelEstimationApi, \
+    PerformanceModelResultApi
 from stand.cluster_api import ClusterListApi
 from stand.job_api import JobListApi, JobDetailApi, \
     JobStopActionApi, JobLockActionApi, JobUnlockActionApi, \
@@ -99,6 +100,8 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
         '/jobs/<int:job_id>/sample/<task_id>': JobSampleActionApi,
         '/clusters': ClusterListApi,
         '/clusters/<int:cluster_id>': ClusterDetailApi,
+        '/performance-models': PerformanceModelEstimationApi,
+        '/performance-models/<schedule_id>': PerformanceModelResultApi,
     }
     for path, view in mappings.items():
         api.add_resource(view, path)

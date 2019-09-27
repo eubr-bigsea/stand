@@ -40,6 +40,7 @@ class ResultType:
     MODEL = 'MODEL'
     HTML = 'HTML'
     TEXT = 'TEXT'
+    METRIC = 'METRIC'
     OTHER = 'OTHER'
 
     @staticmethod
@@ -112,6 +113,9 @@ class Cluster(db.Model):
                              default='1M', nullable=False)
     general_parameters = Column(String(1000), nullable=False)
 
+    # Associations
+    flavors = relationship("ClusterFlavor", back_populates="cluster")
+
     def __unicode__(self):
         return self.name
 
@@ -154,6 +158,30 @@ class ClusterConfiguration(db.Model):
     id = Column(Integer, primary_key=True)
     name = Column(String(200), nullable=False)
     value = Column(String(500), nullable=False)
+
+    # Associations
+    cluster_id = Column(Integer,
+                        ForeignKey("cluster.id"), nullable=False)
+    cluster = relationship(
+        "Cluster",
+        foreign_keys=[cluster_id])
+
+    def __unicode__(self):
+        return self.name
+
+    def __repr__(self):
+        return '<Instance {}: {}>'.format(self.__class__, self.id)
+
+
+class ClusterFlavor(db.Model):
+    """ Cluster flavor """
+    __tablename__ = 'cluster_flavor'
+
+    # Fields
+    id = Column(Integer, primary_key=True)
+    name = Column(String(200), nullable=False)
+    enabled = Column(String(200), nullable=False)
+    parameters = Column(LONGTEXT, nullable=False)
 
     # Associations
     cluster_id = Column(Integer,
