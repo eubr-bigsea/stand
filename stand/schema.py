@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import datetime
+import json
 from copy import deepcopy
 from marshmallow import Schema, fields, post_load
 from marshmallow.validate import OneOf
@@ -287,8 +289,7 @@ class JobItemResponseSchema(Schema):
     started = fields.DateTime(required=False, allow_none=True)
     finished = fields.DateTime(required=False, allow_none=True)
     status = fields.String(required=True, missing=StatusExecution.WAITING,
-                           validate=[
-                               OneOf(list(StatusExecution.__dict__.keys()))])
+                           validate=[OneOf(list(StatusExecution.__dict__.keys()))])
     status_text = fields.String(required=False, allow_none=True)
     exception_stack = fields.String(required=False, allow_none=True)
     cluster = fields.Nested(
@@ -327,8 +328,7 @@ class JobListResponseSchema(Schema):
     started = fields.DateTime(required=False, allow_none=True)
     finished = fields.DateTime(required=False, allow_none=True)
     status = fields.String(required=True, missing=StatusExecution.WAITING,
-                           validate=[
-                               OneOf(list(StatusExecution.__dict__.keys()))])
+                           validate=[OneOf(list(StatusExecution.__dict__.keys()))])
     status_text = fields.String(required=False, allow_none=True)
     exception_stack = fields.String(required=False, allow_none=True)
     cluster = fields.Nested(
@@ -407,8 +407,7 @@ class JobExecuteResponseSchema(Schema):
     name = fields.String(required=False, allow_none=True)
     started = fields.DateTime(required=False, allow_none=True)
     status = fields.String(required=True, missing=StatusExecution.WAITING,
-                           validate=[
-                               OneOf(list(StatusExecution.__dict__.keys()))])
+                           validate=[OneOf(list(StatusExecution.__dict__.keys()))])
     status_text = fields.String(required=False, allow_none=True)
     exception_stack = fields.String(required=False, allow_none=True)
     workflow_id = fields.Integer(required=True)
@@ -492,8 +491,7 @@ class JobStepItemResponseSchema(Schema):
     """ JSON serialization schema """
     date = fields.DateTime(required=True)
     status = fields.String(required=True,
-                           validate=[
-                               OneOf(list(StatusExecution.__dict__.keys()))])
+                           validate=[OneOf(list(StatusExecution.__dict__.keys()))])
     message = fields.String(allow_none=True)
     std_out = fields.String(allow_none=True)
     std_err = fields.String(allow_none=True)
@@ -522,8 +520,7 @@ class JobStepListResponseSchema(Schema):
     """ JSON serialization schema """
     date = fields.DateTime(required=True)
     status = fields.String(required=True,
-                           validate=[
-                               OneOf(list(StatusExecution.__dict__.keys()))])
+                           validate=[OneOf(list(StatusExecution.__dict__.keys()))])
     task_id = fields.String(required=True)
     operation_id = fields.Integer(required=True)
     operation_name = fields.String(required=True)
@@ -547,8 +544,7 @@ class JobStepCreateRequestSchema(Schema):
     """ JSON serialization schema """
     date = fields.DateTime(required=True)
     status = fields.String(required=True,
-                           validate=[
-                               OneOf(list(StatusExecution.__dict__.keys()))])
+                           validate=[OneOf(list(StatusExecution.__dict__.keys()))])
     task_id = fields.String(required=True)
     operation_id = fields.Integer(required=True)
     operation_name = fields.String(required=True)
@@ -573,8 +569,7 @@ class JobStepLogListResponseSchema(Schema):
     id = fields.Integer(required=True)
     level = fields.String(required=True)
     status = fields.String(required=True,
-                           validate=[
-                               OneOf(list(StatusExecution.__dict__.keys()))])
+                           validate=[OneOf(list(StatusExecution.__dict__.keys()))])
     date = fields.DateTime(required=True)
     message = fields.String(required=True)
     type = fields.String(required=True, missing='TEXT')
@@ -594,8 +589,7 @@ class JobStepLogItemResponseSchema(Schema):
     id = fields.Integer(required=True)
     level = fields.String(required=True)
     status = fields.String(required=True,
-                           validate=[
-                               OneOf(list(StatusExecution.__dict__.keys()))])
+                           validate=[OneOf(list(StatusExecution.__dict__.keys()))])
     date = fields.DateTime(required=True)
     message = fields.String(required=True)
     type = fields.String(required=True, missing='TEXT')
@@ -615,8 +609,7 @@ class JobStepLogCreateRequestSchema(Schema):
     id = fields.Integer(allow_none=True)
     level = fields.String(required=True)
     status = fields.String(required=True,
-                           validate=[
-                               OneOf(list(StatusExecution.__dict__.keys()))])
+                           validate=[OneOf(list(StatusExecution.__dict__.keys()))])
     date = fields.DateTime(required=True)
     message = fields.String(required=True)
     type = fields.String(required=True, missing='TEXT')
@@ -629,3 +622,4 @@ class JobStepLogCreateRequestSchema(Schema):
 
     class Meta:
         ordered = True
+

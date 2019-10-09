@@ -56,7 +56,8 @@ def check_connection(dbapi_con, con_record, con_proxy):
 
 def handle_updates(app_, redis_url):
     parsed = urllib.parse.urlparse(redis_url)
-    redis_conn = StrictRedis(host=parsed.hostname, port=parsed.port)
+    redis_conn = StrictRedis(
+            decode_responses=True,host=parsed.hostname, port=parsed.port)
     with app_.app_context():
         while True:
             _, msg = redis_conn.blpop('stand_updates')
