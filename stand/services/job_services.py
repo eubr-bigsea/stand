@@ -94,7 +94,7 @@ class JobService:
 
         cluster_properties = ['id', 'type', 'address', 'executors',
                               'executor_cores', 'executor_memory',
-                              'general_parameters']
+                              'general_parameters', 'auth_token']
         cluster_info = {}
         for p in cluster_properties:
             cluster_info[p] = getattr(job.cluster, p)
