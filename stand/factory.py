@@ -5,6 +5,7 @@ import logging
 import logging.config
 
 import os
+import rq
 import socketio
 from flask import Flask
 from flask_admin import Admin
@@ -14,17 +15,19 @@ from flask_cors import CORS
 from flask_restful import Api
 from mockredis import MockRedis
 from sqlalchemy import and_
-from stand.cluster_api import ClusterDetailApi, PerformanceModelEstimationApi, \
-    PerformanceModelResultApi
+from stand.cluster_api import ClusterDetailApi, PerformanceModelEstimationApi
 from stand.cluster_api import ClusterListApi
 from stand.job_api import JobListApi, JobDetailApi, \
     JobStopActionApi, JobLockActionApi, JobUnlockActionApi, \
     UpdateJobStatusActionApi, UpdateJobStepStatusActionApi, \
-    JobSampleActionApi, JobSourceCodeApi, LatestJobDetailApi,\
+    JobSampleActionApi, JobSourceCodeApi, LatestJobDetailApi, \
     PerformanceModelEstimationApi, PerformanceModelEstimationResultApi
 from stand.models import db, Job, JobStep, JobStepLog, StatusExecution, \
     JobResult
 from stand.services.redis_service import connect_redis_store
+
+SEED_QUEUE_NAME = 'seed'
+SEED_METRIC_JOB_NAME = 'seed.jobs.metric_probe_updater'
 
 
 class MockRedisWrapper(MockRedis):
@@ -120,7 +123,7 @@ def mocked_emit(original_emit, app_):
     Updates database with new statuses
     """
 
-    redis_store = create_redis_store(app_)
+    redis_store_ = create_redis_store(app_)
 
     def new_emit(self, event, data, namespace, room=None, skip_sid=None,
                  callback=None):
@@ -128,10 +131,10 @@ def mocked_emit(original_emit, app_):
 
         if room.isdigit():
             use_callback = handle_emit(data, event, namespace, room, self,
-                                       skip_sid, use_callback, redis_store)
+                                       skip_sid, use_callback, redis_store_)
             if isinstance(data.get('message', ''), bytes):
                 data['message'] = str(data['message'], 'utf-8')
-            redis_store.rpush('cache_room_{}'.format(room), json.dumps(
+            redis_store_.rpush('cache_room_{}'.format(room), json.dumps(
                 {'event': event, 'data': data, 'namespace': namespace,
                  'room': room}))
         return original_emit(self, event, data, namespace, room=room,
@@ -146,10 +149,10 @@ def mocked_emit(original_emit, app_):
 
     def handle_emit(data, event, namespace, room, self, skip_sid, use_callback,
                     redis_store):
-
+        logger = logging.getLogger(__name__)
         # print(('-' * 40))
         # print((data, event, namespace, room, self, skip_sid, use_callback,
-        #      redis_store))
+        #      redis_store_))
         # print(('-' * 40))
         try:
             now = datetime.datetime.now().strftime(
@@ -273,16 +276,25 @@ def mocked_emit(original_emit, app_):
                             operation_id=op_id,
                             type=data.get('type'),
                             title=data.get('title'),
-                            content=data.get('content'))
+                            content=data.get('message'))
                         job.results.append(result)
                         db.session.add(job)
                         db.session.commit()
                         if 'operation_id' in data:
                             del data['operation_id']
+                        data['time'] = datetime.datetime.now().isoformat()
                         data['id'] = result.id
                         data['task'] = {'id': task_id}
+                        data['message'] = json.loads(data['message'])
+
+                        # If metric, post again to be read by metric agent
+                        if data.get('type') == 'METRIC':
+                            q = rq.Queue(name=SEED_QUEUE_NAME,
+                                         connection=redis_store)
+                            data['content'] = json.loads(data['content'])
+                            rq_job = q.enqueue(SEED_METRIC_JOB_NAME, data)
+                            logger.info('Scheduled job for metric %s', rq_job)
         except Exception as ex:
-            logger = logging.getLogger(__name__)
             logger.exception(ex)
         return use_callback
 

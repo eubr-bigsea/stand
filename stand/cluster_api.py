@@ -71,6 +71,7 @@ class ClusterListApi(Resource):
 
 class ClusterDetailApi(Resource):
     """ REST API for a single instance of class Cluster """
+    human_name = 'Cluster'
 
     @staticmethod
     @requires_auth
@@ -80,6 +81,86 @@ class ClusterDetailApi(Resource):
             return ClusterItemResponseSchema().dump(cluster).data
         else:
             return dict(status="ERROR", message=gettext("Not found")), 404
+
+    @requires_auth
+    def delete(self, cluster_id):
+        return_code = 200
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug(gettext('Deleting %s (id=%s)'), self.human_name,
+                      cluster_id)
+        cluster = Cluster.query.get(cluster_id)
+        if cluster is not None:
+            try:
+                db.session.delete(cluster)
+                db.session.commit()
+                result = {
+                    'status': 'OK',
+                    'message': gettext('%(name)s deleted with success!',
+                                       name=self.human_name)
+                }
+            except Exception as e:
+                result = {'status': 'ERROR',
+                          'message': gettext("Internal error")}
+                return_code = 500
+                if current_app.debug:
+                    result['debug_detail'] = str(e)
+                db.session.rollback()
+        else:
+            return_code = 404
+            result = {
+                'status': 'ERROR',
+                'message': gettext('%(name)s not found (id=%(id)s).',
+                                   name=self.human_name, id=cluster_id)
+            }
+        return result, return_code
+
+    @requires_auth
+    def patch(self, cluster_id):
+        result = {'status': 'ERROR', 'message': gettext('Insufficient data.')}
+        return_code = 400
+
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug(gettext('Updating %s (id=%s)'), self.human_name,
+                      cluster_id)
+        if request.json:
+            request_schema = partial_schema_factory(
+                ClusterCreateRequestSchema)
+            # Ignore missing fields to allow partial updates
+            form = request_schema.load(request.json, partial=True)
+            response_schema = ClusterItemResponseSchema()
+            if not form.errors:
+                try:
+                    form.data.id = cluster_id
+                    cluster = db.session.merge(form.data)
+                    db.session.commit()
+
+                    if cluster is not None:
+                        return_code = 200
+                        result = {
+                            'status': 'OK',
+                            'message': gettext(
+                                '%(n)s (id=%(id)s) was updated with success!',
+                                n=self.human_name,
+                                id=cluster_id),
+                            'data': [response_schema.dump(
+                                cluster).data]
+                        }
+                except Exception as e:
+                    result = {'status': 'ERROR',
+                              'message': gettext("Internal error")}
+                    return_code = 500
+                    if current_app.debug:
+                        result['debug_detail'] = str(e)
+                    db.session.rollback()
+            else:
+                result = {
+                    'status': 'ERROR',
+                    'message': gettext('Invalid data for %(name)s (id=%(id)s)',
+                                       name=self.human_name,
+                                       id=cluster_id),
+                    'errors': form.errors
+                }
+        return result, return_code
 
 
 class PerformanceModelEstimationApi(Resource):
