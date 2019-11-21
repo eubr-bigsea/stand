@@ -25,7 +25,7 @@ class ClusterListApi(Resource):
         elif request.args.get('simple', 'false') == 'true':
             only = ('id', 'name')
         else:
-            only = ('id', 'name', 'flavors', 'enabled')
+            only = ('id', 'name', 'flavors', 'enabled', 'ui_parameters')
         enabled_filter = request.args.get('enabled')
         if enabled_filter:
             clusters = Cluster.query.filter(

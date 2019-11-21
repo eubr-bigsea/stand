@@ -112,6 +112,7 @@ class Cluster(db.Model):
     executor_memory = Column(String(15),
                              default='1M', nullable=False)
     auth_token = Column(String(1000), nullable=False)
+    ui_parameters = Column(String(1000), nullable=False)
     general_parameters = Column(String(1000), nullable=False)
 
     # Associations

@@ -135,6 +135,7 @@ class ClusterListResponseSchema(Schema):
     executor_cores = fields.Integer(required=True, missing=1)
     executor_memory = fields.String(required=True, missing='1M')
     auth_token = fields.String(required=True)
+    ui_parameters = fields.String(required=True)
     general_parameters = fields.String(required=True)
     flavors = fields.Nested(
         'stand.schema.ClusterFlavorListResponseSchema',
@@ -160,6 +161,7 @@ class ClusterItemResponseSchema(Schema):
     executor_cores = fields.Integer(required=True, missing=1)
     executor_memory = fields.String(required=True, missing='1M')
     auth_token = fields.String(required=True)
+    ui_parameters = fields.String(required=True)
     general_parameters = fields.String(required=True)
     flavors = fields.Nested(
         'stand.schema.ClusterFlavorItemResponseSchema',
@@ -189,6 +191,7 @@ class ClusterCreateRequestSchema(Schema):
     executor_cores = fields.Integer(required=True, missing=1)
     executor_memory = fields.String(required=True, missing='1M')
     auth_token = fields.String(required=True)
+    ui_parameters = fields.String(required=True)
     general_parameters = fields.String(required=True)
     flavors = fields.Nested(
         'stand.schema.ClusterFlavorCreateRequestSchema',
