@@ -468,7 +468,8 @@ class JobSourceCodeApi(Resource):
         else:
             db.session.rollback()
             return {'status': 'FORBIDDEN'}, 403
- 
+
+
 class PerformanceModelEstimationResultApi(Resource):
     """ 
     Triggers the execution of an execution model in the backend.
@@ -479,19 +480,25 @@ class PerformanceModelEstimationResultApi(Resource):
     def get(key):
         return JobService.get_performance_model_result(key)
 
+
 class PerformanceModelEstimationApi(Resource):
     """ 
     Triggers the execution of an execution model in the backend.
     """
+
     @staticmethod
     @requires_auth
     def post(model_id):
         # Deadline in seconds
-        if request.json == None:
-            return {'status': 'ERROR', 'message': 
-                    'You need to inform the deadline'}
+        if request.json is None:
+            return {'status': 'ERROR',
+                    'message': 'You need to inform the deadline'}
         deadline = request.json.get('deadline', 3600)
         return JobService.execute_performance_model(
-                model_id, deadline, request.json.get('cores', [2]))
-
-       
+            int(request.json.get('cluster_id', 0)),
+            model_id, deadline, request.json.get('cores', [2]),
+            request.json.get('platform', 'keras'),
+            int(request.json.get('data_size', 1000)),
+            int(request.json.get('iterations', 1000)),
+            int(request.json.get('batch_size', 1000)),
+        )
