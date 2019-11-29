@@ -20,7 +20,8 @@ from stand.job_api import JobListApi, JobDetailApi, \
     JobStopActionApi, JobLockActionApi, JobUnlockActionApi, \
     UpdateJobStatusActionApi, UpdateJobStepStatusActionApi, \
     JobSampleActionApi, JobSourceCodeApi, LatestJobDetailApi,\
-    PerformanceModelEstimationApi, PerformanceModelEstimationResultApi
+    PerformanceModelEstimationApi, PerformanceModelEstimationResultApi, \
+    DataSourceInitializationApi
 from stand.models import db, Job, JobStep, JobStepLog, StatusExecution, \
     JobResult
 from stand.services.redis_service import connect_redis_store
@@ -102,6 +103,7 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
         '/clusters/<int:cluster_id>': ClusterDetailApi,
         '/performance/<int:model_id>': PerformanceModelEstimationApi,
         '/performance/result/<key>': PerformanceModelEstimationResultApi,
+        '/datasource/init': DataSourceInitializationApi,
     }
     for path, view in mappings.items():
         api.add_resource(view, path)

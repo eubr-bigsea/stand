@@ -10,6 +10,10 @@ from sqlalchemy import and_
 from stand.app_auth import requires_auth
 from stand.schema import *
 from stand.services.job_services import JobService
+from stand.services.redis_service import connect_redis_store
+import rq
+import stand.util
+from rq.exceptions import NoSuchJobError
 
 log = logging.getLogger(__name__)
 
@@ -502,3 +506,44 @@ class PerformanceModelEstimationApi(Resource):
             int(request.json.get('iterations', 1000)),
             int(request.json.get('batch_size', 1000)),
         )
+
+
+class DataSourceInitializationApi(Resource):
+    """
+    Initializes a data source
+    """
+    @staticmethod
+    @requires_auth
+    def get():
+        job_id = request.args.get('key')
+        redis_store = connect_redis_store(
+            None, testing=False, decode_responses=False)
+        try:
+            rq_job = rq.job.Job(job_id, connection=redis_store)
+            if rq_job and rq_job.result:
+                print('*' * 10)
+                print(rq_job.result)
+                print('*' * 10)
+                return {'status': rq_job.result.get('status'),
+                        'result': rq_job.result}
+            else:
+                return {'status': 'PROCESSING'}
+        except NoSuchJobError:
+            return {'status': 'ERROR', 'message': 'Job not found'}
+
+    @staticmethod
+    @requires_auth
+    def post():
+        # Deadline in seconds
+        if request.json is None:
+            return {'status': 'ERROR',
+                    'message': 'You need to inform the parameters'}
+        redis_store = connect_redis_store(
+            None, testing=False, decode_responses=False)
+        q = rq.Queue('juicer', connection=redis_store)
+
+        payload = request.json
+        log.info("Payload %s", payload)
+        result = q.enqueue('juicer.jobs.cache_vallum_data',
+                           payload)
+        return result.id
