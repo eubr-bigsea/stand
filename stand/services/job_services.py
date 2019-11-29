@@ -2,12 +2,14 @@
 import datetime
 import json
 import logging
+from gettext import gettext
 
 import requests
+import rq
 import stand.util
+from rq.exceptions import NoSuchJobError
 from stand.models import db, StatusExecution, JobException, Job
 from stand.services.redis_service import connect_redis_store
-import rq
 
 logging.basicConfig(
     format=('[%(levelname)s] %(asctime)s,%(msecs)05.1f '
@@ -76,6 +78,8 @@ class JobService:
         # Initial job status must be WAITING
         job.status = StatusExecution.WAITING
         job.started = datetime.datetime.utcnow()
+        job.status_text = gettext('Job is allocating computer resources. '
+                                  'Please wait')
 
         # Limit the name of a job
         job.name = job.name[:50]
@@ -94,7 +98,7 @@ class JobService:
 
         cluster_properties = ['id', 'type', 'address', 'executors',
                               'executor_cores', 'executor_memory',
-                              'general_parameters', 'auth_token']
+                              'auth_token', 'general_parameters']
         cluster_info = {}
         for p in cluster_properties:
             cluster_info[p] = getattr(job.cluster, p)
@@ -210,22 +214,32 @@ class JobService:
         })
         redis_store.rpush("queue_start", msg)
         return json.loads(redis_store.blpop(output)[1])
+
     @staticmethod
-    def execute_performance_model(model_id, deadline, cores):
+    def execute_performance_model(cluster_id, model_id, deadline, cores,
+                                  platform,
+                                  data_size, iterations, batch_size):
         redis_store = connect_redis_store(
-                None, testing=False, decode_responses=False)
+            None, testing=False, decode_responses=False)
         q = rq.Queue('juicer', connection=redis_store)
-        payload = {'model_id': model_id, 'deadline': deadline, 'cores': cores}
-        result = q.enqueue('juicer.jobs.estimate_time_with_performance_model', 
+        payload = {'model_id': model_id, 'deadline': deadline, 'cores': cores,
+                   'platform': platform,
+                   'data_size': data_size,
+                   'iterations': iterations,
+                   'batch_size': batch_size,
+                   'cluster_id': cluster_id}
+        log.info("Payload %s", payload)
+        result = q.enqueue('juicer.jobs.estimate_time_with_performance_model',
                            payload)
         return result.id
+
     @staticmethod
     def get_performance_model_result(job_id):
         redis_store = connect_redis_store(
-                None, testing=False, decode_responses=False)
+            None, testing=False, decode_responses=False)
         try:
             rq_job = rq.job.Job(job_id, connection=redis_store)
-            return {'status': 'OK', 'result': rq_job.result}
-        except rq.exceptions.NoSuchJobError as nsje:
+            return {'status': rq_job.result.get('status'),
+                    'result': rq_job.result}
+        except NoSuchJobError:
             return {'status': 'ERROR', 'message': 'Job not found'}
-

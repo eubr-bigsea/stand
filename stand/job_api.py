@@ -10,6 +10,10 @@ from sqlalchemy import and_
 from stand.app_auth import requires_auth
 from stand.schema import *
 from stand.services.job_services import JobService
+from stand.services.redis_service import connect_redis_store
+import rq
+import stand.util
+from rq.exceptions import NoSuchJobError
 
 log = logging.getLogger(__name__)
 
@@ -468,7 +472,8 @@ class JobSourceCodeApi(Resource):
         else:
             db.session.rollback()
             return {'status': 'FORBIDDEN'}, 403
- 
+
+
 class PerformanceModelEstimationResultApi(Resource):
     """ 
     Triggers the execution of an execution model in the backend.
@@ -479,19 +484,66 @@ class PerformanceModelEstimationResultApi(Resource):
     def get(key):
         return JobService.get_performance_model_result(key)
 
+
 class PerformanceModelEstimationApi(Resource):
     """ 
     Triggers the execution of an execution model in the backend.
     """
+
     @staticmethod
     @requires_auth
     def post(model_id):
         # Deadline in seconds
-        if request.json == None:
-            return {'status': 'ERROR', 'message': 
-                    'You need to inform the deadline'}
+        if request.json is None:
+            return {'status': 'ERROR',
+                    'message': 'You need to inform the deadline'}
         deadline = request.json.get('deadline', 3600)
         return JobService.execute_performance_model(
-                model_id, deadline, request.json.get('cores', [2]))
+            int(request.json.get('cluster_id', 0)),
+            model_id, deadline, request.json.get('cores', [2]),
+            request.json.get('platform', 'keras'),
+            int(request.json.get('data_size', 1000)),
+            int(request.json.get('iterations', 1000)),
+            int(request.json.get('batch_size', 1000)),
+        )
 
-       
+
+class DataSourceInitializationApi(Resource):
+    """
+    Initializes a data source
+    """
+    @staticmethod
+    @requires_auth
+    def get():
+        job_id = request.args.get('key')
+        redis_store = connect_redis_store(
+            None, testing=False, decode_responses=False)
+        try:
+            rq_job = rq.job.Job(job_id, connection=redis_store)
+            if rq_job and rq_job.result:
+                print('*' * 10)
+                print(rq_job.result)
+                print('*' * 10)
+                return {'status': rq_job.result.get('status'),
+                        'result': rq_job.result}
+            else:
+                return {'status': 'PROCESSING'}
+        except NoSuchJobError:
+            return {'status': 'ERROR', 'message': 'Job not found'}
+
+    @staticmethod
+    @requires_auth
+    def post():
+        # Deadline in seconds
+        if request.json is None:
+            return {'status': 'ERROR',
+                    'message': 'You need to inform the parameters'}
+        redis_store = connect_redis_store(
+            None, testing=False, decode_responses=False)
+        q = rq.Queue('juicer', connection=redis_store)
+
+        payload = request.json
+        log.info("Payload %s", payload)
+        result = q.enqueue('juicer.jobs.cache_vallum_data',
+                           payload)
+        return result.id
