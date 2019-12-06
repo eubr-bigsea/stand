@@ -9,7 +9,7 @@ from rq.job import Job as RQJob
 from stand.app_auth import requires_auth
 from stand.schema import *
 from stand.services.redis_service import connect_redis_store
-
+import json
 log = logging.getLogger(__name__)
 
 
@@ -29,6 +29,9 @@ class MetricListApi(Resource):
 
             payload = request.json
             log.info("Payload %s", payload)
+            with open('/tmp/payload.json', 'a') as f:
+                f.write(json.dumps(payload))
+                f.write('\n')
             result = q.enqueue('seed.jobs.send_to_tma', payload)
             result_code = 200
             result = {'status': 'OK', 'message': 'Data received'}
