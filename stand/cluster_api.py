@@ -118,7 +118,6 @@ class ClusterDetailApi(Resource):
     def patch(self, cluster_id):
         result = {'status': 'ERROR', 'message': gettext('Insufficient data.')}
         return_code = 400
-
         if log.isEnabledFor(logging.DEBUG):
             log.debug(gettext('Updating %s (id=%s)'), self.human_name,
                       cluster_id)
