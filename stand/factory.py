@@ -154,10 +154,10 @@ def mocked_emit(original_emit, app_):
     def handle_emit(data, event, namespace, room, self, skip_sid, use_callback,
                     redis_store):
         logger = logging.getLogger(__name__)
-        # print(('-' * 40))
-        # print((data, event, namespace, room, self, skip_sid, use_callback,
-        #      redis_store_))
-        # print(('-' * 40))
+        print(('-' * 40))
+        print((data, event, namespace, room, self, skip_sid, use_callback,
+              redis_store_))
+        print(('-' * 40))
         try:
             now = datetime.datetime.now().strftime(
                 '%Y-%m-%dT%H:%m:%S')

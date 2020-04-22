@@ -29,6 +29,7 @@ class StandSocketIO:
             self.socket_io.on(event, namespace=self.namespace, handler=handler)
 
     def on_join_room(self, sid, message):
+        print('=== > ', message)
         room = str(message.get('room'))
 
         self.redis_store.hset(
