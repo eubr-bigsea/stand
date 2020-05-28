@@ -23,10 +23,18 @@ class StandSocketIO:
             'join': self.on_join_room,
             'leave': self.on_leave_room,
             'close': self.on_close_room,
+            'echo': self.on_echo,
 
         }
         for event, handler in list(handlers.items()):
             self.socket_io.on(event, namespace=self.namespace, handler=handler)
+
+    def on_echo(self, sid, message):
+        print('=' * 20, ' echo ')
+        print(message)
+        print('=' * 20)
+        self.socket_io.emit('echo', 'Echo: ' + message, room="echo",
+                namespace=self.namespace)
 
     def on_join_room(self, sid, message):
         print('=== > ', message)

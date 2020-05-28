@@ -133,7 +133,7 @@ def mocked_emit(original_emit, app_):
                  callback=None):
         use_callback = callback
 
-        if room.isdigit():
+        if room and room.isdigit():
             use_callback = handle_emit(data, event, namespace, room, self,
                                        skip_sid, use_callback, redis_store_)
             if isinstance(data.get('message', ''), bytes):
