@@ -9,6 +9,7 @@ from flask_restful import Resource
 from sqlalchemy import and_
 from stand.app_auth import requires_auth
 from stand.schema import *
+from stand.models import JobType
 from stand.services.job_services import JobService
 from stand.services.redis_service import connect_redis_store
 import rq
@@ -73,6 +74,10 @@ class JobListApi(Resource):
                                 lambda field: field)
         jobs = jobs.filter(
             Job.name.like('%%{}%%'.format(request.args.get('name', '') or '')))
+
+        job_type = request.args.get('type')
+        if job_type:
+            jobs = jobs.filter(Job.type==job_type)
 
         sort = request.args.get('sort', 'name')
         if sort not in ['status', 'id', 'user_name', 'workflow_name',

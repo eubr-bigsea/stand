@@ -8,7 +8,7 @@ import requests
 import rq
 import stand.util
 from rq.exceptions import NoSuchJobError
-from stand.models import db, StatusExecution, JobException, Job
+from stand.models import db, StatusExecution, JobException, Job, JobType
 from stand.services.redis_service import connect_redis_store
 
 logging.basicConfig(
@@ -77,6 +77,10 @@ class JobService:
 
         # Initial job status must be WAITING
         job.status = StatusExecution.WAITING
+
+        if  workflow.get('publishing_status') in ['EDITING', 'PUBLISHED']:
+            job.type = JobType.APP
+
         job.started = datetime.datetime.utcnow()
         job.status_text = gettext('Job is allocating computer resources. '
                                   'Please wait')

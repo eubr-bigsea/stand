@@ -63,6 +63,17 @@ class ClusterType:
 
 
 # noinspection PyClassHasNoInit
+class JobType:
+    NORMAL = 'NORMAL'
+    APP = 'APP'
+
+    @staticmethod
+    def values():
+        return [n for n in list(JobType.__dict__.keys())
+                if n[0] != '_' and n != 'values']
+
+
+# noinspection PyClassHasNoInit
 class ClusterPermission:
     EXECUTE = 'EXECUTE'
 
@@ -84,12 +95,15 @@ class PermissionType:
         return [n for n in list(PermissionType.__dict__.keys())
                 if n[0] != '_' and n != 'values']
 
-
 # noinspection PyClassHasNoInit
+
+
 class JobException(BaseException):
     def __init__(self, message, error_code):
         self.message = message
         self.error_code = error_code
+
+# Association tables definition
 
 
 class Cluster(db.Model):
@@ -118,7 +132,7 @@ class Cluster(db.Model):
     # Associations
     flavors = relationship("ClusterFlavor", back_populates="cluster")
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
     def __repr__(self):
@@ -140,12 +154,13 @@ class ClusterAccess(db.Model):
 
     # Associations
     cluster_id = Column(Integer,
-                        ForeignKey("cluster.id"), nullable=False)
+                        ForeignKey("cluster.id",
+                                   name="fk_cluster_id"), nullable=False)
     cluster = relationship(
         "Cluster",
         foreign_keys=[cluster_id])
 
-    def __unicode__(self):
+    def __str__(self):
         return self.permission
 
     def __repr__(self):
@@ -163,12 +178,13 @@ class ClusterConfiguration(db.Model):
 
     # Associations
     cluster_id = Column(Integer,
-                        ForeignKey("cluster.id"), nullable=False)
+                        ForeignKey("cluster.id",
+                                   name="fk_cluster_id"), nullable=False)
     cluster = relationship(
         "Cluster",
         foreign_keys=[cluster_id])
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
     def __repr__(self):
@@ -187,12 +203,13 @@ class ClusterFlavor(db.Model):
 
     # Associations
     cluster_id = Column(Integer,
-                        ForeignKey("cluster.id"), nullable=False)
+                        ForeignKey("cluster.id",
+                                   name="fk_cluster_id"), nullable=False)
     cluster = relationship(
         "Cluster",
         foreign_keys=[cluster_id])
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
     def __repr__(self):
@@ -210,12 +227,13 @@ class ClusterPlatform(db.Model):
 
     # Associations
     cluster_id = Column(Integer,
-                        ForeignKey("cluster.id"), nullable=False)
+                        ForeignKey("cluster.id",
+                                   name="fk_cluster_id"), nullable=False)
     cluster = relationship(
         "Cluster",
         foreign_keys=[cluster_id])
 
-    def __unicode__(self):
+    def __str__(self):
         return self.platform_id
 
     def __repr__(self):
@@ -232,7 +250,7 @@ class ExecutionPermission(db.Model):
                              name='PermissionTypeEnumType'), nullable=False)
     user_id = Column(Integer, nullable=False)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.permission
 
     def __repr__(self):
@@ -248,6 +266,9 @@ class Job(db.Model):
     created = Column(DateTime,
                      default=func.now(), nullable=False)
     name = Column(String(50))
+    type = Column(Enum(*list(JobType.values()),
+                       name='JobTypeEnumType'),
+                  default=JobType.NORMAL, nullable=False)
     started = Column(DateTime)
     finished = Column(DateTime)
     status = Column(Enum(*list(StatusExecution.values()),
@@ -265,7 +286,8 @@ class Job(db.Model):
 
     # Associations
     cluster_id = Column(Integer,
-                        ForeignKey("cluster.id"), nullable=False)
+                        ForeignKey("cluster.id",
+                                   name="fk_cluster_id"), nullable=False)
     cluster = relationship(
         "Cluster",
         foreign_keys=[cluster_id])
@@ -274,7 +296,7 @@ class Job(db.Model):
     results = relationship("JobResult", back_populates="job",
                            cascade="all, delete-orphan")
 
-    def __unicode__(self):
+    def __str__(self):
         return self.created
 
     def __repr__(self):
@@ -296,12 +318,13 @@ class JobResult(db.Model):
 
     # Associations
     job_id = Column(Integer,
-                    ForeignKey("job.id"), nullable=False)
+                    ForeignKey("job.id",
+                               name="fk_job_id"), nullable=False)
     job = relationship(
         "Job",
         foreign_keys=[job_id])
 
-    def __unicode__(self):
+    def __str__(self):
         return self.task_id
 
     def __repr__(self):
@@ -324,14 +347,15 @@ class JobStep(db.Model):
 
     # Associations
     job_id = Column(Integer,
-                    ForeignKey("job.id"), nullable=False)
+                    ForeignKey("job.id",
+                               name="fk_job_id"), nullable=False)
     job = relationship(
         "Job",
         foreign_keys=[job_id])
     logs = relationship("JobStepLog",
                         cascade="all, delete-orphan")
 
-    def __unicode__(self):
+    def __str__(self):
         return self.date
 
     def __repr__(self):
@@ -354,12 +378,13 @@ class JobStepLog(db.Model):
 
     # Associations
     step_id = Column(Integer,
-                     ForeignKey("job_step.id"), nullable=False)
+                     ForeignKey("job_step.id",
+                                name="fk_job_step_id"), nullable=False)
     step = relationship(
         "JobStep",
         foreign_keys=[step_id])
 
-    def __unicode__(self):
+    def __str__(self):
         return self.level
 
     def __repr__(self):
@@ -378,7 +403,7 @@ class Room(db.Model):
     consumers = Column(Integer,
                        default=0, nullable=False)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
     def __repr__(self):
@@ -398,14 +423,15 @@ class RoomParticipant(db.Model):
 
     # Associations
     room_id = Column(Integer,
-                     ForeignKey("room.id"), nullable=False)
+                     ForeignKey("room.id",
+                                name="fk_room_id"), nullable=False)
     room = relationship(
         "Room",
         foreign_keys=[room_id],
         backref=backref("participants",
                         cascade="all, delete-orphan"))
 
-    def __unicode__(self):
+    def __str__(self):
         return self.sid
 
     def __repr__(self):
