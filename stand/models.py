@@ -114,7 +114,7 @@ class Cluster(db.Model):
     id = Column(Integer, primary_key=True)
     name = Column(String(200), nullable=False)
     description = Column(String(200), nullable=False)
-    enabled = Column(String(200), nullable=False)
+    enabled = Column(Boolean, nullable=False)
     type = Column(Enum(*list(ClusterType.values()),
                        name='ClusterTypeEnumType'),
                   default=ClusterType.SPARK_LOCAL, nullable=False)
@@ -125,9 +125,9 @@ class Cluster(db.Model):
                             default=1, nullable=False)
     executor_memory = Column(String(15),
                              default='1M', nullable=False)
-    auth_token = Column(String(1000), nullable=False)
+    auth_token = Column(String(1000))
     ui_parameters = Column(String(1000))
-    general_parameters = Column(String(1000), nullable=False)
+    general_parameters = Column(String(1000))
 
     # Associations
     flavors = relationship("ClusterFlavor", back_populates="cluster")

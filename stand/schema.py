@@ -134,12 +134,12 @@ class ClusterListResponseSchema(Schema):
     executors = fields.Integer(required=True, missing=1, default=1)
     executor_cores = fields.Integer(required=True, missing=1, default=1)
     executor_memory = fields.String(required=True, missing='1M', default='1M')
-    auth_token = fields.String(required=True)
+    auth_token = fields.String(required=False, allow_none=True)
     ui_parameters = fields.String(required=False, allow_none=True)
-    general_parameters = fields.String(required=True)
+    general_parameters = fields.String(required=False, allow_none=True)
     flavors = fields.Nested(
         'stand.schema.ClusterFlavorListResponseSchema',
-        required=True,
+        allow_none=True,
         many=True)
 
     # noinspection PyUnresolvedReferences
@@ -160,12 +160,12 @@ class ClusterItemResponseSchema(Schema):
     executors = fields.Integer(required=True, missing=1, default=1)
     executor_cores = fields.Integer(required=True, missing=1, default=1)
     executor_memory = fields.String(required=True, missing='1M', default='1M')
-    auth_token = fields.String(required=True)
+    auth_token = fields.String(required=False, allow_none=True)
     ui_parameters = fields.String(required=False, allow_none=True)
-    general_parameters = fields.String(required=True)
+    general_parameters = fields.String(required=False, allow_none=True)
     flavors = fields.Nested(
         'stand.schema.ClusterFlavorItemResponseSchema',
-        required=True,
+        allow_none=True,
         many=True)
 
     # noinspection PyUnresolvedReferences
@@ -180,22 +180,21 @@ class ClusterItemResponseSchema(Schema):
 
 class ClusterCreateRequestSchema(Schema):
     """ JSON serialization schema """
-    id = fields.Integer(required=True)
     name = fields.String(required=True)
     description = fields.String(required=True)
-    enabled = fields.String(required=True)
+    enabled = fields.Boolean(required=True)
     type = fields.String(required=True, missing=ClusterType.SPARK_LOCAL, default=ClusterType.SPARK_LOCAL,
                          validate=[OneOf(list(ClusterType.__dict__.keys()))])
     address = fields.String(required=True)
     executors = fields.Integer(required=True, missing=1, default=1)
     executor_cores = fields.Integer(required=True, missing=1, default=1)
     executor_memory = fields.String(required=True, missing='1M', default='1M')
-    auth_token = fields.String(required=True)
+    auth_token = fields.String(required=False, allow_none=True)
     ui_parameters = fields.String(required=False, allow_none=True)
-    general_parameters = fields.String(required=True)
+    general_parameters = fields.String(required=False, allow_none=True)
     flavors = fields.Nested(
         'stand.schema.ClusterFlavorCreateRequestSchema',
-        required=True,
+        allow_none=True,
         many=True)
 
     # noinspection PyUnresolvedReferences
