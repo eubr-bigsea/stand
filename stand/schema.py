@@ -157,6 +157,10 @@ class ClusterItemResponseSchema(Schema):
     id = fields.Integer(required=True)
     name = fields.String(required=True)
     description = fields.String(required=True)
+    enabled = fields.Boolean(required=True)
+    type = fields.String(required=True, missing=ClusterType.SPARK_LOCAL, default=ClusterType.SPARK_LOCAL,
+                         validate=[OneOf(list(ClusterType.__dict__.keys()))])
+    address = fields.String(required=True)
     executors = fields.Integer(required=True, missing=1, default=1)
     executor_cores = fields.Integer(required=True, missing=1, default=1)
     executor_memory = fields.String(required=True, missing='1M', default='1M')
