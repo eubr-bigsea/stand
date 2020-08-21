@@ -22,7 +22,7 @@ from stand.job_api import JobListApi, JobDetailApi, \
     UpdateJobStatusActionApi, UpdateJobStepStatusActionApi, \
     JobSampleActionApi, JobSourceCodeApi, LatestJobDetailApi,\
     PerformanceModelEstimationApi, PerformanceModelEstimationResultApi, \
-    DataSourceInitializationApi
+    DataSourceInitializationApi, WorkflowStartActionApi
 from stand.gateway_api import MetricListApi
 from stand.models import db, Job, JobStep, JobStepLog, StatusExecution, \
     JobResult
@@ -110,6 +110,7 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
         '/performance/result/<key>': PerformanceModelEstimationResultApi,
         '/datasource/init': DataSourceInitializationApi,
         '/metric': MetricListApi,
+        '/workflow': WorkflowStartActionApi,
     }
     for path, view in mappings.items():
         api.add_resource(view, path)

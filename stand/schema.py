@@ -303,6 +303,7 @@ class JobItemResponseSchema(Schema):
                            validate=[OneOf(list(StatusExecution.__dict__.keys()))])
     status_text = fields.String(required=False, allow_none=True)
     exception_stack = fields.String(required=False, allow_none=True)
+    job_key = fields.String(required=True)
     cluster = fields.Nested(
         'stand.schema.ClusterItemResponseSchema',
         required=True)
@@ -344,6 +345,7 @@ class JobListResponseSchema(Schema):
                            validate=[OneOf(list(StatusExecution.__dict__.keys()))])
     status_text = fields.String(required=False, allow_none=True)
     exception_stack = fields.String(required=False, allow_none=True)
+    job_key = fields.String(required=True)
     cluster = fields.Nested(
         'stand.schema.ClusterListResponseSchema',
         required=True)
@@ -374,6 +376,7 @@ class JobCreateRequestSchema(Schema):
     type = fields.String(required=True, missing=JobType.NORMAL, default=JobType.NORMAL,
                          validate=[OneOf(list(JobType.__dict__.keys()))])
     exception_stack = fields.String(required=False, allow_none=True)
+    job_key = fields.String(required=True)
     workflow = fields.Nested(
         'stand.schema.WorkflowDefinitionCreateRequestSchema',
         required=True)
@@ -428,6 +431,7 @@ class JobExecuteResponseSchema(Schema):
     status_text = fields.String(required=False, allow_none=True)
     exception_stack = fields.String(required=False, allow_none=True)
     workflow_id = fields.Integer(required=True)
+    job_key = fields.String(required=True)
     message = fields.String(allow_none=True)
     status_url = fields.Url(required=True)
     cluster = fields.Nested(

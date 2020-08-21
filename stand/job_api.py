@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-}
-import logging
+# -*- coding: utf-8 -*-} import logging
 import math
 
 from flask import g
@@ -9,10 +8,11 @@ from flask_restful import Resource
 from sqlalchemy import and_
 from stand.app_auth import requires_auth
 from stand.schema import *
-from stand.models import JobType
+from stand.models import JobType, StatusExecution 
 from stand.services.job_services import JobService
 from stand.services.redis_service import connect_redis_store
 import rq
+import logging
 import stand.util
 from rq.exceptions import NoSuchJobError
 
@@ -542,7 +542,7 @@ class DataSourceInitializationApi(Resource):
         # Deadline in seconds
         if request.json is None:
             return {'status': 'ERROR',
-                    'message': 'You need to inform the parameters'}
+                    'message': gettext('You need to inform the parameters')}
         redis_store = connect_redis_store(
             None, testing=False, decode_responses=False)
         q = rq.Queue('juicer', connection=redis_store)
@@ -564,31 +564,64 @@ class WorkflowStartActionApi(Resource):
         redis_store = connect_redis_store(
             None, testing=False, decode_responses=False)
         try:
+            print(job_id)
             rq_job = rq.job.Job(job_id, connection=redis_store)
             if rq_job and rq_job.result:
                 print('*' * 10)
-                print(rq_job.result)
+                print(rq_job.get_status())
                 print('*' * 10)
-                return {'status': rq_job.result.get('status'),
+                return {'status': rq_job.get_status(),
                         'result': rq_job.result}
             else:
-                return {'status': 'PROCESSING'}
+                return {'status': 'ERROR', 'job_id': job_id,
+                    'message': gettext('Job not found')}
         except NoSuchJobError:
-            return {'status': 'ERROR', 'message': 'Job not found'}
+            return {'status': 'ERROR', 
+                    'message': gettext('Job not found')}
 
     @staticmethod
     @requires_auth
-    def post(workflow_id):
+    def post():
         if request.json is None:
             return {'status': 'ERROR',
-                    'message': 'You need to inform the parameters'}
+                    'message': gettext('You need to inform the parameters')}
         redis_store = connect_redis_store(
             None, testing=False, decode_responses=False)
         q = rq.Queue('juicer', connection=redis_store)
+        
+        workflow_id = request.json.get('workflow_id')
+        if not workflow_id:
+            return {'status': 'ERROR',
+                    'message': gettext('You must inform workflow_id.')}
+
+        cluster_id = request.json.get('cluster_id')
+        if not cluster_id:
+            return {'status': 'ERROR',
+                    'message': gettext('You must inform cluster_id.')}
 
         payload = {'data': request.json, 'workflow_id': workflow_id}
-        result = q.enqueue('juicer.jobs.start_workflow',
-                           payload)
+        result = q.enqueue('juicer.jobs.start_workflow', payload)
+        now = datetime.datetime.now()
+        name = 'Workflow {} @ {}'.format(workflow_id, now.isoformat())
+
+        cluster = Cluster.query.get(int(cluster_id))
+
+        job = Job(
+            created=now,
+            status=StatusExecution.WAITING,
+            workflow_id=workflow_id,
+            workflow_name=name,
+            workflow_definition='{}',
+            user_id=g.user.id,
+            user_login=g.user.login,
+            user_name=g.user.name,
+            cluster=cluster,
+            name=payload.get('name', name),
+            type=JobType.BATCH,
+            job_key=result.id
+        )
+        db.session.add(job)
+        db.session.commit()
         return result.id
 
 

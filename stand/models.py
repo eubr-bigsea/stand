@@ -66,6 +66,7 @@ class ClusterType:
 class JobType:
     NORMAL = 'NORMAL'
     APP = 'APP'
+    BATCH = 'BATCH'
 
     @staticmethod
     def values():
@@ -127,7 +128,7 @@ class Cluster(db.Model):
                              default='1M', nullable=False)
     auth_token = Column(String(1000))
     ui_parameters = Column(String(1000))
-    general_parameters = Column(String(1000))
+    general_parameters = Column(String(3000))
 
     # Associations
     flavors = relationship("ClusterFlavor", back_populates="cluster")
@@ -283,6 +284,7 @@ class Job(db.Model):
     user_login = Column(String(50), nullable=False)
     user_name = Column(String(200), nullable=False)
     source_code = Column(LONGTEXT)
+    job_key = Column(String(200), nullable=False)
 
     # Associations
     cluster_id = Column(Integer,
