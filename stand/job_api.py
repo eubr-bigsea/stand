@@ -42,7 +42,7 @@ class LatestJobDetailApi(Resource):
     @staticmethod
     @requires_auth
     def get():
-        workflow_id = request.args.get('workflow_id')
+        workflow_id = request.args.get('workflow')
 
         jobs = _get_jobs(Job.query, [PermissionType.LIST, PermissionType.STOP,
                                      PermissionType.MANAGE])
@@ -552,3 +552,43 @@ class DataSourceInitializationApi(Resource):
         result = q.enqueue('juicer.jobs.cache_vallum_data',
                            payload)
         return result.id
+
+
+class WorkflowStartActionApi(Resource):
+    """ RPC API for action that starts a Job from an workflow id """
+
+    @staticmethod
+    @requires_auth
+    def get():
+        job_id = request.args.get('key')
+        redis_store = connect_redis_store(
+            None, testing=False, decode_responses=False)
+        try:
+            rq_job = rq.job.Job(job_id, connection=redis_store)
+            if rq_job and rq_job.result:
+                print('*' * 10)
+                print(rq_job.result)
+                print('*' * 10)
+                return {'status': rq_job.result.get('status'),
+                        'result': rq_job.result}
+            else:
+                return {'status': 'PROCESSING'}
+        except NoSuchJobError:
+            return {'status': 'ERROR', 'message': 'Job not found'}
+
+    @staticmethod
+    @requires_auth
+    def post(workflow_id):
+        if request.json is None:
+            return {'status': 'ERROR',
+                    'message': 'You need to inform the parameters'}
+        redis_store = connect_redis_store(
+            None, testing=False, decode_responses=False)
+        q = rq.Queue('juicer', connection=redis_store)
+
+        payload = {'data': request.json, 'workflow_id': workflow_id}
+        result = q.enqueue('juicer.jobs.start_workflow',
+                           payload)
+        return result.id
+
+
