@@ -2,6 +2,7 @@
 import logging
 
 import rq
+import math
 from flask import request, current_app
 from flask_babel import gettext
 from flask_restful import Resource
@@ -16,9 +17,11 @@ log = logging.getLogger(__name__)
 class ClusterListApi(Resource):
     """ REST API for listing class Cluster """
 
-    @staticmethod
+    def __init__(self):
+        self.human_name = gettext('Cluster')
+
     @requires_auth
-    def get():
+    def get(self):
         if request.args.get('fields'):
             only = [f.strip() for f in
                     request.args.get('fields').split(',')]
@@ -31,10 +34,43 @@ class ClusterListApi(Resource):
             clusters = Cluster.query.filter(
                 Cluster.enabled == (enabled_filter != 'false'))
         else:
-            clusters = Cluster.query.all()
+            clusters = Cluster.query
 
-        return ClusterListResponseSchema(
-            many=True, only=only).dump(clusters).data
+        q = request.args.get('query')
+        if q:
+            clusters = clusters.filter(Cluster.name.like('%' + q + '%'))
+
+        sort = request.args.get('sort', 'name')
+        if sort not in ['type', 'id', 'name']:
+            sort = 'id'
+        sort_option = getattr(Cluster, sort)
+        if request.args.get('asc', 'true') == 'false':
+            sort_option = sort_option.desc()
+
+        clusters = clusters.order_by(sort_option)
+
+        page = request.args.get('page') or '1'
+        if page is not None and page.isdigit():
+            page_size = int(request.args.get('size', 20))
+            page = int(page)
+            pagination = clusters.paginate(page, page_size, True)
+            result = {
+                'data': ClusterListResponseSchema(
+                    many=True, only=only).dump(pagination.items).data,
+                'pagination': {
+                    'page': page, 'size': page_size,
+                    'total': pagination.total,
+                    'pages': int(math.ceil(1.0 * pagination.total / page_size))}
+            }
+        else:
+            result = {
+                'data': ClusterListResponseSchema(
+                    many=True, only=only).dump(
+                    clusters).data}
+
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug(gettext('Listing %(name)s', name=self.human_name))
+        return result
 
     @staticmethod
     @requires_auth
