@@ -318,6 +318,7 @@ def create_socket_io_app(_app):
     mgr = socketio.RedisManager(socket_io_config['redis_url'], 'job_output')
     sio = socketio.Server(engineio_options={'logger': True},
                           client_manager=mgr,
+                          cors_allowed_origins='*',
                           allow_upgrades=True)
 
     return sio, socketio.Middleware(sio, _app)
