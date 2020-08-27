@@ -58,7 +58,7 @@ class JobService:
         db.session.commit()
 
     @staticmethod
-    def start(job, workflow, app_configs=None):
+    def start(job, workflow, app_configs=None, job_type=None):
         if app_configs is None:
             app_configs = {}
         invalid_statuses = [StatusExecution.RUNNING, StatusExecution.PENDING,
@@ -68,17 +68,19 @@ class JobService:
         # @FIXME Validate workflow
 
         # Validate if workflow is already running
-        jobs_running = Job.query.filter(Job.status.in_(invalid_statuses)) \
-            .filter(Job.workflow_id == job.workflow_id).first()
-        if False and jobs_running:
-            raise JobException(
-                'Workflow is already being run by another job ({})'.format(
-                    jobs_running.id), JobException.ALREADY_RUNNING)
+        # jobs_running = Job.query.filter(Job.status.in_(invalid_statuses)) \
+        #     .filter(Job.workflow_id == job.workflow_id).first()
+        # if False and jobs_running:
+        #     raise JobException(
+        #         'Workflow is already being run by another job ({})'.format(
+        #             jobs_running.id), JobException.ALREADY_RUNNING)
 
         # Initial job status must be WAITING
         job.status = StatusExecution.WAITING
 
-        if  workflow.get('publishing_status') in ['EDITING', 'PUBLISHED']:
+        if job_type == JobType.BATCH:
+            job.type = JobType.BATCH
+        elif  workflow.get('publishing_status') in ['EDITING', 'PUBLISHED']:
             job.type = JobType.APP
 
         job.started = datetime.datetime.utcnow()

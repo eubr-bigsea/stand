@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-} import logging
 import math
+import requests 
 
 from flask import g
 from flask import request, current_app
@@ -88,7 +89,6 @@ class JobListApi(Resource):
             sort_option = sort_option.desc()
 
         jobs = jobs.order_by(sort_option)
-
         page = request.args.get('page') or '1'
 
         if page is not None and page.isdigit():
@@ -559,69 +559,62 @@ class WorkflowStartActionApi(Resource):
 
     @staticmethod
     @requires_auth
-    def get():
-        job_id = request.args.get('key')
-        redis_store = connect_redis_store(
-            None, testing=False, decode_responses=False)
-        try:
-            print(job_id)
-            rq_job = rq.job.Job(job_id, connection=redis_store)
-            if rq_job and rq_job.result:
-                print('*' * 10)
-                print(rq_job.get_status())
-                print('*' * 10)
-                return {'status': rq_job.get_status(),
-                        'result': rq_job.result}
-            else:
-                return {'status': 'ERROR', 'job_id': job_id,
-                    'message': gettext('Job not found')}
-        except NoSuchJobError:
-            return {'status': 'ERROR', 
-                    'message': gettext('Job not found')}
-
-    @staticmethod
-    @requires_auth
     def post():
         if request.json is None:
             return {'status': 'ERROR',
                     'message': gettext('You need to inform the parameters')}
-        redis_store = connect_redis_store(
-            None, testing=False, decode_responses=False)
-        q = rq.Queue('juicer', connection=redis_store)
         
         workflow_id = request.json.get('workflow_id')
         if not workflow_id:
             return {'status': 'ERROR',
                     'message': gettext('You must inform workflow_id.')}
 
-        cluster_id = request.json.get('cluster_id')
-        if not cluster_id:
-            return {'status': 'ERROR',
-                    'message': gettext('You must inform cluster_id.')}
-
         payload = {'data': request.json, 'workflow_id': workflow_id}
-        result = q.enqueue('juicer.jobs.start_workflow', payload)
         now = datetime.datetime.now()
         name = 'Workflow {} @ {}'.format(workflow_id, now.isoformat())
-
-        cluster = Cluster.query.get(int(cluster_id))
 
         job = Job(
             created=now,
             status=StatusExecution.WAITING,
             workflow_id=workflow_id,
             workflow_name=name,
-            workflow_definition='{}',
             user_id=g.user.id,
             user_login=g.user.login,
             user_name=g.user.name,
-            cluster=cluster,
             name=payload.get('name', name),
             type=JobType.BATCH,
-            job_key=result.id
         )
-        db.session.add(job)
-        db.session.commit()
-        return result.id
+        # Retrieves the workflow from tahiti
+        tahiti_config = current_app.config['STAND_CONFIG']['services']['tahiti']
+        url = '{}/workflows/{}'.format(tahiti_config.get('url'), workflow_id)
+        headers = {'X-Auth-Token': str(tahiti_config['auth_token'])}
+        try:
+            r = requests.get(url, headers=headers)
+            if r.status_code == 200:
+
+                workflow = r.json()
+                cluster_id = request.json.get('cluster_id', 
+                        workflow.get('preferred_cluster_id'))
+                if not cluster_id:
+                    return {'status': 'ERROR',
+                        'message': gettext(
+                            'You must inform cluster_id or define a '
+                            'preferred one in workflow.')}
+
+                job.cluster = Cluster.query.get(int(cluster_id))
+                job.workflow_definition = r.text
+                JobService.start(job, workflow, {}, JobType.BATCH)
+                return {'data': {'job': {'id': job.id}}}
+            else:
+                logging.error(gettext('Error retrieving workflow {}: {}').format(
+                    workflow_id, r.text))
+                return {'status': 'ERROR', 
+                        'message': gettext(
+                            'Workflow not found or error retrieving it.')}
+        except Exception as e:
+           logging.error(e)
+           return {'status': 'ERROR', 
+                   'message': gettext(
+                       'Workflow not found or error retrieving it.')}
 
 
