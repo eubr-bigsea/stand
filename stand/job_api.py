@@ -122,6 +122,7 @@ class JobListApi(Resource):
                 request_json['user']['login'] = g.user.login
                 request_json['user']['name'] = ' '.join([g.user.first_name,
                                                          g.user.last_name])
+                request_json['job_key'] = ''
 
                 request_schema = JobCreateRequestSchema()
                 response_schema = JobItemResponseSchema()
