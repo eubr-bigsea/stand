@@ -114,7 +114,8 @@ class ClusterDetailApi(Resource):
     def get(cluster_id):
         cluster = Cluster.query.get(cluster_id)
         if cluster is not None:
-            return ClusterItemResponseSchema().dump(cluster).data
+            return {'data': ClusterItemResponseSchema().dump(cluster).data, 
+                'status': 'OK'}
         else:
             return dict(status="ERROR", message=gettext("Not found")), 404
 
