@@ -619,3 +619,30 @@ class WorkflowStartActionApi(Resource):
                        'Workflow not found or error retrieving it.')}
 
 
+class WorkflowSourceCodeResultApi(Resource):
+    """
+    """
+
+    @staticmethod
+    @requires_auth
+    def get(key):
+        return JobService.get_generate_code_result(key)
+
+class WorkflowSourceCodeApi(Resource):
+    """
+    """
+
+    @staticmethod
+    @requires_auth
+    def post():
+        if request.json is None:
+            return {'status': 'ERROR',
+                    'message': gettext('You need to inform the parameters')}
+        
+        workflow_id = request.json.get('workflow_id')
+        if not workflow_id:
+            return {'status': 'ERROR',
+                    'message': gettext('You must inform workflow_id.')}
+
+        return JobService.generate_code(workflow_id, 
+            request.json.get('template', 'python'))

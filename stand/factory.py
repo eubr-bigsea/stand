@@ -3,6 +3,7 @@ import datetime
 import json
 import logging
 import logging.config
+import rq_dashboard
 
 import os
 import rq
@@ -22,7 +23,9 @@ from stand.job_api import JobListApi, JobDetailApi, \
     UpdateJobStatusActionApi, UpdateJobStepStatusActionApi, \
     JobSampleActionApi, JobSourceCodeApi, LatestJobDetailApi,\
     PerformanceModelEstimationApi, PerformanceModelEstimationResultApi, \
-    DataSourceInitializationApi, WorkflowStartActionApi
+    DataSourceInitializationApi, WorkflowStartActionApi, WorkflowSourceCodeApi,\
+    WorkflowSourceCodeResultApi
+
 from stand.gateway_api import MetricListApi
 from stand.models import db, Job, JobStep, JobStepLog, StatusExecution, \
     JobResult
@@ -111,6 +114,8 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
         '/datasource/init': DataSourceInitializationApi,
         '/metric': MetricListApi,
         '/workflow': WorkflowStartActionApi,
+        '/workflow/source-code': WorkflowSourceCodeApi,
+        '/workflow/source-code/<key>': WorkflowSourceCodeResultApi,
     }
     for path, view in mappings.items():
         api.add_resource(view, path)
@@ -119,6 +124,9 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
     app.config['CACHE_TYPE'] = 'simple'
     cache = Cache(config={'CACHE_TYPE': 'simple'})
     cache.init_app(app)
+
+    app.config.from_object(rq_dashboard.default_settings)
+    app.register_blueprint(rq_dashboard.blueprint, url_prefix="/rq")
 
     return app
 

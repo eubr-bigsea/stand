@@ -249,3 +249,28 @@ class JobService:
                     'result': rq_job.result}
         except NoSuchJobError:
             return {'status': 'ERROR', 'message': 'Job not found'}
+
+    @staticmethod
+    def generate_code(workflow_id, template):
+        redis_store = connect_redis_store(
+            None, testing=False, decode_responses=False)
+        q = rq.Queue('juicer', connection=redis_store)
+        payload = {'workflow_id': workflow_id, 'template': template}
+
+        log.info("Payload %s", payload)
+        result = q.enqueue('juicer.jobs.code_gen.generate', workflow_id, template)
+        return result.id
+
+    @staticmethod
+    def get_generate_code_result(job_id):
+        redis_store = connect_redis_store(
+            None, testing=False, decode_responses=False)
+        try:
+            rq_job = rq.job.Job(job_id, connection=redis_store)
+            # return {'status': rq_job.result.get('status'),
+            #        'code': rq_job.result.get('code')}
+            return rq_job.result.get('code')
+        except NoSuchJobError:
+            return {'status': 'ERROR', 'message': 'Not found'}
+
+
