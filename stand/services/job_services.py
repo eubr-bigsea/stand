@@ -10,6 +10,7 @@ import stand.util
 from rq.exceptions import NoSuchJobError
 from stand.models import db, StatusExecution, JobException, Job, JobType
 from stand.services.redis_service import connect_redis_store
+from stand.schema import ClusterItemResponseSchema
 
 logging.basicConfig(
     format=('[%(levelname)s] %(asctime)s,%(msecs)05.1f '
@@ -149,10 +150,13 @@ class JobService:
             redis_store = connect_redis_store(None, testing=False)
 
             # @FIXME Each workflow has only one app. In future, we may support N
-            msg = json.dumps(dict(workflow_id=job.workflow_id,
-                                  app_id=job.workflow_id,
-                                  job_id=job.id,
-                                  type='terminate'))
+            cluster = job.cluster
+            msg = json.dumps(
+                dict(workflow_id=job.workflow_id,
+                     app_id=job.workflow_id,
+                     job_id=job.id,
+                     cluster= ClusterItemResponseSchema().dump(cluster).data,
+                     type='terminate'))
             redis_store.rpush("queue_start", msg)
 
             # # This hash controls the status of job. Used for prevent starting
