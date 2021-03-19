@@ -29,7 +29,7 @@ inflect==2.1.0
 inflection==0.3.1
 ipaddress==1.0.22
 itsdangerous==1.1.0
-Jinja2==2.10.1
+Jinja2==2.11.3
 Mako==1.0.13
 MarkupSafe==1.1.1
 marshmallow==2.19.5
