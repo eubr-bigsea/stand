@@ -358,7 +358,7 @@ class JobStep(db.Model):
                         cascade="all, delete-orphan")
 
     def __str__(self):
-        return self.date
+        return str(self.date)
 
     def __repr__(self):
         return '<Instance {}: {}>'.format(self.__class__, self.id)

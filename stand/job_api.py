@@ -118,6 +118,11 @@ class JobListApi(Resource):
         if request.json is not None:
             try:
                 request_json = request.json
+
+                # This parameter is important when executing a job in
+                # data explorer.
+                persist = request_json.get('persist', True)
+
                 request_json['user']['id'] = g.user.id
                 request_json['user']['login'] = g.user.login
                 request_json['user']['name'] = ' '.join([g.user.first_name,
@@ -142,10 +147,14 @@ class JobListApi(Resource):
                 else:
                     job = form.data
                     JobService.start(job, request_json['workflow'],
-                                     request_json.get('app_configs', {}))
+                                     request_json.get('app_configs', {}),
+                                     persist=persist)
                     result_code = 200
-                    result = dict(data=response_schema.dump(job).data,
-                                  message='', status='OK')
+                    if persist:
+                        result = dict(data=response_schema.dump(job).data,
+                                      message='', status='OK')
+                    else:
+                        result = {'status': 'OK', 'data': {'id': job.id} }
             except KeyError:
                 result['detail'] = gettext('Missing information in JSON')
             except ValueError:
@@ -605,7 +614,7 @@ class WorkflowStartActionApi(Resource):
 
                 job.cluster = Cluster.query.get(int(cluster_id))
                 job.workflow_definition = r.text
-                JobService.start(job, workflow, {}, JobType.BATCH)
+                JobService.start(job, workflow, {}, JobType.BATCH, persist=True)
                 return {'data': {'job': {'id': job.id}}}
             else:
                 logging.error(gettext('Error retrieving workflow {}: {}').format(

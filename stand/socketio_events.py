@@ -30,14 +30,14 @@ class StandSocketIO:
             self.socket_io.on(event, namespace=self.namespace, handler=handler)
 
     def on_echo(self, sid, message):
-        print('=' * 20, ' echo ')
-        print(message)
-        print('=' * 20)
+        # print('=' * 20, ' echo ')
+        # print(message)
+        # print('=' * 20)
         self.socket_io.emit('echo', 'Echo: ' + message, room="echo",
                 namespace=self.namespace)
 
     def on_join_room(self, sid, message):
-        print('=== > ', message)
+        # print('=== > ', message)
         room = str(message.get('room'))
 
         self.redis_store.hset(
@@ -81,7 +81,8 @@ class StandSocketIO:
                     room=sid, namespace=self.namespace)
             self.redis_store.expire('room_{}'.format(room), 10)
         except Exception as e:
-            print('ERROR!!!!!', e.message)
+            #print('ERROR!!!!!', e.message)
+            pass
 
     def on_close_room(self, sid, message):
         room = str(message.get('room'))
