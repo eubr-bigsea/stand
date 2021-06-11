@@ -163,10 +163,10 @@ def mocked_emit(original_emit, app_):
     def handle_emit(data, event, namespace, room, self, skip_sid, use_callback,
                     redis_store):
         logger = logging.getLogger(__name__)
-        print(('-' * 40))
-        print((data, event, namespace, room, self, skip_sid, use_callback,
-              redis_store_))
-        print(('-' * 40))
+        # print(('-' * 40))
+        # print((data, event, namespace, room, self, skip_sid, use_callback,
+        #       redis_store_))
+        # print(('-' * 40))
         try:
             now = datetime.datetime.now().strftime(
                 '%Y-%m-%dT%H:%m:%S')
@@ -199,8 +199,9 @@ def mocked_emit(original_emit, app_):
                                     message=_gettext('Canceled by error'))
 
                                 job_step.logs.append(step_log)
-                                db.session.add(job_step)
-                                db.session.commit()
+                                if job_id > 0:
+                                    db.session.add(job_step)
+                                    db.session.commit()
 
                                 msg = {
                                     'type': data.get('type', 'TEXT') or 'TEXT',
@@ -235,16 +236,18 @@ def mocked_emit(original_emit, app_):
                                                     'data': msg,
                                                     'namespace': namespace,
                                                     'room': room}))
-                                db.session.add(job_step)
+                                if job_id > 0:
+                                    db.session.add(job_step)
 
                         elif job.status == StatusExecution.CANCELED:
                             for job_step in job.steps:
                                 if job_step.status not in final_states:
                                     job_step.status = StatusExecution.CANCELED
-                                db.session.add(job_step)
-
-                        db.session.add(job)
-                        db.session.commit()
+                                if job_id > 0:
+                                    db.session.add(job_step)
+                        if job_id > 0:
+                            db.session.add(job)
+                            db.session.commit()
                 elif event == 'update task':
                     job_id = int(room)
                     job_step = JobStep.query.filter(and_(
@@ -263,15 +266,19 @@ def mocked_emit(original_emit, app_):
                             else:
                                 level = 'INFO'
                         data['date'] = now
+                        step_log_msg = data.get('message', 'no message')
+                        step_log_type = data.get('type', 'TEXT')
+                        if step_log_type == 'OBJECT':
+                            step_log_msg = json.dumps(step_log_msg)
+
                         step_log = JobStepLog(
                             level=level, date=datetime.datetime.now(),
                             status=job_step.status,
-                            type=data.get('type', 'TEXT'),
-                            message=data.get('message',
-                                             data.get('msg',
-                                                      'no message')))
+                            type=step_log_type,
+                            message=step_log_msg)
                         job_step.logs.append(step_log)
-                        if data.get('type') != 'SILENT':
+                        # If job_id <= 0, it is internal and it is not persisted
+                        if data.get('type') != 'SILENT' and job_id > 0:
                             db.session.add(job_step)
                             db.session.commit()
                         data['type'] = data.get('type', 'TEXT') or 'TEXT'
@@ -291,8 +298,9 @@ def mocked_emit(original_emit, app_):
                             title=data.get('title'),
                             content=data.get('message'))
                         job.results.append(result)
-                        db.session.add(job)
-                        db.session.commit()
+                        if job_id > 0:
+                            db.session.add(job)
+                            db.session.commit()
                         if 'operation_id' in data:
                             del data['operation_id']
                         data['time'] = datetime.datetime.now().isoformat()
