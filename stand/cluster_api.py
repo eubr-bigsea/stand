@@ -28,7 +28,8 @@ class ClusterListApi(Resource):
         elif request.args.get('simple', 'false') == 'true':
             only = ('id', 'name')
         else:
-            only = ('id', 'name', 'flavors', 'enabled', 'ui_parameters')
+            only = ('id', 'name', 'flavors', 'enabled', 'platforms', 
+                    'ui_parameters')
         enabled_filter = request.args.get('enabled')
         if enabled_filter:
             clusters = Cluster.query.filter(
@@ -40,6 +41,11 @@ class ClusterListApi(Resource):
         if q:
             clusters = clusters.filter(Cluster.name.like('%' + q + '%'))
 
+        platform = request.args.get('platform')
+        if platform:
+            clusters = clusters.join(Cluster.platforms).filter(
+                    ClusterPlatform.platform_id == int(platform))
+
         sort = request.args.get('sort', 'name')
         if sort not in ['type', 'id', 'name']:
             sort = 'id'
@@ -48,7 +54,7 @@ class ClusterListApi(Resource):
             sort_option = sort_option.desc()
 
         clusters = clusters.order_by(sort_option)
-
+        print(str(clusters))
         page = request.args.get('page') or '1'
         if page is not None and page.isdigit():
             page_size = int(request.args.get('size', 20))

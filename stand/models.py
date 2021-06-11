@@ -132,6 +132,7 @@ class Cluster(db.Model):
 
     # Associations
     flavors = relationship("ClusterFlavor", back_populates="cluster")
+    platforms = relationship("ClusterPlatform", back_populates="cluster")
 
     def __str__(self):
         return self.name
@@ -339,13 +340,13 @@ class JobStep(db.Model):
 
     # Fields
     id = Column(Integer, primary_key=True)
+    task_name = Column(String(200))
     date = Column(DateTime, nullable=False)
     status = Column(Enum(*list(StatusExecution.values()),
                          name='StatusExecutionEnumType'), nullable=False)
     task_id = Column(String(200), nullable=False)
     operation_id = Column(Integer, nullable=False)
     operation_name = Column(String(200), nullable=False)
-    task_name = Column(String(200))
 
     # Associations
     job_id = Column(Integer,
@@ -358,7 +359,7 @@ class JobStep(db.Model):
                         cascade="all, delete-orphan")
 
     def __str__(self):
-        return str(self.date)
+        return self.task_name
 
     def __repr__(self):
         return '<Instance {}: {}>'.format(self.__class__, self.id)

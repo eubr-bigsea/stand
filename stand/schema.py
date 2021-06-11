@@ -141,6 +141,10 @@ class ClusterListResponseSchema(Schema):
         'stand.schema.ClusterFlavorListResponseSchema',
         allow_none=True,
         many=True)
+    platforms = fields.Nested(
+        'stand.schema.ClusterPlatformListResponseSchema',
+        allow_none=True,
+        many=True)
 
     # noinspection PyUnresolvedReferences
     @post_load
@@ -171,6 +175,10 @@ class ClusterItemResponseSchema(Schema):
         'stand.schema.ClusterFlavorItemResponseSchema',
         allow_none=True,
         many=True)
+    platforms = fields.Nested(
+        'stand.schema.ClusterPlatformItemResponseSchema',
+        allow_none=True,
+        many=True)
 
     # noinspection PyUnresolvedReferences
     @post_load
@@ -198,6 +206,10 @@ class ClusterCreateRequestSchema(Schema):
     general_parameters = fields.String(required=False, allow_none=True)
     flavors = fields.Nested(
         'stand.schema.ClusterFlavorCreateRequestSchema',
+        allow_none=True,
+        many=True)
+    platforms = fields.Nested(
+        'stand.schema.ClusterPlatformCreateRequestSchema',
         allow_none=True,
         many=True)
 
@@ -273,12 +285,51 @@ class ClusterFlavorCreateRequestSchema(Schema):
         ordered = True
 
 
+class ClusterPlatformSimpleListResponseSchema(Schema):
+    """ JSON simple """
+    id = fields.Function(lambda x: x.platform_id)
+
+    # noinspection PyUnresolvedReferences
+    @post_load
+    def make_object(self, data):
+        """ Deserialize data into an instance of ClusterPlatform"""
+        return ClusterPlatform(**data)
+
+    class Meta:
+        ordered = True
+
+
 class ClusterPlatformListResponseSchema(Schema):
     """ JSON serialization schema """
-    platform_id = fields.Integer(required=True, missing=1, default=1)
-    cluster = fields.Nested(
-        'stand.schema.ClusterListResponseSchema',
-        required=True)
+    id = fields.Function(lambda x: x.platform_id)
+
+    # noinspection PyUnresolvedReferences
+    @post_load
+    def make_object(self, data):
+        """ Deserialize data into an instance of ClusterPlatform"""
+        return ClusterPlatform(**data)
+
+    class Meta:
+        ordered = True
+
+
+class ClusterPlatformItemResponseSchema(Schema):
+    """ JSON serialization schema """
+    id = fields.Function(lambda x: x.platform_id)
+
+    # noinspection PyUnresolvedReferences
+    @post_load
+    def make_object(self, data):
+        """ Deserialize data into an instance of ClusterPlatform"""
+        return ClusterPlatform(**data)
+
+    class Meta:
+        ordered = True
+
+
+class ClusterPlatformCreateRequestSchema(Schema):
+    """ JSON serialization schema """
+    id = fields.Function(lambda x: x.platform_id)
 
     # noinspection PyUnresolvedReferences
     @post_load
@@ -539,13 +590,13 @@ class JobStepItemResponseSchema(Schema):
 
 class JobStepListResponseSchema(Schema):
     """ JSON serialization schema """
+    task_name = fields.String(required=False, allow_none=True)
     date = fields.DateTime(required=True)
     status = fields.String(required=True,
                            validate=[OneOf(list(StatusExecution.__dict__.keys()))])
     task_id = fields.String(required=True)
     operation_id = fields.Integer(required=True)
     operation_name = fields.String(required=True)
-    task_name = fields.String(required=False, allow_none=True)
     logs = fields.Nested(
         'stand.schema.JobStepLogListResponseSchema',
         required=True,
@@ -563,13 +614,13 @@ class JobStepListResponseSchema(Schema):
 
 class JobStepCreateRequestSchema(Schema):
     """ JSON serialization schema """
+    task_name = fields.String(required=False, allow_none=True)
     date = fields.DateTime(required=True)
     status = fields.String(required=True,
                            validate=[OneOf(list(StatusExecution.__dict__.keys()))])
     task_id = fields.String(required=True)
     operation_id = fields.Integer(required=True)
     operation_name = fields.String(required=True)
-    task_name = fields.String(required=False, allow_none=True)
     logs = fields.Nested(
         'stand.schema.JobStepLogCreateRequestSchema',
         required=True,
