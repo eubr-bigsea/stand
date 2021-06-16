@@ -3,28 +3,27 @@ import datetime
 import json
 import logging
 import logging.config
-import rq_dashboard
 
 import os
 import rq
 import socketio
 from flask import Flask
-from flask_admin import Admin
 from flask_babel import Babel, gettext
 from flask_caching import Cache
 from flask_cors import CORS
+from flask_migrate import Migrate
 from flask_restful import Api
 from mockredis import MockRedis
 from sqlalchemy import and_
 from stand.cluster_api import ClusterDetailApi, PerformanceModelEstimationApi
 from stand.cluster_api import ClusterListApi
-from stand.job_api import JobListApi, JobDetailApi, \
-    JobStopActionApi, JobLockActionApi, JobUnlockActionApi, \
-    UpdateJobStatusActionApi, UpdateJobStepStatusActionApi, \
-    JobSampleActionApi, JobSourceCodeApi, LatestJobDetailApi,\
-    PerformanceModelEstimationApi, PerformanceModelEstimationResultApi, \
-    DataSourceInitializationApi, WorkflowStartActionApi, WorkflowSourceCodeApi,\
-    WorkflowSourceCodeResultApi
+from stand.job_api import (JobListApi, JobDetailApi, 
+    JobStopActionApi, JobLockActionApi, JobUnlockActionApi, 
+    UpdateJobStatusActionApi, UpdateJobStepStatusActionApi,
+    JobSampleActionApi, JobSourceCodeApi, LatestJobDetailApi,
+    PerformanceModelEstimationApi, PerformanceModelEstimationResultApi, 
+    DataSourceInitializationApi, WorkflowStartActionApi, WorkflowSourceCodeApi,
+    WorkflowSourceCodeResultApi)
 
 from stand.gateway_api import MetricListApi
 from stand.models import db, Job, JobStep, JobStepLog, StatusExecution, \
@@ -81,9 +80,6 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
         with app.app_context():
             db.create_all()
 
-    # Flask Admin
-    admin = Admin(app, name='Stand', template_mode='bootstrap3')
-
     os.chdir(os.environ.get('STAND_HOME', '.'))
     # Logging configuration
     logging.config.fileConfig('logging_config.ini')
@@ -93,6 +89,9 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
 
     # CORS configuration
     CORS(app, resources={r"/*": {"origins": "*"}})
+
+    # Flask Migrate
+    migrate = Migrate(app, db)
 
     # API configuration
     api = Api(app)
@@ -124,9 +123,6 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
     app.config['CACHE_TYPE'] = 'simple'
     cache = Cache(config={'CACHE_TYPE': 'simple'})
     cache.init_app(app)
-
-    app.config.from_object(rq_dashboard.default_settings)
-    app.register_blueprint(rq_dashboard.blueprint, url_prefix="/rq")
 
     return app
 

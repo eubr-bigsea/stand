@@ -1,4 +1,4 @@
-"""empty message
+""" Create tables
 
 Revision ID: caae322c390f
 Revises: 
@@ -7,7 +7,7 @@ Create Date: 2017-02-22 19:02:25.570381
 """
 from alembic import op
 import sqlalchemy as sa
-
+from stand.migration_utils import is_psql
 
 # revision identifiers, used by Alembic.
 revision = 'caae322c390f'
@@ -101,4 +101,9 @@ def downgrade():
     op.drop_table('cluster_access')
     op.drop_table('room')
     op.drop_table('cluster')
+
+    if is_psql():
+        op.get_bind().execute('DROP TYPE "StatusExecutionEnumType"')
+        op.get_bind().execute('DROP TYPE "ClusterTypeEnumType"')
+        op.get_bind().execute('DROP TYPE "ClusterPermissionEnumType"')
     ### end Alembic commands ###

@@ -2,7 +2,7 @@
 import datetime
 import json
 from copy import deepcopy
-from marshmallow import Schema, fields, post_load
+from marshmallow import Schema, fields, post_load, post_dump
 from marshmallow.validate import OneOf
 from stand.models import *
 
@@ -21,7 +21,7 @@ def load_json(str_value):
     try:
         return json.loads(str_value)
     except BaseException:
-        return "Error loading JSON"
+        return None
 
 
 # region Protected
@@ -48,8 +48,7 @@ class WorkflowDefinitionCreateRequestSchema(Schema):
     id = fields.Integer(required=True)
     name = fields.String(required=True)
     description = fields.String(required=False, allow_none=True)
-    enabled = fields.Boolean(required=True, missing=True,
-                             default=True)
+    enabled = fields.Boolean(required=True, default=True)
     image = fields.String(required=False, allow_none=True)
     tasks = fields.Nested('stand.schema.TaskDefinitionCreateRequestSchema',
                           required=True,
@@ -111,14 +110,22 @@ class PerformanceModelEstimationResponseSchema(Schema):
 
 # endregion
 
+class BaseSchema(Schema):
+    @post_dump
+    def remove_skip_values(self, data, **kwargs):
+        return {
+            key: value for key, value in data.items()
+            if value is not None and value != []
+        }
 
-class ClusterSimpleListResponseSchema(Schema):
+
+class ClusterSimpleListResponseSchema(BaseSchema):
     """ JSON simple """
     id = fields.Integer(required=True)
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of Cluster"""
         return Cluster(**data)
 
@@ -126,14 +133,26 @@ class ClusterSimpleListResponseSchema(Schema):
         ordered = True
 
 
-class ClusterListResponseSchema(Schema):
+class ClusterListResponseSchema(BaseSchema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
     name = fields.String(required=True)
     description = fields.String(required=True)
-    executors = fields.Integer(required=True, missing=1, default=1)
-    executor_cores = fields.Integer(required=True, missing=1, default=1)
-    executor_memory = fields.String(required=True, missing='1M', default='1M')
+    executors = fields.Integer(
+        required=False,
+        allow_none=True,
+        missing=1,
+        default=1)
+    executor_cores = fields.Integer(
+        required=False,
+        allow_none=True,
+        missing=1,
+        default=1)
+    executor_memory = fields.String(
+        required=False,
+        allow_none=True,
+        missing='1M',
+        default='1M')
     auth_token = fields.String(required=False, allow_none=True)
     ui_parameters = fields.String(required=False, allow_none=True)
     general_parameters = fields.String(required=False, allow_none=True)
@@ -148,7 +167,7 @@ class ClusterListResponseSchema(Schema):
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of Cluster"""
         return Cluster(**data)
 
@@ -156,18 +175,30 @@ class ClusterListResponseSchema(Schema):
         ordered = True
 
 
-class ClusterItemResponseSchema(Schema):
+class ClusterItemResponseSchema(BaseSchema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
     name = fields.String(required=True)
     description = fields.String(required=True)
     enabled = fields.Boolean(required=True)
-    type = fields.String(required=True, missing=ClusterType.SPARK_LOCAL, default=ClusterType.SPARK_LOCAL,
+    type = fields.String(required=False, allow_none=True, missing=ClusterType.SPARK_LOCAL, default=ClusterType.SPARK_LOCAL,
                          validate=[OneOf(list(ClusterType.__dict__.keys()))])
     address = fields.String(required=True)
-    executors = fields.Integer(required=True, missing=1, default=1)
-    executor_cores = fields.Integer(required=True, missing=1, default=1)
-    executor_memory = fields.String(required=True, missing='1M', default='1M')
+    executors = fields.Integer(
+        required=False,
+        allow_none=True,
+        missing=1,
+        default=1)
+    executor_cores = fields.Integer(
+        required=False,
+        allow_none=True,
+        missing=1,
+        default=1)
+    executor_memory = fields.String(
+        required=False,
+        allow_none=True,
+        missing='1M',
+        default='1M')
     auth_token = fields.String(required=False, allow_none=True)
     ui_parameters = fields.String(required=False, allow_none=True)
     general_parameters = fields.String(required=False, allow_none=True)
@@ -182,7 +213,7 @@ class ClusterItemResponseSchema(Schema):
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of Cluster"""
         return Cluster(**data)
 
@@ -190,17 +221,29 @@ class ClusterItemResponseSchema(Schema):
         ordered = True
 
 
-class ClusterCreateRequestSchema(Schema):
+class ClusterCreateRequestSchema(BaseSchema):
     """ JSON serialization schema """
     name = fields.String(required=True)
     description = fields.String(required=True)
     enabled = fields.Boolean(required=True)
-    type = fields.String(required=True, missing=ClusterType.SPARK_LOCAL, default=ClusterType.SPARK_LOCAL,
+    type = fields.String(required=False, allow_none=True, missing=ClusterType.SPARK_LOCAL, default=ClusterType.SPARK_LOCAL,
                          validate=[OneOf(list(ClusterType.__dict__.keys()))])
     address = fields.String(required=True)
-    executors = fields.Integer(required=True, missing=1, default=1)
-    executor_cores = fields.Integer(required=True, missing=1, default=1)
-    executor_memory = fields.String(required=True, missing='1M', default='1M')
+    executors = fields.Integer(
+        required=False,
+        allow_none=True,
+        missing=1,
+        default=1)
+    executor_cores = fields.Integer(
+        required=False,
+        allow_none=True,
+        missing=1,
+        default=1)
+    executor_memory = fields.String(
+        required=False,
+        allow_none=True,
+        missing='1M',
+        default='1M')
     auth_token = fields.String(required=False, allow_none=True)
     ui_parameters = fields.String(required=False, allow_none=True)
     general_parameters = fields.String(required=False, allow_none=True)
@@ -215,7 +258,7 @@ class ClusterCreateRequestSchema(Schema):
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of Cluster"""
         return Cluster(**data)
 
@@ -223,14 +266,14 @@ class ClusterCreateRequestSchema(Schema):
         ordered = True
 
 
-class ClusterFlavorSimpleListResponseSchema(Schema):
+class ClusterFlavorSimpleListResponseSchema(BaseSchema):
     """ JSON simple """
     id = fields.Integer(required=True)
     name = fields.String(required=True)
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of ClusterFlavor"""
         return ClusterFlavor(**data)
 
@@ -238,14 +281,14 @@ class ClusterFlavorSimpleListResponseSchema(Schema):
         ordered = True
 
 
-class ClusterFlavorListResponseSchema(Schema):
+class ClusterFlavorListResponseSchema(BaseSchema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
     name = fields.String(required=True)
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of ClusterFlavor"""
         return ClusterFlavor(**data)
 
@@ -253,14 +296,14 @@ class ClusterFlavorListResponseSchema(Schema):
         ordered = True
 
 
-class ClusterFlavorItemResponseSchema(Schema):
+class ClusterFlavorItemResponseSchema(BaseSchema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
     name = fields.String(required=True)
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of ClusterFlavor"""
         return ClusterFlavor(**data)
 
@@ -268,7 +311,7 @@ class ClusterFlavorItemResponseSchema(Schema):
         ordered = True
 
 
-class ClusterFlavorCreateRequestSchema(Schema):
+class ClusterFlavorCreateRequestSchema(BaseSchema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
     name = fields.String(required=True)
@@ -277,7 +320,7 @@ class ClusterFlavorCreateRequestSchema(Schema):
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of ClusterFlavor"""
         return ClusterFlavor(**data)
 
@@ -285,13 +328,13 @@ class ClusterFlavorCreateRequestSchema(Schema):
         ordered = True
 
 
-class ClusterPlatformSimpleListResponseSchema(Schema):
+class ClusterPlatformSimpleListResponseSchema(BaseSchema):
     """ JSON simple """
     id = fields.Function(lambda x: x.platform_id)
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of ClusterPlatform"""
         return ClusterPlatform(**data)
 
@@ -299,13 +342,13 @@ class ClusterPlatformSimpleListResponseSchema(Schema):
         ordered = True
 
 
-class ClusterPlatformListResponseSchema(Schema):
+class ClusterPlatformListResponseSchema(BaseSchema):
     """ JSON serialization schema """
     id = fields.Function(lambda x: x.platform_id)
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of ClusterPlatform"""
         return ClusterPlatform(**data)
 
@@ -313,13 +356,13 @@ class ClusterPlatformListResponseSchema(Schema):
         ordered = True
 
 
-class ClusterPlatformItemResponseSchema(Schema):
+class ClusterPlatformItemResponseSchema(BaseSchema):
     """ JSON serialization schema """
     id = fields.Function(lambda x: x.platform_id)
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of ClusterPlatform"""
         return ClusterPlatform(**data)
 
@@ -327,13 +370,13 @@ class ClusterPlatformItemResponseSchema(Schema):
         ordered = True
 
 
-class ClusterPlatformCreateRequestSchema(Schema):
+class ClusterPlatformCreateRequestSchema(BaseSchema):
     """ JSON serialization schema """
     id = fields.Function(lambda x: x.platform_id)
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of ClusterPlatform"""
         return ClusterPlatform(**data)
 
@@ -341,16 +384,16 @@ class ClusterPlatformCreateRequestSchema(Schema):
         ordered = True
 
 
-class JobItemResponseSchema(Schema):
+class JobItemResponseSchema(BaseSchema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
-    created = fields.DateTime(required=True)
+    created = fields.DateTime(required=False, allow_none=True)
     name = fields.String(required=False, allow_none=True)
-    type = fields.String(required=True, missing=JobType.NORMAL, default=JobType.NORMAL,
+    type = fields.String(required=False, allow_none=True, missing=JobType.NORMAL, default=JobType.NORMAL,
                          validate=[OneOf(list(JobType.__dict__.keys()))])
     started = fields.DateTime(required=False, allow_none=True)
     finished = fields.DateTime(required=False, allow_none=True)
-    status = fields.String(required=True, missing=StatusExecution.WAITING, default=StatusExecution.WAITING,
+    status = fields.String(required=False, allow_none=True, missing=StatusExecution.WAITING, default=StatusExecution.WAITING,
                            validate=[OneOf(list(StatusExecution.__dict__.keys()))])
     status_text = fields.String(required=False, allow_none=True)
     exception_stack = fields.String(required=False, allow_none=True)
@@ -375,7 +418,7 @@ class JobItemResponseSchema(Schema):
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of Job"""
         return Job(**data)
 
@@ -383,16 +426,16 @@ class JobItemResponseSchema(Schema):
         ordered = True
 
 
-class JobListResponseSchema(Schema):
+class JobListResponseSchema(BaseSchema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
-    created = fields.DateTime(required=True)
+    created = fields.DateTime(required=False, allow_none=True)
     name = fields.String(required=False, allow_none=True)
-    type = fields.String(required=True, missing=JobType.NORMAL, default=JobType.NORMAL,
+    type = fields.String(required=False, allow_none=True, missing=JobType.NORMAL, default=JobType.NORMAL,
                          validate=[OneOf(list(JobType.__dict__.keys()))])
     started = fields.DateTime(required=False, allow_none=True)
     finished = fields.DateTime(required=False, allow_none=True)
-    status = fields.String(required=True, missing=StatusExecution.WAITING, default=StatusExecution.WAITING,
+    status = fields.String(required=False, allow_none=True, missing=StatusExecution.WAITING, default=StatusExecution.WAITING,
                            validate=[OneOf(list(StatusExecution.__dict__.keys()))])
     status_text = fields.String(required=False, allow_none=True)
     exception_stack = fields.String(required=False, allow_none=True)
@@ -413,7 +456,7 @@ class JobListResponseSchema(Schema):
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of Job"""
         return Job(**data)
 
@@ -421,10 +464,10 @@ class JobListResponseSchema(Schema):
         ordered = True
 
 
-class JobCreateRequestSchema(Schema):
+class JobCreateRequestSchema(BaseSchema):
     """ JSON serialization schema """
     name = fields.String(required=False, allow_none=True)
-    type = fields.String(required=True, missing=JobType.NORMAL, default=JobType.NORMAL,
+    type = fields.String(required=False, allow_none=True, missing=JobType.NORMAL, default=JobType.NORMAL,
                          validate=[OneOf(list(JobType.__dict__.keys()))])
     exception_stack = fields.String(required=False, allow_none=True)
     job_key = fields.String(required=True)
@@ -440,7 +483,7 @@ class JobCreateRequestSchema(Schema):
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of Job"""
 
         data['cluster_id'] = data['cluster']['id']
@@ -469,15 +512,15 @@ class JobCreateRequestSchema(Schema):
         ordered = True
 
 
-class JobExecuteResponseSchema(Schema):
+class JobExecuteResponseSchema(BaseSchema):
     """ JSON schema for response """
     id = fields.Integer(required=True)
-    created = fields.DateTime(required=True)
+    created = fields.DateTime(required=False, allow_none=True)
     name = fields.String(required=False, allow_none=True)
-    type = fields.String(required=True, missing=JobType.NORMAL, default=JobType.NORMAL,
+    type = fields.String(required=False, allow_none=True, missing=JobType.NORMAL, default=JobType.NORMAL,
                          validate=[OneOf(list(JobType.__dict__.keys()))])
     started = fields.DateTime(required=False, allow_none=True)
-    status = fields.String(required=True, missing=StatusExecution.WAITING, default=StatusExecution.WAITING,
+    status = fields.String(required=False, allow_none=True, missing=StatusExecution.WAITING, default=StatusExecution.WAITING,
                            validate=[OneOf(list(StatusExecution.__dict__.keys()))])
     status_text = fields.String(required=False, allow_none=True)
     exception_stack = fields.String(required=False, allow_none=True)
@@ -499,7 +542,7 @@ class JobExecuteResponseSchema(Schema):
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of Job"""
         return Job(**data)
 
@@ -507,13 +550,13 @@ class JobExecuteResponseSchema(Schema):
         ordered = True
 
 
-class JobStatusRequestSchema(Schema):
+class JobStatusRequestSchema(BaseSchema):
     """ JSON schema for executing tasks """
     token = fields.String(allow_none=True)
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of Job"""
         return Job(**data)
 
@@ -521,7 +564,7 @@ class JobStatusRequestSchema(Schema):
         ordered = True
 
 
-class JobResultItemResponseSchema(Schema):
+class JobResultItemResponseSchema(BaseSchema):
     """ JSON serialization schema """
     title = fields.String(required=False, allow_none=True)
     type = fields.String(required=True,
@@ -532,7 +575,7 @@ class JobResultItemResponseSchema(Schema):
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of JobResult"""
         return JobResult(**data)
 
@@ -540,7 +583,7 @@ class JobResultItemResponseSchema(Schema):
         ordered = True
 
 
-class JobResultListResponseSchema(Schema):
+class JobResultListResponseSchema(BaseSchema):
     """ JSON serialization schema """
     task_id = fields.String(required=True)
     operation_id = fields.Integer(required=True)
@@ -551,7 +594,7 @@ class JobResultListResponseSchema(Schema):
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of JobResult"""
         return JobResult(**data)
 
@@ -559,7 +602,7 @@ class JobResultListResponseSchema(Schema):
         ordered = True
 
 
-class JobStepItemResponseSchema(Schema):
+class JobStepItemResponseSchema(BaseSchema):
     """ JSON serialization schema """
     date = fields.DateTime(required=True)
     status = fields.String(required=True,
@@ -580,7 +623,7 @@ class JobStepItemResponseSchema(Schema):
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of JobStep"""
         return JobStep(**data)
 
@@ -588,7 +631,7 @@ class JobStepItemResponseSchema(Schema):
         ordered = True
 
 
-class JobStepListResponseSchema(Schema):
+class JobStepListResponseSchema(BaseSchema):
     """ JSON serialization schema """
     task_name = fields.String(required=False, allow_none=True)
     date = fields.DateTime(required=True)
@@ -604,7 +647,7 @@ class JobStepListResponseSchema(Schema):
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of JobStep"""
         return JobStep(**data)
 
@@ -612,7 +655,7 @@ class JobStepListResponseSchema(Schema):
         ordered = True
 
 
-class JobStepCreateRequestSchema(Schema):
+class JobStepCreateRequestSchema(BaseSchema):
     """ JSON serialization schema """
     task_name = fields.String(required=False, allow_none=True)
     date = fields.DateTime(required=True)
@@ -628,7 +671,7 @@ class JobStepCreateRequestSchema(Schema):
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of JobStep"""
         return JobStep(**data)
 
@@ -636,7 +679,7 @@ class JobStepCreateRequestSchema(Schema):
         ordered = True
 
 
-class JobStepLogListResponseSchema(Schema):
+class JobStepLogListResponseSchema(BaseSchema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
     level = fields.String(required=True)
@@ -644,11 +687,15 @@ class JobStepLogListResponseSchema(Schema):
                            validate=[OneOf(list(StatusExecution.__dict__.keys()))])
     date = fields.DateTime(required=True)
     message = fields.String(required=True)
-    type = fields.String(required=True, missing='TEXT', default='TEXT')
+    type = fields.String(
+        required=False,
+        allow_none=True,
+        missing='TEXT',
+        default='TEXT')
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of JobStepLog"""
         return JobStepLog(**data)
 
@@ -656,7 +703,7 @@ class JobStepLogListResponseSchema(Schema):
         ordered = True
 
 
-class JobStepLogItemResponseSchema(Schema):
+class JobStepLogItemResponseSchema(BaseSchema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
     level = fields.String(required=True)
@@ -664,11 +711,15 @@ class JobStepLogItemResponseSchema(Schema):
                            validate=[OneOf(list(StatusExecution.__dict__.keys()))])
     date = fields.DateTime(required=True)
     message = fields.String(required=True)
-    type = fields.String(required=True, missing='TEXT', default='TEXT')
+    type = fields.String(
+        required=False,
+        allow_none=True,
+        missing='TEXT',
+        default='TEXT')
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of JobStepLog"""
         return JobStepLog(**data)
 
@@ -676,7 +727,7 @@ class JobStepLogItemResponseSchema(Schema):
         ordered = True
 
 
-class JobStepLogCreateRequestSchema(Schema):
+class JobStepLogCreateRequestSchema(BaseSchema):
     """ JSON serialization schema """
     id = fields.Integer(allow_none=True)
     level = fields.String(required=True)
@@ -684,11 +735,15 @@ class JobStepLogCreateRequestSchema(Schema):
                            validate=[OneOf(list(StatusExecution.__dict__.keys()))])
     date = fields.DateTime(required=True)
     message = fields.String(required=True)
-    type = fields.String(required=True, missing='TEXT', default='TEXT')
+    type = fields.String(
+        required=False,
+        allow_none=True,
+        missing='TEXT',
+        default='TEXT')
 
     # noinspection PyUnresolvedReferences
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of JobStepLog"""
         return JobStepLog(**data)
 
