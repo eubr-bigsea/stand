@@ -149,7 +149,7 @@ class JobService:
         if job.status not in valid_status_in_stop + valid_end_status:
             raise JobException(
                 'You cannot stop a job in the state \'{}\''.format(job.status),
-                JobException.INVALID_STATE)
+                'INVALID_STATE')
         if job.status in valid_status_in_stop:
             job.status = StatusExecution.CANCELED
             db.session.add(job)
@@ -176,6 +176,10 @@ class JobService:
                              'status', StatusExecution.CANCELED)
 
             db.session.commit()
+        elif job.status in valid_end_status:
+            raise JobException(
+                'You cannot stop a job in the state \'{}\''.format(job.status),
+                'ALREADY_FINISHED')
 
     @staticmethod
     def lock(job, user, computer, force=False):
@@ -197,8 +201,7 @@ class JobService:
                 job=job.id, user=already_locked['user']['name'],
                 computer=already_locked['computer'],
                 date=already_locked['date'])
-            raise JobException(error_code=JobException.ALREADY_LOCKED,
-                               message=msg)
+            raise JobException(error_code='ALREADY_LOCKED', message=msg)
 
     @staticmethod
     def get_lock_status(job):

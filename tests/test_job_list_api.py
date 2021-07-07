@@ -112,6 +112,7 @@ def test_list_jobs_paged_out_of_bounds_return_404(client):
 
 
 def test_create_job_no_persist_ok_result_success(client, redis_store):
+    redis_store.flushdb()
     workflow_id = 800
     headers = {'X-Auth-Token': str(client.secret)}
     data = {

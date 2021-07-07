@@ -20,12 +20,6 @@ from rq.exceptions import NoSuchJobError
 log = logging.getLogger(__name__)
 
 
-def translate_validation(validation_errors):
-    for field, errors in list(validation_errors.items()):
-        validation_errors[field] = [gettext(error) for error in errors]
-    return validation_errors
-
-
 def apply_filter(query, args, name, transform=None, transform_name=None):
     result = query
     if name in args and args[name].strip() != '':
@@ -242,11 +236,7 @@ class JobStopActionApi(Resource):
                 log.exception(gettext('Error in POST'))
                 result, result_code = dict(status="ERROR",
                                            message=str(je),
-                                           code=je.error_code), 422
-                # if je.error_code == JobException.ALREADY_FINISHED:
-                #     result['status'] = 'OK'
-                #     result['data'] = response_schema.dump(job).data
-                #     result_code = 200
+                                           code=je.error_code), 400
             except Exception as e:
                 log.exception(gettext('Error in POST'))
                 result, result_code = dict(status="ERROR",
@@ -290,8 +280,8 @@ class JobLockActionApi(Resource):
             except JobException as je:
                 log.exception('Error in POST')
                 result, result_code = dict(
-                    status="ERROR", message=jstr(e), code=je.error_code), 422
-                if je.error_code == JobException.ALREADY_LOCKED:
+                    status="ERROR", message=str(je), code=je.error_code), 422
+                if je.error_code == 'ALREADY_LOCKED':
                     result_code = 409
 
             except Exception as e:
@@ -334,7 +324,7 @@ class JobSampleActionApi(Resource):
             except JobException as je:
                 log.exception('Error in POST')
                 result, result_code = dict(
-                    status="ERROR", message=jstr(e), code=je.error_code), 422
+                    status="ERROR", message=str(je), code=je.error_code), 422
 
             except Exception as e:
                 log.exception('Error in POST')

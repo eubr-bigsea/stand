@@ -14,13 +14,6 @@ from stand.services.redis_service import connect_redis_store
 
 log = logging.getLogger(__name__)
 
-
-def translate_validation(validation_errors):
-    for field, errors in list(validation_errors.items()):
-        validation_errors[field] = [gettext(error) for error in errors]
-    return validation_errors
-
-
 class ClusterListApi(Resource):
     """ REST API for listing class Cluster """
 
