@@ -1,49 +1,57 @@
 import json
 from datetime import datetime
 from functools import partial
-
-import mock
 import stand.util
 from flask import url_for
-from stand.models import StatusExecution, JobException
+from stand.models import Job, StatusExecution, JobException, db, StatusExecution
 
-job_stop_url = partial(url_for, endpoint='jobstopactionapi')
+
+def job_stop_url(job_id): return f'/jobs/{job_id}/stop'
+
+
 job_lock_url = partial(url_for, endpoint='joblockactionapi')
 job_unlock_url = partial(url_for, endpoint='jobunlockactionapi')
 
 HEADERS = {'X-Auth-Token': '123456', 'Content-Type': 'application/json'}
 
 
-def test_stop_job_workflow_running_success(client, model_factories,
-                                           redis_store):
-    fake_job = model_factories.job_factory.create(
-        id=444, status=StatusExecution.RUNNING)
-    redis_store.hset('job_{}'.format(fake_job.id), 'status', fake_job.status)
+def test_stop_job_workflow_running_success(client, app, redis_store):
+    headers = {'X-Auth-Token': str(client.secret)}
+    job_id = 2000
+    with app.app_context():
+        job = Job(id=job_id, workflow_id=1000, cluster_id=1, workflow_name='DEL',
+                  user_id=1, user_name='AA', user_login='aa',
+                  status=StatusExecution.RUNNING,
+                  workflow_definition=json.dumps({'id': 1}))
+        db.session.add(job)
+        db.session.commit()
 
-    data = {}
-    headers = {'Content-Type': 'application/json'}
-    headers.update(HEADERS)
-    response = client.post(job_stop_url(job_id=fake_job.id), headers=headers,
-                           data=json.dumps(data))
+        redis_store.hset('job_{}'.format(job_id), 'status', job.status)
 
-    result = response.json
+        response = client.post(job_stop_url(job_id=job_id), headers=headers)
 
+        result = response.json
+
+    #import pdb; pdb.set_trace()
     assert result['data']['status'] == StatusExecution.CANCELED
     assert result['status'] == 'OK'
     assert response.status_code == 200
 
-    assert redis_store.hget('job_{}'.format(fake_job.id),
-                            'status') == StatusExecution.CANCELED
+    assert redis_store.hget(
+        f'job_{job_id}', 'status') == StatusExecution.CANCELED
+    with app.app_context():
+        db.session.delete(job)
+        db.session.commit()
 
 
-def test_stop_job_workflow_not_running_success(client, model_factories):
+def test_stop_job_workflow_not_running_success(client):
     fake_job = model_factories.job_factory.create(
         id=456, status=StatusExecution.COMPLETED)
 
     data = {}
     headers = {'Content-Type': 'application/json'}
     headers.update(HEADERS)
-    response = client.post(job_stop_url(job_id=fake_job.id), headers=headers,
+    response = client.post(job_stop_url(job_id=job_id), headers=headers,
                            data=json.dumps(data))
     result = response.json
     assert response.status_code == 401
@@ -99,7 +107,7 @@ def test_fetch_all_result_job_sucess(client):
     assert True
 
 
-def test_lock_job_by_id_api_success(client, model_factories, redis_store):
+def test_lock_job_by_id_api_success(client, redis_store):
     fake_job = model_factories.job_factory.create(
         id=456, status=StatusExecution.WAITING)
 
@@ -112,32 +120,36 @@ def test_lock_job_by_id_api_success(client, model_factories, redis_store):
 
     # Monkey patch
     locked_at = datetime(2010, 1, 20, 14, 12, 11)
-    with mock.patch('stand.util.get_now') as patched:
-        patched.return_value = locked_at
-        response = client.post(job_lock_url(job_id=fake_job.id),
-                               headers=headers, data=json.dumps(data))
-        result = response.json
-        assert response.status_code == 200, response.json
-        assert result['status'] == 'OK'
+    stand.util.get_now = lambda: locked_at
+    response = client.post(job_lock_url(job_id=job_id),
+                           headers=headers, data=json.dumps(data))
+    result = response.json
+    assert response.status_code == 200, response.json
+    assert result['status'] == 'OK'
 
-        queued = redis_store.hget('job_{}'.format(fake_job.id), 'lock')
-        assert queued != ''
+    queued = redis_store.hget('job_{}'.format(job_id), 'lock')
+    assert queued != ''
 
-        lock_info = json.loads(queued)
-        assert lock_info['user']['id'] == data['user']['id']
-        assert lock_info['user']['name'] == data['user']['name']
-        assert lock_info['computer'] == data['computer']
-        assert lock_info['date'] == locked_at.isoformat()
+    lock_info = json.loads(queued)
+    assert lock_info['user']['id'] == data['user']['id']
+    assert lock_info['user']['name'] == data['user']['name']
+    assert lock_info['computer'] == data['computer']
+    assert lock_info['date'] == locked_at.isoformat()
 
 
-def test_unlock_job_by_id_api_success(client, model_factories):
+def test_unlock_job_by_id_api_success(client):
     assert True
 
 
-def test_lock_job_by_id_api_already_locked_failure(client, model_factories,
-                                                   redis_store):
-    fake_job = model_factories.job_factory.create(
-        id=999, status=StatusExecution.WAITING)
+def test_lock_job_by_id_api_already_locked_failure(client, app, redis_store):
+    job_id = 5000
+    with app.app_context():
+        job = Job(id=job_id, workflow_id=1000, cluster_id=1, workflow_name='DEL',
+                  user_id=1, user_name='AA', user_login='BBB',
+                  status=StatusExecution.WAITING,
+                  workflow_definition=json.dumps({'id': 1}))
+        db.session.add(job)
+        db.session.commit()
 
     since = stand.util.get_now().isoformat()
     data1 = {
@@ -146,7 +158,7 @@ def test_lock_job_by_id_api_already_locked_failure(client, model_factories,
         'date': since
     }
     # Records lock information
-    redis_store.hset('job_{}'.format(fake_job.id), 'lock', json.dumps(data1))
+    redis_store.hset('job_{}'.format(job_id), 'lock', json.dumps(data1))
 
     data2 = {
         'user': {'id': 300, 'name': 'BigSea'},
@@ -155,7 +167,7 @@ def test_lock_job_by_id_api_already_locked_failure(client, model_factories,
     headers = {'Content-Type': 'application/json'}
     headers.update(HEADERS)
 
-    response = client.post(job_lock_url(job_id=fake_job.id),
+    response = client.post(job_lock_url(job_id=job_id),
                            headers=headers, data=json.dumps(data2))
 
     result = response.json
@@ -163,9 +175,12 @@ def test_lock_job_by_id_api_already_locked_failure(client, model_factories,
     assert result['status'] == 'ERROR'
     assert result['message'] == ('Job {job} is locked by {user} '
                                  '@ {computer} since {date}').format(
-        job=fake_job.id, user=data1['user']['name'], computer=data1['computer'],
+        job=job_id, user=data1['user']['name'], computer=data1['computer'],
         date=since)
+    with app.app_context():
+        db.session.delete(job)
+        db.session.commit()
 
 
-def test_unlock_job_by_id_api_failure(client, model_factories):
+def test_unlock_job_by_id_api_failure(client):
     assert True

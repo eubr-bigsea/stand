@@ -8,7 +8,7 @@ Create Date: 2018-03-14 13:27:34.654315
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import mysql
-from stand.migration_utils import is_mysql
+from stand.migration_utils import is_mysql, is_sqlite
 
 # revision identifiers, used by Alembic.
 revision = '255f81eff867'
@@ -37,8 +37,13 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_column('job', 'name')
-    op.drop_column('job', 'exception_stack')
+    if is_sqlite():
+        with op.batch_alter_table('job') as batch_op:
+            batch_op.drop_column('name')
+            batch_op.drop_column('exception_stack')
+    else:
+        op.drop_column('job', 'name')
+        op.drop_column('job', 'exception_stack')
 
     if is_mysql():
         op.execute("""

@@ -1,23 +1,29 @@
 # -*- coding: utf-8 -*-} import logging
 import math
-import requests 
+import requests
 
 from flask import g
 from flask import request, current_app
 from flask_babel import gettext
 from flask_restful import Resource
+from marshmallow import ValidationError
 from sqlalchemy import and_
 from stand.app_auth import requires_auth
 from stand.schema import *
-from stand.models import JobType, StatusExecution 
+from stand.models import JobType, StatusExecution
 from stand.services.job_services import JobService
 from stand.services.redis_service import connect_redis_store
 import rq
 import logging
-import stand.util
 from rq.exceptions import NoSuchJobError
 
 log = logging.getLogger(__name__)
+
+
+def translate_validation(validation_errors):
+    for field, errors in list(validation_errors.items()):
+        validation_errors[field] = [gettext(error) for error in errors]
+    return validation_errors
 
 
 def apply_filter(query, args, name, transform=None, transform_name=None):
@@ -74,11 +80,11 @@ class JobListApi(Resource):
             jobs = apply_filter(jobs, request.args, name, int,
                                 lambda field: field)
         jobs = jobs.filter(
-            Job.name.like('%%{}%%'.format(request.args.get('name', '') or '')))
+            Job.name.like(f'%%{request.args.get("name", "") or ""}%%'))
 
         job_type = request.args.get('type')
         if job_type:
-            jobs = jobs.filter(Job.type==job_type)
+            jobs = jobs.filter(Job.type == job_type)
 
         sort = request.args.get('sort', 'name')
         if sort not in ['status', 'id', 'user_name', 'workflow_name',
@@ -97,7 +103,7 @@ class JobListApi(Resource):
             pagination = jobs.paginate(page, page_size, True)
             result = {
                 'data': JobListResponseSchema(many=True, only=only).dump(
-                    pagination.items).data,
+                    pagination.items),
                 'pagination': {
                     'page': page, 'size': page_size,
                     'total': pagination.total,
@@ -105,7 +111,7 @@ class JobListApi(Resource):
             }
         else:
             result = {'data': JobListResponseSchema(many=True, only=only).dump(
-                jobs).data}
+                jobs)}
 
         return result
 
@@ -121,40 +127,43 @@ class JobListApi(Resource):
 
                 # This parameter is important when executing a job in
                 # data explorer.
-                persist = request_json.get('persist', True)
+                persist = request_json.pop('persist', True)
 
-                request_json['user']['id'] = g.user.id
-                request_json['user']['login'] = g.user.login
-                request_json['user']['name'] = ' '.join([g.user.first_name,
-                                                         g.user.last_name])
+                request_json['user'] = {
+                    'id': g.user.id,
+                    'login': g.user.login,
+                    'name': f'{g.user.first_name} {g.user.last_name}'
+                }
                 request_json['job_key'] = ''
 
                 request_schema = JobCreateRequestSchema()
                 response_schema = JobItemResponseSchema()
+                new_job = request_schema.load(request_json)
+                new_job.status = StatusExecution.WAITING
+                if not new_job.name:
+                    new_job.name = request_json.get('workflow_name') or \
+                        gettext('Unnamed job')
+                # Check if cluster id is valid
+                cluster_id = request_json.get('cluster', {}).get('id')
+                cluster = Cluster.query.get(cluster_id)
+                if cluster is None:
+                    raise ValidationError({'cluster': ['Invalid cluster']})
 
-                request_json['workflow']['locale'] = request.headers.get(
-                    'Locale', 'en') or 'en'
-                request_json['status'] = StatusExecution.WAITING
-                if not request_json.get('name'):
-                    request_json['name'] = request_json.get('workflow_name')
-
-                form = request_schema.load(request_json)
-
-                if form.errors:
-                    result, result_code = dict(
-                        status="ERROR", message=gettext("Validation error"),
-                        errors=form.errors), 422
+                JobService.start(new_job, request_json['workflow'],
+                                 request_json.get('app_configs', {}),
+                                 persist=persist,
+                                 testing=current_app.testing)
+                result_code = 201
+                if persist:
+                    result = dict(data=response_schema.dump(new_job),
+                                  message='', status='OK')
                 else:
-                    job = form.data
-                    JobService.start(job, request_json['workflow'],
-                                     request_json.get('app_configs', {}),
-                                     persist=persist)
-                    result_code = 200
-                    if persist:
-                        result = dict(data=response_schema.dump(job).data,
-                                      message='', status='OK')
-                    else:
-                        result = {'status': 'OK', 'data': {'id': job.id} }
+                    result = {'status': 'OK', 'data': {'id': new_job.id}}
+            except ValidationError as e:
+                result = {'status': 'ERROR',
+                          'message': gettext("Validation error"),
+                          'errors': translate_validation(e.messages)}
+                result_code = 400
             except KeyError:
                 result['detail'] = gettext('Missing information in JSON')
             except ValueError:
@@ -186,7 +195,7 @@ class JobDetailApi(Resource):
                          [PermissionType.LIST, PermissionType.STOP,
                           PermissionType.MANAGE]).all()
         if len(jobs) == 1:
-            return JobItemResponseSchema().dump(jobs[0]).data
+            return JobItemResponseSchema().dump(jobs[0])
         else:
             return dict(status="ERROR", message=gettext("Not found")), 404
 
@@ -202,7 +211,7 @@ class JobDetailApi(Resource):
                 JobService.stop(job)
                 db.session.delete(job)
                 db.session.commit()
-                result, result_code = dict(status="OK", message="Deleted"), 200
+                result, result_code = dict(status="OK", message="Deleted"), 204
             except Exception as e:
                 log.exception('Error in DELETE')
                 result, result_code = dict(status="ERROR",
@@ -210,66 +219,6 @@ class JobDetailApi(Resource):
                 if current_app.debug:
                     result['debug_detail'] = str(e)
                 db.session.rollback()
-        return result, result_code
-
-    @staticmethod
-    @requires_auth
-    def patch(job_id):
-        result = dict(status="ERROR", message=gettext("Insufficient data"))
-        result_code = 404
-        # noinspection PyBroadException
-        try:
-            if request.data:
-                request_json = json.loads(request.data)
-                request_schema = partial_schema_factory(
-                    JobCreateRequestSchema)
-                for task in request_json.get('tasks', {}):
-                    task['forms'] = {k: v for k, v in task['forms'].items()
-                                     if v.get('value') is not None}
-                # Ignore missing fields to allow partial updates
-                params = {}
-                params.update(request_json)
-                if 'platform_id' in params and params['platform_id'] is None:
-                    params.pop('platform_id')
-                if 'user' in params:
-                    user = params.pop('user')
-                    params['user_id'] = user['id']
-                    params['user_login'] = user['login']
-                    params['user_name'] = user['name']
-
-                form = request_schema.load(params, partial=True)
-                response_schema = JobItemResponseSchema()
-                if not form.errors:
-                    try:
-                        form.data.id = job_id
-                        job = db.session.merge(form.data)
-                        db.session.flush()
-                        db.session.commit()
-
-                        if job is not None:
-                            result, result_code = dict(
-                                status="OK", message="Updated",
-                                data=response_schema.dump(job).data), 200
-                        else:
-                            result = dict(status="ERROR",
-                                          message=gettext("Not found"))
-                    except Exception as e:
-                        log.exception(gettext('Error in PATCH'))
-                        result, result_code = dict(
-                            status="ERROR",
-                            message=gettext("Internal error")), 500
-                        if current_app.debug:
-                            result['debug_detail'] = str(e)
-                        db.session.rollback()
-                else:
-                    result = dict(status="ERROR",
-                                  message=gettext("Invalid data"),
-                                  errors=form.errors)
-        except Exception:
-            log.exception(gettext('Error in PATCH'))
-            result_code = 500
-            import sys
-            result = {'status': "ERROR", 'message': sys.exc_info()[1]}
         return result, result_code
 
 
@@ -281,19 +230,18 @@ class JobStopActionApi(Resource):
     def post(job_id):
         result, result_code = dict(status="ERROR",
                                    message=gettext("Not found")), 404
-
         job = Job.query.get(job_id)
         if job is not None:
             response_schema = JobItemResponseSchema()
             try:
                 JobService.stop(job)
                 result, result_code = dict(
-                    status="OK", message=gettext("Deleted"),
-                    data=response_schema.dump(job).data), 200
+                    status="OK", message=gettext("Job stopped"),
+                    data=response_schema.dump(job)), 200
             except JobException as je:
                 log.exception(gettext('Error in POST'))
                 result, result_code = dict(status="ERROR",
-                                           message=jstr(e),
+                                           message=str(je),
                                            code=je.error_code), 422
                 # if je.error_code == JobException.ALREADY_FINISHED:
                 #     result['status'] = 'OK'
@@ -470,8 +418,8 @@ class JobSourceCodeApi(Resource):
         job = Job.query.get_or_404(ident=job_id)
 
         return {
-                   'lang': 'python',
-                   'source': job.source_code}, 200
+            'lang': 'python',
+            'source': job.source_code}, 200
 
     @staticmethod
     @requires_auth
@@ -574,7 +522,7 @@ class WorkflowStartActionApi(Resource):
         if request.json is None:
             return {'status': 'ERROR',
                     'message': gettext('You need to inform the parameters')}
-        
+
         workflow_id = request.json.get('workflow_id')
         if not workflow_id:
             return {'status': 'ERROR',
@@ -582,7 +530,7 @@ class WorkflowStartActionApi(Resource):
 
         payload = {'data': request.json, 'workflow_id': workflow_id}
         now = datetime.datetime.now()
-        name = 'Workflow {} @ {}'.format(workflow_id, now.isoformat())
+        name = f'Workflow {workflow_id} @ {now.isoformat()}'
 
         job = Job(
             created=now,
@@ -597,36 +545,37 @@ class WorkflowStartActionApi(Resource):
         )
         # Retrieves the workflow from tahiti
         tahiti_config = current_app.config['STAND_CONFIG']['services']['tahiti']
-        url = '{}/workflows/{}'.format(tahiti_config.get('url'), workflow_id)
+        url = f'{tahiti_config.get("url")}/workflows/{workflow_id}'
         headers = {'X-Auth-Token': str(tahiti_config['auth_token'])}
         try:
             r = requests.get(url, headers=headers)
             if r.status_code == 200:
 
                 workflow = r.json()
-                cluster_id = request.json.get('cluster_id', 
-                        workflow.get('preferred_cluster_id'))
+                cluster_id = request.json.get('cluster_id',
+                                              workflow.get('preferred_cluster_id'))
                 if not cluster_id:
                     return {'status': 'ERROR',
-                        'message': gettext(
-                            'You must inform cluster_id or define a '
-                            'preferred one in workflow.')}
+                            'message': gettext(
+                                'You must inform cluster_id or define a '
+                                'preferred one in workflow.')}
 
                 job.cluster = Cluster.query.get(int(cluster_id))
                 job.workflow_definition = r.text
-                JobService.start(job, workflow, {}, JobType.BATCH, persist=True)
+                JobService.start(job, workflow, {},
+                                 JobType.BATCH, persist=True)
                 return {'data': {'job': {'id': job.id}}}
             else:
                 logging.error(gettext('Error retrieving workflow {}: {}').format(
                     workflow_id, r.text))
-                return {'status': 'ERROR', 
+                return {'status': 'ERROR',
                         'message': gettext(
                             'Workflow not found or error retrieving it.')}
         except Exception as e:
-           logging.error(e)
-           return {'status': 'ERROR', 
-                   'message': gettext(
-                       'Workflow not found or error retrieving it.')}
+            logging.error(e)
+            return {'status': 'ERROR',
+                    'message': gettext(
+                        'Workflow not found or error retrieving it.')}
 
 
 class WorkflowSourceCodeResultApi(Resource):
@@ -638,6 +587,7 @@ class WorkflowSourceCodeResultApi(Resource):
     def get(key):
         return JobService.get_generate_code_result(key)
 
+
 class WorkflowSourceCodeApi(Resource):
     """
     """
@@ -648,11 +598,11 @@ class WorkflowSourceCodeApi(Resource):
         if request.json is None:
             return {'status': 'ERROR',
                     'message': gettext('You need to inform the parameters')}
-        
+
         workflow_id = request.json.get('workflow_id')
         if not workflow_id:
             return {'status': 'ERROR',
                     'message': gettext('You must inform workflow_id.')}
 
-        return JobService.generate_code(workflow_id, 
-            request.json.get('template', 'python'))
+        return JobService.generate_code(workflow_id,
+                                        request.json.get('template', 'python'))

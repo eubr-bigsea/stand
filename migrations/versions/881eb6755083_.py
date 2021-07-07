@@ -7,6 +7,7 @@ Create Date: 2017-09-11 16:46:28.607116
 """
 import sqlalchemy as sa
 from alembic import op
+from stand.migration_utils import is_sqlite
 
 # revision identifiers, used by Alembic.
 revision = '881eb6755083'
@@ -20,4 +21,8 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_column('job', 'source_code')
+    if is_sqlite():
+        with op.batch_alter_table('job') as batch_op:
+            batch_op.drop_column('source_code')
+    else:
+        op.drop_column('job', 'source_code')

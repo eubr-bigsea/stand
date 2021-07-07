@@ -25,7 +25,6 @@ def connect_redis_store(url, testing=False, decode_responses=True):
         return FlaskRedis(host=parsed.hostname, port=parsed.port,
                           db=int(parsed_qs.get('db', 0)),
                           decode_responses=decode_responses)
-
     if testing or (current_app and current_app.testing):
         redis_store = FlaskRedis.from_custom_provider(MockRedisWrapper)
         redis_store.init_app(current_app)

@@ -1,103 +1,96 @@
-# from project.database import db as _db
-import logging
-import sys
-from collections import namedtuple
-
 import os
+from stand.factory import create_babel_i18n
 import pytest
-from factories import JobFactory, ClusterFactory
-from stand.factory import create_app
-from stand.models import db as _db
+import datetime
+import flask_migrate
+from stand.app import create_app
+from stand.models import (Job, ClusterType, Cluster,
+                          JobType, StatusExecution, db)
 from stand.services.redis_service import connect_redis_store
 
-sys.path.append(os.path.dirname(os.path.curdir))
+@pytest.fixture(scope='session')
+def redis_store(app):
+    with app.app_context():
+        store = connect_redis_store(None, True)
+        store.flushdb()
+        return store
 
-TESTDB = 'test_project.db'
-TESTDB_PATH = "{}/{}".format(os.path.dirname(__file__), TESTDB)
-TEST_DATABASE_URI = 'sqlite:///' + TESTDB_PATH
+def get_clusters():
+    v1 = Cluster(
+        id=2, name="Cluster 1", description="Cluster 1",
+        enabled=True, type=ClusterType.SPARK_LOCAL,
+        address='local', executors=1, executor_cores=1,
+        executor_memory='1G', general_parameters='{}')
 
+    v2 = Cluster(
+        id=3, name="Cluster 2", description="Cluster 2",
+        enabled=True, type=ClusterType.KUBERNETES,
+        address='kb8://', executors=2, executor_cores=2,
+        executor_memory='2G', general_parameters='{}')
+    v3 = Cluster(
+        id=4, name="Cluster 3", description="Cluster 3",
+        enabled=False, type=ClusterType.YARN,
+        address='local', executors=1, executor_cores=1,
+        executor_memory='1G', general_parameters='{}')
 
-@pytest.fixture(scope='function')
-def app(request):
-    """Session-wide test `Flask` application."""
-    settings_override = {
-        'TESTING': True,
-        'SQLALCHEMY_DATABASE_URI': TEST_DATABASE_URI
-    }
-    result_app = create_app(settings_override, log_level=logging.WARN)
-    result_app.debug = True
-    result_app.config['TESTING'] = True
-    # Establish an application context before running the tests.
-    ctx = result_app.app_context()
-    ctx.push()
-
-    result_app.testing = True
-    yield result_app
-
-    ctx.pop()
-
-
-# noinspection PyShadowingNames
-@pytest.fixture(scope='function')
-def db(app, request):
-    """Session-wide test database."""
-    if os.path.exists(TESTDB_PATH):
-        os.unlink(TESTDB_PATH)
-
-    # See http://stackoverflow.com/a/28527080/1646932 about setup and teardown
-    # the database
-    _db.app = app
-    _db.create_all()
-    yield _db
-    _db.drop_all()
+    return [v1, v2, v3]
 
 
-# noinspection PyShadowingNames
-@pytest.fixture(scope='function')
-def session(db, request):
-    """Creates a new database session for a test."""
-    connection = db.engine.connect()
-    transaction = connection.begin()
-
-    result_session = db.create_scoped_session(
-        options=dict(bind=connection, binds={}))
-
-    db.session = result_session
-    yield result_session
-
-    transaction.rollback()
-    connection.close()
-    result_session.remove()
-
-
-# noinspection PyShadowingNames
-@pytest.fixture(scope='function')
-def job_factory(session):
-    JobFactory._meta.sqlalchemy_session = session
-    return JobFactory
-
-
-# noinspection PyShadowingNames
-@pytest.fixture(scope='function')
-def cluster_factory(session):
-    ClusterFactory._meta.sqlalchemy_session = session
-    return ClusterFactory
-
-
-# noinspection PyShadowingNames
-@pytest.fixture(scope='function')
-def model_factories(job_factory, cluster_factory):
-    factories = namedtuple('ModelFactories', 'job_factory, cluster_factory')
-    return factories(job_factory=job_factory, cluster_factory=cluster_factory)
+def get_jobs():
+    now = datetime.datetime.now()
+    j1 = Job(
+        id=1, created=now, name="Job 1 - Test", type=JobType.NORMAL,
+        started=now, finished=now, status=StatusExecution.WAITING,
+        status_text='Nothing', workflow_id=1,
+        workflow_name='WF1', workflow_definition='{"id": 1}',
+        user_id=1, user_login='admin', user_name='Admin',
+        job_key='1111', cluster_id=1,
+        steps=[], results=[]
+    )
+    j2 = Job(
+        id=2, created=now, name="Job 2 - Test", type=JobType.NORMAL,
+        started=now, finished=now, status=StatusExecution.WAITING,
+        status_text='Nothing', workflow_id=2,
+        workflow_name='WF2', workflow_definition='{"id": 2}',
+        user_id=2, user_login='Someone', user_name='Someone',
+        job_key='2222', cluster_id=1,
+        steps=[], results=[]
+    )
+    j3 = Job(
+        id=3, created=now, name="Job 3", type=JobType.NORMAL,
+        started=now, finished=now, status=StatusExecution.WAITING,
+        status_text='Nothing', workflow_id=1,
+        workflow_name='WF3', workflow_definition='{"id": 1}',
+        user_id=1, user_login='admin', user_name='Admin',
+        job_key='3333', cluster_id=1,
+        steps=[], results=[]
+    )
+    return [j1, j2, j3]
 
 
-@pytest.fixture(scope='function')
-def redis_store():
-    store = connect_redis_store(None, True)
-    store.flushdb()
-    return store
+@pytest.fixture(scope='session')
+def app():
+    return create_app()
 
+@pytest.fixture(scope='session')
+def client(app):
 
-@pytest.fixture(scope='function')
-def tahiti_service():
-    return ""
+    path = os.path.dirname(os.path.abspath(__name__))
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{path}/test.db'
+    app.config['TESTING'] = True
+    # import pdb; pdb.set_trace()
+    with app.test_client() as client:
+        client.app = app
+        create_babel_i18n(app)
+        with app.app_context():
+            if os.path.exists(os.path.join(path, 'test.db')):
+                os.remove(os.path.join(path, 'test.db'))
+            # flask_migrate.downgrade(revision="base")
+            flask_migrate.upgrade(revision='head')
+            for cluster in get_clusters():
+                db.session.add(cluster)
+            for job in get_jobs():
+                db.session.add(job)
+            client.secret = app.config['STAND_CONFIG']['secret']
+            db.session.commit()
+        yield client

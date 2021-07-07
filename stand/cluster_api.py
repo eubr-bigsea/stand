@@ -6,12 +6,19 @@ import math
 from flask import request, current_app
 from flask_babel import gettext
 from flask_restful import Resource
+from marshmallow import ValidationError
 from rq.job import Job as RQJob
 from stand.app_auth import requires_auth
 from stand.schema import *
 from stand.services.redis_service import connect_redis_store
 
 log = logging.getLogger(__name__)
+
+
+def translate_validation(validation_errors):
+    for field, errors in list(validation_errors.items()):
+        validation_errors[field] = [gettext(error) for error in errors]
+    return validation_errors
 
 
 class ClusterListApi(Resource):
@@ -28,7 +35,7 @@ class ClusterListApi(Resource):
         elif request.args.get('simple', 'false') == 'true':
             only = ('id', 'name')
         else:
-            only = ('id', 'name', 'flavors', 'enabled', 'platforms', 
+            only = ('id', 'name', 'flavors', 'enabled', 'platforms',
                     'ui_parameters')
         enabled_filter = request.args.get('enabled')
         if enabled_filter:
@@ -44,7 +51,7 @@ class ClusterListApi(Resource):
         platform = request.args.get('platform')
         if platform:
             clusters = clusters.join(Cluster.platforms).filter(
-                    ClusterPlatform.platform_id == int(platform))
+                ClusterPlatform.platform_id == int(platform))
 
         sort = request.args.get('sort', 'name')
         if sort not in ['type', 'id', 'name']:
@@ -54,7 +61,6 @@ class ClusterListApi(Resource):
             sort_option = sort_option.desc()
 
         clusters = clusters.order_by(sort_option)
-        print(str(clusters))
         page = request.args.get('page') or '1'
         if page is not None and page.isdigit():
             page_size = int(request.args.get('size', 20))
@@ -62,7 +68,7 @@ class ClusterListApi(Resource):
             pagination = clusters.paginate(page, page_size, True)
             result = {
                 'data': ClusterListResponseSchema(
-                    many=True, only=only).dump(pagination.items).data,
+                    many=True, only=only).dump(pagination.items),
                 'pagination': {
                     'page': page, 'size': page_size,
                     'total': pagination.total,
@@ -72,7 +78,7 @@ class ClusterListApi(Resource):
             result = {
                 'data': ClusterListResponseSchema(
                     many=True, only=only).dump(
-                    clusters).data}
+                    clusters)}
 
         if log.isEnabledFor(logging.DEBUG):
             log.debug(gettext('Listing %(name)s', name=self.human_name))
@@ -87,26 +93,22 @@ class ClusterListApi(Resource):
         if request.json is not None:
             request_schema = ClusterCreateRequestSchema()
             response_schema = ClusterItemResponseSchema()
-            form = request_schema.load(request.json)
-            if form.errors:
+            try:
+                cluster = request_schema.load(request.json)
+                db.session.add(cluster)
+                db.session.commit()
+                result, result_code = response_schema.dump(cluster), 201
+            except ValidationError as e:
+                result = {'status': 'ERROR',
+                          'message': gettext("Validation error"),
+                          'errors': translate_validation(e.messages)}
+            except Exception as e:
+                log.exception('Error in POST')
                 result, result_code = dict(
-                    status="ERROR", message=gettext('Validation error'),
-                    errors=form.errors), 400
-            else:
-                try:
-                    cluster = form.data
-                    db.session.add(cluster)
-                    db.session.commit()
-                    result, result_code = response_schema.dump(
-                        cluster).data, 200
-                except Exception as e:
-                    log.exception('Error in POST')
-                    result, result_code = dict(status="ERROR",
-                                               message=gettext(
-                                                   'Internal error')), 500
-                    if current_app.debug:
-                        result['debug_detail'] = str(e)
-                    db.session.rollback()
+                    status="ERROR", message=gettext('Internal error')), 500
+                if current_app.debug:
+                    result['debug_detail'] = str(e)
+                db.session.rollback()
 
         return result, result_code
 
@@ -120,14 +122,14 @@ class ClusterDetailApi(Resource):
     def get(cluster_id):
         cluster = Cluster.query.get(cluster_id)
         if cluster is not None:
-            return {'data': ClusterItemResponseSchema().dump(cluster).data, 
-                'status': 'OK'}
+            return {'data': [ClusterItemResponseSchema().dump(cluster)],
+                    'status': 'OK'}
         else:
             return dict(status="ERROR", message=gettext("Not found")), 404
 
     @requires_auth
     def delete(self, cluster_id):
-        return_code = 200
+        return_code = 204
         if log.isEnabledFor(logging.DEBUG):
             log.debug(gettext('Deleting %s (id=%s)'), self.human_name,
                       cluster_id)
@@ -168,40 +170,33 @@ class ClusterDetailApi(Resource):
             request_schema = partial_schema_factory(
                 ClusterCreateRequestSchema)
             # Ignore missing fields to allow partial updates
-            form = request_schema.load(request.json, partial=True)
+            cluster = request_schema.load(request.json, partial=True)
             response_schema = ClusterItemResponseSchema()
-            if not form.errors:
-                try:
-                    form.data.id = cluster_id
-                    cluster = db.session.merge(form.data)
-                    db.session.commit()
-
-                    if cluster is not None:
-                        return_code = 200
-                        result = {
-                            'status': 'OK',
-                            'message': gettext(
-                                '%(n)s (id=%(id)s) was updated with success!',
-                                n=self.human_name,
-                                id=cluster_id),
-                            'data': [response_schema.dump(
-                                cluster).data]
-                        }
-                except Exception as e:
-                    result = {'status': 'ERROR',
-                              'message': gettext("Internal error")}
-                    return_code = 500
-                    if current_app.debug:
-                        result['debug_detail'] = str(e)
-                    db.session.rollback()
-            else:
-                result = {
-                    'status': 'ERROR',
-                    'message': gettext('Invalid data for %(name)s (id=%(id)s)',
-                                       name=self.human_name,
-                                       id=cluster_id),
-                    'errors': form.errors
-                }
+            try:
+                cluster.id = cluster_id
+                cluster = db.session.merge(cluster)
+                db.session.commit()
+                if cluster is not None:
+                    return_code = 200
+                    result = {
+                        'status': 'OK',
+                        'message': gettext(
+                            '%(n)s (id=%(id)s) was updated with success!',
+                            n=self.human_name,
+                            id=cluster_id),
+                        'data': [response_schema.dump(cluster)]
+                    }
+            except ValidationError as e:
+                result = {'status': 'ERROR',
+                          'message': gettext("Validation error"),
+                          'errors': translate_validation(e.messages)}
+            except Exception as e:
+                result = {'status': 'ERROR',
+                          'message': gettext("Internal error")}
+                return_code = 500
+                if current_app.debug:
+                    result['debug_detail'] = str(e)
+                db.session.rollback()
         return result, return_code
 
 

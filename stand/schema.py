@@ -47,6 +47,7 @@ class WorkflowDefinitionCreateRequestSchema(Schema):
     """
     id = fields.Integer(required=True)
     name = fields.String(required=True)
+    locale = fields.String(required=False, default="pt")
     description = fields.String(required=False, allow_none=True)
     enabled = fields.Boolean(required=True, default=True)
     image = fields.String(required=False, allow_none=True)
@@ -138,6 +139,9 @@ class ClusterListResponseSchema(BaseSchema):
     id = fields.Integer(required=True)
     name = fields.String(required=True)
     description = fields.String(required=True)
+    enabled = fields.Boolean(required=True)
+    type = fields.String(required=False, allow_none=True, missing=ClusterType.SPARK_LOCAL, default=ClusterType.SPARK_LOCAL,
+                         validate=[OneOf(list(ClusterType.__dict__.keys()))])
     executors = fields.Integer(
         required=False,
         allow_none=True,

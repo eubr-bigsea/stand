@@ -59,7 +59,8 @@ class JobService:
         db.session.commit()
 
     @staticmethod
-    def start(job, workflow, app_configs=None, job_type=None, persist=True):
+    def start(job, workflow, app_configs=None, job_type=None, persist=True,
+              testing=False):
         if app_configs is None:
             app_configs = {}
         invalid_statuses = [StatusExecution.RUNNING, StatusExecution.PENDING,
@@ -81,7 +82,7 @@ class JobService:
 
         if job_type == JobType.BATCH:
             job.type = JobType.BATCH
-        elif  workflow.get('publishing_status') in ['EDITING', 'PUBLISHED']:
+        elif workflow.get('publishing_status') in ['EDITING', 'PUBLISHED']:
             job.type = JobType.APP
 
         job.started = datetime.datetime.utcnow()
@@ -90,12 +91,11 @@ class JobService:
 
         # Limit the name of a job
         job.name = job.name[:50]
-
         log.info("Persistent job: %s", persist)
         db.session.add(job)
         db.session.flush()  # Flush is needed to get the value of job.id
 
-        redis_store = connect_redis_store(None, testing=False)
+        redis_store = connect_redis_store(None, testing=testing)
         # This queue is used to keep the order of execution and to know
         # what is pending.
 
@@ -112,7 +112,7 @@ class JobService:
         for p in cluster_properties:
             cluster_info[p] = getattr(job.cluster, p)
 
-        # Is job persisted in database? If so, 
+        # Is job persisted in database? If so,
         # its generated source code must be updated by Juicer
         app_configs['persist'] = persist
         msg = json.dumps(dict(workflow_id=job.workflow_id,
@@ -126,12 +126,12 @@ class JobService:
 
         # This hash controls the status of job. Used for prevent starting
         # jobs in invalid states
-        record_wf_id = 'record_workflow_{}'.format(job.workflow_id)
+        record_wf_id = f'record_workflow_{job.workflow_id}'
         redis_store.hset(record_wf_id, 'status', job.status)
 
         # TTL=1h (sufficient time to other stages use the information)
         redis_store.expire(record_wf_id, time=3600)
-        redis_store.expire('queue_app_{}'.format(job.workflow_id), time=3600)
+        redis_store.expire(f'queue_app_{job.workflow_id}', time=3600)
 
         if persist:
             db.session.commit()
@@ -163,7 +163,7 @@ class JobService:
                 dict(workflow_id=job.workflow_id,
                      app_id=job.workflow_id,
                      job_id=job.id,
-                     cluster= ClusterItemResponseSchema().dump(cluster).data,
+                     cluster=ClusterItemResponseSchema().dump(cluster),
                      type='terminate'))
             redis_store.rpush("queue_start", msg)
 
@@ -172,8 +172,8 @@ class JobService:
             # redis_store.hset('record_workflow_{}'.format(job.workflow_id),
             #                  'status', StatusExecution.CANCELED)
             #
-            # redis_store.hset('job_{}'.format(job.id),
-            #                  'status', StatusExecution.CANCELED)
+            redis_store.hset('job_{}'.format(job.id),
+                             'status', StatusExecution.CANCELED)
 
             db.session.commit()
 
@@ -265,7 +265,8 @@ class JobService:
         payload = {'workflow_id': workflow_id, 'template': template}
 
         log.info("Payload %s", payload)
-        result = q.enqueue('juicer.jobs.code_gen.generate', workflow_id, template)
+        result = q.enqueue('juicer.jobs.code_gen.generate',
+                           workflow_id, template)
         return result.id
 
     @staticmethod
@@ -279,5 +280,3 @@ class JobService:
             return rq_job.result.get('code')
         except NoSuchJobError:
             return {'status': 'ERROR', 'message': 'Not found'}
-
-

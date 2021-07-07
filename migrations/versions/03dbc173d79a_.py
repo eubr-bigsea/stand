@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import mysql
 from stand.migration_utils import (is_mysql, get_psql_enum_alter_commands,
-        upgrade_actions, downgrade_actions)
+        upgrade_actions, downgrade_actions, is_sqlite)
 
 # revision identifiers, used by Alembic.
 revision = '03dbc173d79a'
@@ -36,6 +36,8 @@ def upgrade():
                 ENUM('MESOS','YARN','SPARK_LOCAL','KUBERNETES')
                 CHARSET utf8 COLLATE utf8_general_ci NOT NULL;
             """)
+    elif is_sqlite():
+        pass # No enum support in sqlite
     else:
         op.alter_column('job_step_log', 'message',
                     existing_type=sa.Text(),
@@ -54,6 +56,8 @@ def downgrade():
         op.alter_column('job_step_log', 'message',
                     existing_type=mysql.LONGTEXT(),
                     nullable=True)
+    elif is_sqlite():
+        pass # Keep cluster options
     else:
         pass # Keep cluster options
     op.drop_table('cluster_platform')
