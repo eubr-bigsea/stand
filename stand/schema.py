@@ -2,7 +2,7 @@
 import datetime
 import json
 from copy import deepcopy
-from marshmallow import Schema, fields, post_load, post_dump
+from marshmallow import Schema, fields, post_load, post_dump, EXCLUDE
 from marshmallow.validate import OneOf
 from flask_babel import gettext
 from stand.models import *
@@ -139,6 +139,7 @@ class ClusterSimpleListResponseSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class ClusterListResponseSchema(BaseSchema):
@@ -184,6 +185,7 @@ class ClusterListResponseSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class ClusterItemResponseSchema(BaseSchema):
@@ -230,6 +232,7 @@ class ClusterItemResponseSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class ClusterCreateRequestSchema(BaseSchema):
@@ -275,6 +278,7 @@ class ClusterCreateRequestSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class ClusterFlavorSimpleListResponseSchema(BaseSchema):
@@ -290,6 +294,7 @@ class ClusterFlavorSimpleListResponseSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class ClusterFlavorListResponseSchema(BaseSchema):
@@ -305,6 +310,7 @@ class ClusterFlavorListResponseSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class ClusterFlavorItemResponseSchema(BaseSchema):
@@ -320,6 +326,7 @@ class ClusterFlavorItemResponseSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class ClusterFlavorCreateRequestSchema(BaseSchema):
@@ -337,6 +344,7 @@ class ClusterFlavorCreateRequestSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class ClusterPlatformSimpleListResponseSchema(BaseSchema):
@@ -351,6 +359,7 @@ class ClusterPlatformSimpleListResponseSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class ClusterPlatformListResponseSchema(BaseSchema):
@@ -365,6 +374,7 @@ class ClusterPlatformListResponseSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class ClusterPlatformItemResponseSchema(BaseSchema):
@@ -379,6 +389,7 @@ class ClusterPlatformItemResponseSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class ClusterPlatformCreateRequestSchema(BaseSchema):
@@ -393,6 +404,7 @@ class ClusterPlatformCreateRequestSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class JobItemResponseSchema(BaseSchema):
@@ -435,6 +447,7 @@ class JobItemResponseSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class JobListResponseSchema(BaseSchema):
@@ -473,6 +486,7 @@ class JobListResponseSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class JobCreateRequestSchema(BaseSchema):
@@ -521,6 +535,7 @@ class JobCreateRequestSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class JobExecuteResponseSchema(BaseSchema):
@@ -559,6 +574,7 @@ class JobExecuteResponseSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class JobStatusRequestSchema(BaseSchema):
@@ -573,6 +589,7 @@ class JobStatusRequestSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class JobResultItemResponseSchema(BaseSchema):
@@ -592,6 +609,7 @@ class JobResultItemResponseSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class JobResultListResponseSchema(BaseSchema):
@@ -611,6 +629,7 @@ class JobResultListResponseSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class JobStepItemResponseSchema(BaseSchema):
@@ -640,6 +659,7 @@ class JobStepItemResponseSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class JobStepListResponseSchema(BaseSchema):
@@ -664,6 +684,7 @@ class JobStepListResponseSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class JobStepCreateRequestSchema(BaseSchema):
@@ -688,6 +709,7 @@ class JobStepCreateRequestSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class JobStepLogListResponseSchema(BaseSchema):
@@ -712,6 +734,7 @@ class JobStepLogListResponseSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class JobStepLogItemResponseSchema(BaseSchema):
@@ -736,6 +759,7 @@ class JobStepLogItemResponseSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class JobStepLogCreateRequestSchema(BaseSchema):
@@ -760,4 +784,5 @@ class JobStepLogCreateRequestSchema(BaseSchema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 

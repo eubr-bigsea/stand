@@ -59,7 +59,7 @@ FLUSH PRIVILEGES;
 
 Change to the source code directory and execute the following command:
 ```
-PYTHONPATH=. STAND_CONFIG=./stand-config.yaml python stand/manage.py db upgrade
+FLASK_APP=stand.app PYTHONPATH=. STAND_CONFIG=./stand-config.yaml flask db upgrade
 ```
 This command will create the tables in the database.
 
