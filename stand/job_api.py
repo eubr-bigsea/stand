@@ -52,7 +52,7 @@ class LatestJobDetailApi(Resource):
 
         if len(jobs) == 1:
             return JobItemResponseSchema(exclude=('workflow',)).dump(
-                jobs[0]).data
+                jobs[0])
         else:
             return dict(status="ERROR", message=gettext("Not found")), 404
 

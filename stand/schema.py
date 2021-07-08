@@ -3,6 +3,7 @@ import datetime
 import json
 from copy import deepcopy
 from marshmallow import Schema, fields, post_load, post_dump, EXCLUDE
+from marshmallow.utils import INCLUDE
 from marshmallow.validate import OneOf
 from flask_babel import gettext
 from stand.models import *
@@ -20,7 +21,10 @@ def partial_schema_factory(schema_cls):
 
 def translate_validation(validation_errors):
     for field, errors in list(validation_errors.items()):
-        validation_errors[field] = [gettext(error) for error in errors]
+        if isinstance(errors, dict):
+            validation_errors[field] = translate_validation(errors)
+        else:
+            validation_errors[field] = [gettext(error) for error in errors]
         return validation_errors
 
 
@@ -41,7 +45,8 @@ class ClusterIdCreateRequestSchema(EntityIdCreateRequestSchema):
 
 
 class PlatformIdCreateRequestSchema(EntityIdCreateRequestSchema):
-    pass
+    class Meta:
+        unknown = INCLUDE
 
 
 class OperationIdCreateRequestSchema(EntityIdCreateRequestSchema):
@@ -69,7 +74,8 @@ class WorkflowDefinitionCreateRequestSchema(Schema):
 
     user = fields.Nested('stand.schema.UserCreateRequestSchema',
                          required=False)
-
+    class Meta:
+        unknown = INCLUDE
 
 class TaskDefinitionCreateRequestSchema(Schema):
     id = fields.String(required=True)
@@ -81,7 +87,8 @@ class TaskDefinitionCreateRequestSchema(Schema):
     environment = fields.String(required=False, allow_none=True)
     forms = fields.Dict(required=True)
     operation = fields.Nested(OperationIdCreateRequestSchema, required=True)
-
+    class Meta:
+        unknown = INCLUDE
 
 class FlowDefinitionCreateRequestSchema(Schema):
     """ JSON schema for new instance """
@@ -91,7 +98,8 @@ class FlowDefinitionCreateRequestSchema(Schema):
     target_id = fields.String(required=True)
     environment = fields.String(required=False, allow_none=True)
 
-
+    class Meta:
+        unknown = INCLUDE
 class UserCreateRequestSchema(Schema):
     id = fields.Integer(required=True)
     login = fields.String(required=True)
