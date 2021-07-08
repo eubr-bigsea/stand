@@ -36,6 +36,19 @@ def test_cluster_list_success(client):
     assert resp['data'][0]['enabled'] == default_cluster.enabled
 
 
+def test_cluster_list_fail_invalid_field(client):
+    headers = {'X-Auth-Token': str(client.secret)}
+    
+    rv = client.get('/clusters', headers=headers,
+        query_string={
+            'limit': 10, 'ascending': 1,
+            'page': 1, 'byColumn': 0,
+            'asc': 'true', 'size': 10,
+            'fields': 'id,name,type,address,enabled'})
+    
+    assert 200 == rv.status_code, 'Incorrect status code'
+    
+
 def test_cluster_list_with_parameters_success(client):
     headers = {'X-Auth-Token': str(client.secret)}
     params = {'enabled': 'false', 'fields': 'id,name',

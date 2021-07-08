@@ -23,8 +23,9 @@ class ClusterListApi(Resource):
     @requires_auth
     def get(self):
         if request.args.get('fields'):
+            valid = ClusterListResponseSchema._declared_fields.keys()
             only = [f.strip() for f in
-                    request.args.get('fields').split(',')]
+                    request.args.get('fields').split(',') if f in valid]
         elif request.args.get('simple', 'false') == 'true':
             only = ('id', 'name')
         else:
