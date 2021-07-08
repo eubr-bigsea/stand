@@ -69,7 +69,15 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
     app.config['BABEL_DEFAULT_LOCALE'] = 'en'
 
     app.config['REDIS_URL'] = server_config.get('redis_url')
-    app.config.update(config.get('config', {}))
+    engine_config = config.get('config', {})
+    if engine_config:
+        final_config = {'pool_pre_ping': True}
+        if 'mysql://' in app.config['SQLALCHEMY_DATABASE_URI']:
+            if 'SQLALCHEMY_POOL_SIZE' in engine_config: 
+                final_config['pool_size'] = engine_config['SQLALCHEMY_POOL_SIZE'] 
+            if 'SQLALCHEMY_POOL_RECYCLE' in engine_config: 
+                final_config['pool_recycle'] = engine_config['SQLALCHEMY_POOL_RECYCLE']
+        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = final_config
     app.debug = config['stand'].get('debug', False)
 
     if settings_override:
