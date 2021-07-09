@@ -3,7 +3,6 @@ import datetime
 import json
 from copy import deepcopy
 from marshmallow import Schema, fields, post_load, post_dump, EXCLUDE
-from marshmallow.utils import INCLUDE
 from marshmallow.validate import OneOf
 from flask_babel import gettext
 from stand.models import *
@@ -74,8 +73,10 @@ class WorkflowDefinitionCreateRequestSchema(Schema):
 
     user = fields.Nested('stand.schema.UserCreateRequestSchema',
                          required=False)
+
     class Meta:
         unknown = INCLUDE
+
 
 class TaskDefinitionCreateRequestSchema(Schema):
     id = fields.String(required=True)
@@ -87,8 +88,10 @@ class TaskDefinitionCreateRequestSchema(Schema):
     environment = fields.String(required=False, allow_none=True)
     forms = fields.Dict(required=True)
     operation = fields.Nested(OperationIdCreateRequestSchema, required=True)
+
     class Meta:
         unknown = INCLUDE
+
 
 class FlowDefinitionCreateRequestSchema(Schema):
     """ JSON schema for new instance """
@@ -100,6 +103,8 @@ class FlowDefinitionCreateRequestSchema(Schema):
 
     class Meta:
         unknown = INCLUDE
+
+
 class UserCreateRequestSchema(Schema):
     id = fields.Integer(required=True)
     login = fields.String(required=True)
@@ -131,7 +136,7 @@ class BaseSchema(Schema):
     def remove_skip_values(self, data, **kwargs):
         return {
             key: value for key, value in data.items()
-            if value is not None and value != []
+            if value is not None  # Empty lists must be kept!
         }
 
 
