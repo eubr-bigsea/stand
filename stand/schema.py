@@ -2,7 +2,7 @@
 import datetime
 import json
 from copy import deepcopy
-from marshmallow import Schema, fields, post_load, post_dump, EXCLUDE, INCLUDE
+from marshmallow import Schema, fields, post_load, post_dump, EXCLUDE
 from marshmallow.validate import OneOf
 from flask_babel import gettext
 from stand.models import *
