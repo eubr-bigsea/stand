@@ -49,8 +49,8 @@ class PlatformIdCreateRequestSchema(EntityIdCreateRequestSchema):
 
 
 class OperationIdCreateRequestSchema(EntityIdCreateRequestSchema):
-    pass
-
+    class Meta:
+        unknown = EXCLUDE
 
 class WorkflowDefinitionCreateRequestSchema(Schema):
     """
@@ -75,8 +75,7 @@ class WorkflowDefinitionCreateRequestSchema(Schema):
                          required=False)
 
     class Meta:
-        unknown = INCLUDE
-
+        unknown = INCLUDE # must be INCLUDE to add cluster info and other dynamic props
 
 class TaskDefinitionCreateRequestSchema(Schema):
     id = fields.String(required=True)
@@ -90,7 +89,7 @@ class TaskDefinitionCreateRequestSchema(Schema):
     operation = fields.Nested(OperationIdCreateRequestSchema, required=True)
 
     class Meta:
-        unknown = INCLUDE
+        unknown = EXCLUDE
 
 
 class FlowDefinitionCreateRequestSchema(Schema):
