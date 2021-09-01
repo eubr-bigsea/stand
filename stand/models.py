@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import datetime
 import json
 from flask_sqlalchemy import SQLAlchemy
@@ -103,8 +102,10 @@ class JobException(BaseException):
     def __init__(self, message, error_code):
         self.message = message
         self.error_code = error_code
+
     def __str__(self):
         return self.message
+
 # Association tables definition
 
 
@@ -132,8 +133,9 @@ class Cluster(db.Model):
     general_parameters = Column(String(3000))
 
     # Associations
-    flavors = relationship("ClusterFlavor", back_populates="cluster")
-    platforms = relationship("ClusterPlatform", back_populates="cluster")
+    flavors = relationship("ClusterFlavor")
+    platforms = relationship("ClusterPlatform",
+                             cascade="all, delete-orphan")
 
     def __str__(self):
         return self.name
@@ -158,7 +160,8 @@ class ClusterAccess(db.Model):
     # Associations
     cluster_id = Column(Integer,
                         ForeignKey("cluster.id",
-                                   name="fk_cluster_id"), nullable=False)
+                                   name="fk_cluster_access_cluster_id"), nullable=False,
+                        index=True)
     cluster = relationship(
         "Cluster",
         foreign_keys=[cluster_id])
@@ -182,7 +185,8 @@ class ClusterConfiguration(db.Model):
     # Associations
     cluster_id = Column(Integer,
                         ForeignKey("cluster.id",
-                                   name="fk_cluster_id"), nullable=False)
+                                   name="fk_cluster_configuration_cluster_id"), nullable=False,
+                        index=True)
     cluster = relationship(
         "Cluster",
         foreign_keys=[cluster_id])
@@ -207,7 +211,8 @@ class ClusterFlavor(db.Model):
     # Associations
     cluster_id = Column(Integer,
                         ForeignKey("cluster.id",
-                                   name="fk_cluster_id"), nullable=False)
+                                   name="fk_cluster_flavor_cluster_id"), nullable=False,
+                        index=True)
     cluster = relationship(
         "Cluster",
         foreign_keys=[cluster_id])
@@ -231,7 +236,8 @@ class ClusterPlatform(db.Model):
     # Associations
     cluster_id = Column(Integer,
                         ForeignKey("cluster.id",
-                                   name="fk_cluster_id"), nullable=False)
+                                   name="fk_cluster_platform_cluster_id"), nullable=False,
+                        index=True)
     cluster = relationship(
         "Cluster",
         foreign_keys=[cluster_id])
@@ -291,13 +297,14 @@ class Job(db.Model):
     # Associations
     cluster_id = Column(Integer,
                         ForeignKey("cluster.id",
-                                   name="fk_cluster_id"), nullable=False)
+                                   name="fk_job_cluster_id"), nullable=False,
+                        index=True)
     cluster = relationship(
         "Cluster",
         foreign_keys=[cluster_id])
-    steps = relationship("JobStep", back_populates="job",
+    steps = relationship("JobStep",
                          cascade="all, delete-orphan")
-    results = relationship("JobResult", back_populates="job",
+    results = relationship("JobResult",
                            cascade="all, delete-orphan")
 
     def __str__(self):
@@ -323,7 +330,8 @@ class JobResult(db.Model):
     # Associations
     job_id = Column(Integer,
                     ForeignKey("job.id",
-                               name="fk_job_id"), nullable=False)
+                               name="fk_job_result_job_id"), nullable=False,
+                    index=True)
     job = relationship(
         "Job",
         foreign_keys=[job_id])
@@ -352,7 +360,8 @@ class JobStep(db.Model):
     # Associations
     job_id = Column(Integer,
                     ForeignKey("job.id",
-                               name="fk_job_id"), nullable=False)
+                               name="fk_job_step_job_id"), nullable=False,
+                    index=True)
     job = relationship(
         "Job",
         foreign_keys=[job_id])
@@ -383,7 +392,8 @@ class JobStepLog(db.Model):
     # Associations
     step_id = Column(Integer,
                      ForeignKey("job_step.id",
-                                name="fk_job_step_id"), nullable=False)
+                                name="fk_job_step_log_step_id"), nullable=False,
+                     index=True)
     step = relationship(
         "JobStep",
         foreign_keys=[step_id])
@@ -428,7 +438,8 @@ class RoomParticipant(db.Model):
     # Associations
     room_id = Column(Integer,
                      ForeignKey("room.id",
-                                name="fk_room_id"), nullable=False)
+                                name="fk_room_participant_room_id"), nullable=False,
+                     index=True)
     room = relationship(
         "Room",
         foreign_keys=[room_id],

@@ -163,12 +163,21 @@ class ClusterDetailApi(Resource):
         if request.json:
             request_schema = partial_schema_factory(
                 ClusterCreateRequestSchema)
+            platforms = None
+            if 'platforms' in request.json:
+                platforms =  request.json.pop('platforms')
+
             # Ignore missing fields to allow partial updates
             cluster = request_schema.load(request.json, partial=True)
             response_schema = ClusterItemResponseSchema()
             try:
                 cluster.id = cluster_id
+                cluster.platforms = []
                 cluster = db.session.merge(cluster)
+                if platforms:
+                    for p in platforms:
+                        db.session.add(ClusterPlatform(platform_id=p['id'], 
+                            cluster=cluster))
                 db.session.commit()
                 if cluster is not None:
                     return_code = 200
@@ -185,6 +194,7 @@ class ClusterDetailApi(Resource):
                           'message': gettext("Validation error"),
                           'errors': translate_validation(e.messages)}
             except Exception as e:
+                log.exception('Error in PATCH')
                 result = {'status': 'ERROR',
                           'message': gettext("Internal error")}
                 return_code = 500
