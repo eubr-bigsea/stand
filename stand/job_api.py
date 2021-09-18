@@ -202,7 +202,7 @@ class JobDetailApi(Resource):
                          PermissionType.MANAGE]).first()
         if job is not None:
             try:
-                JobService.stop(job)
+                JobService.stop(job, True)
                 db.session.delete(job)
                 db.session.commit()
                 result, result_code = dict(status="OK", message="Deleted"), 204

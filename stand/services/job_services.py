@@ -139,7 +139,7 @@ class JobService:
             db.session.rollback()
 
     @staticmethod
-    def stop(job):
+    def stop(job, ignore_if_stopped=False):
         valid_status_in_stop = [StatusExecution.WAITING,
                                 StatusExecution.PENDING,
                                 StatusExecution.RUNNING,
@@ -176,7 +176,7 @@ class JobService:
                              'status', StatusExecution.CANCELED)
 
             db.session.commit()
-        elif job.status in valid_end_status:
+        elif job.status in valid_end_status and not ignore_if_stopped:
             raise JobException(
                 'You cannot stop a job in the state \'{}\''.format(job.status),
                 'ALREADY_FINISHED')
