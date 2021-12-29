@@ -130,7 +130,9 @@ class ClusterDetailApi(Resource):
         cluster = Cluster.query.get(cluster_id)
         if cluster is not None:
             try:
-                db.session.delete(cluster)
+                cluster.enabled = False
+                # db.session.delete(cluster)
+                db.session.add(cluster)
                 db.session.commit()
                 result = {
                     'status': 'OK',
@@ -138,6 +140,7 @@ class ClusterDetailApi(Resource):
                                        name=self.human_name)
                 }
             except Exception as e:
+                log.exception('Error in DELETE')
                 result = {'status': 'ERROR',
                           'message': gettext("Internal error")}
                 return_code = 500

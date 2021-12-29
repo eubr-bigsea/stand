@@ -17,6 +17,7 @@ from mockredis import MockRedis
 from sqlalchemy import and_
 from stand.cluster_api import ClusterDetailApi, PerformanceModelEstimationApi
 from stand.cluster_api import ClusterListApi
+from stand.room_api import RoomApi
 from stand.job_api import (JobListApi, JobDetailApi, 
     JobStopActionApi, JobLockActionApi, JobUnlockActionApi, 
     UpdateJobStatusActionApi, UpdateJobStepStatusActionApi,
@@ -104,6 +105,7 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
     # API configuration
     api = Api(app)
     mappings = {
+        '/room': RoomApi,
         '/jobs': JobListApi,
         '/jobs/latest': LatestJobDetailApi,
         '/jobs/<int:job_id>': JobDetailApi,
@@ -332,7 +334,8 @@ def create_socket_io_app(_app):
     :param _app: Flask app
     """
     original_emit = socketio.base_manager.BaseManager.emit
-    socketio.base_manager.BaseManager.emit = mocked_emit(original_emit, _app)
+    if original_emit.__name__ != "new_emit":
+        socketio.base_manager.BaseManager.emit = mocked_emit(original_emit, _app)
 
     socket_io_config = _app.config['STAND_CONFIG']['servers']
     mgr = socketio.RedisManager(socket_io_config['redis_url'], 'job_output')
