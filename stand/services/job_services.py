@@ -8,7 +8,8 @@ import requests
 import rq
 import stand.util
 from rq.exceptions import NoSuchJobError
-from stand.models import db, StatusExecution, JobException, Job, JobType
+from stand.models import (
+    db, StatusExecution, JobException, Job, JobType, Cluster)
 from stand.services.redis_service import connect_redis_store
 from stand.schema import ClusterItemResponseSchema
 
@@ -92,15 +93,23 @@ class JobService:
         # Limit the name of a job
         job.name = job.name[:50]
         log.info("Persistent job: %s", persist)
-        db.session.add(job)
-        db.session.flush()  # Flush is needed to get the value of job.id
+        if persist:
+            db.session.add(job)
+            db.session.flush()  # Flush is needed to get the value of job.id
+        else:
+            job.id = 800000 + job.workflow_id # Offset when job is not persistent
 
         redis_store = connect_redis_store(None, testing=testing)
         # This queue is used to keep the order of execution and to know
-        # what is pending.
+        # what is pending
+
+        if job.cluster is None:
+            preferred = workflow.get('preferred_cluster_id')
+            if preferred:
+                job.cluster = Cluster.query.get(preferred)
 
         # @FIXME Each workflow has only one app. In future, we may support N
-        if not job.cluster.enabled:
+        if job.cluster is None or not job.cluster.enabled:
             raise JobException(
                 gettext('Cluster {} is not enabled.').format(job.cluster.name),
                 JobException.CLUSTER_DISABLED)

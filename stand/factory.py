@@ -147,15 +147,16 @@ def mocked_emit(original_emit, app_):
     def new_emit(self, event, data, namespace, room=None, skip_sid=None,
                  callback=None):
         use_callback = callback
-
         if room and room.isdigit():
             use_callback = handle_emit(data, event, namespace, room, self,
                                        skip_sid, use_callback, redis_store_)
             if isinstance(data.get('message', ''), bytes):
                 data['message'] = str(data['message'], 'utf-8')
+            if data.get('type') == 'OBJECT':
+                data['message'] = json.loads(data['message'])
             redis_store_.rpush('cache_room_{}'.format(room), json.dumps(
                 {'event': event, 'data': data, 'namespace': namespace,
-                 'room': room}))
+                 'room': room}, indent=0))
         return original_emit(self, event, data, namespace, room=room,
                              skip_sid=skip_sid,
                              callback=use_callback)
@@ -274,8 +275,10 @@ def mocked_emit(original_emit, app_):
                         data['date'] = now
                         step_log_msg = data.get('message', 'no message')
                         step_log_type = data.get('type', 'TEXT')
-                        if step_log_type == 'OBJECT':
-                            step_log_msg = json.dumps(step_log_msg)
+
+                        # Messages must be serialized in the client
+                        #if step_log_type == 'OBJECT':
+                        #    step_log_msg = json.dumps(step_log_msg)
 
                         step_log = JobStepLog(
                             level=level, date=datetime.datetime.now(),
