@@ -194,8 +194,13 @@ def mocked_emit(original_emit, app_):
                             job.finished = datetime.datetime.utcnow()
                             data['finished'] = job.finished.strftime(
                                 '%Y-%m-%dT%H:%m:%S')
-
-                        if job.status == StatusExecution.ERROR:
+                        if job.status == StatusExecution.COMPLETED:
+                            for job_step in job.steps:
+                                if job_step.status == 'PENDING':
+                                    job_step.status = 'COMPLETED'
+                                    db.session.add(job_step)
+                            db.session.commit()
+                        elif job.status == StatusExecution.ERROR:
                             for job_step in job.steps:
                                 level = data.get('level', 'ERROR')
 
@@ -274,6 +279,9 @@ def mocked_emit(original_emit, app_):
                                 level = 'INFO'
                         data['date'] = now
                         step_log_msg = data.get('message', 'no message')
+                        if isinstance(step_log_msg, dict):
+                            step_log_msg = json.dumps(step_log_msg)
+
                         step_log_type = data.get('type', 'TEXT')
 
                         # Messages must be serialized in the client
@@ -300,30 +308,35 @@ def mocked_emit(original_emit, app_):
                     if job is not None:
                         task_id = data.get('id')
                         op_id = data.get('operation_id')
+
+                        content = data.get('message')
+                        if isinstance(content, dict):
+                            content = json.dumps(content)
+
                         result = JobResult(
                             task_id=task_id,
                             operation_id=op_id,
                             type=data.get('type'),
                             title=data.get('title'),
-                            content=data.get('message'))
+                            content=content)
                         job.results.append(result)
                         if job_id > 0:
                             db.session.add(job)
                             db.session.commit()
-                        if 'operation_id' in data:
-                            del data['operation_id']
-                        data['time'] = datetime.datetime.now().isoformat()
-                        data['id'] = result.id
-                        data['task'] = {'id': task_id}
-                        data['message'] = json.loads(data['message'])
+                        # if 'operation_id' in data:
+                        #     del data['operation_id']
+                        # data['time'] = datetime.datetime.now().isoformat()
+                        # data['id'] = result.id
+                        # data['task'] = {'id': task_id}
+                        # data['message'] = json.loads(data['message'])
 
                         # If metric, post again to be read by metric agent
-                        if data.get('type') == 'METRIC':
-                            q = rq.Queue(name=SEED_QUEUE_NAME,
-                                         connection=redis_store)
-                            data['content'] = json.loads(data['content'])
-                            rq_job = q.enqueue(SEED_METRIC_JOB_NAME, data)
-                            logger.info('Scheduled job for metric %s', rq_job)
+                        # if data.get('type') == 'METRIC':
+                        #     q = rq.Queue(name=SEED_QUEUE_NAME,
+                        #                  connection=redis_store)
+                        #     data['content'] = json.loads(data['content'])
+                        #     rq_job = q.enqueue(SEED_METRIC_JOB_NAME, data)
+                        #     logger.info('Scheduled job for metric %s', rq_job)
         except Exception as ex:
             logger.exception(ex)
         return use_callback

@@ -24,8 +24,8 @@ class StandSocketIO:
             'leave': self.on_leave_room,
             'close': self.on_close_room,
             'echo': self.on_echo,
-            'more data': self.on_more_data
-
+            'more data': self.on_more_data,
+            'export': self.on_export
         }
         for event, handler in list(handlers.items()):
             self.socket_io.on(event, namespace=self.namespace, handler=handler)
@@ -42,6 +42,8 @@ class StandSocketIO:
                               type='more data'))
         self.redis_store.rpush("queue_start", msg)
 
+    def on_export(self, sid, message):
+        self.redis_store.rpush("queue_start", json.dumps(message))
 
     def on_echo(self, sid, message):
         print('=' * 20, ' echo ')
@@ -78,11 +80,13 @@ class StandSocketIO:
             room=sid, namespace=self.namespace)
 
         # # Resend all statuses
-        if replay_cached:
-            cached = self.redis_store.lrange('cache_room_{}'.format(room), 0, -1)
-            for msg in cached:
-                msg = json.loads(msg)
-                self.socket_io.emit(msg['event'], msg['data'], room=sid,
+        if not replay_cached:
+            return
+
+        cached = self.redis_store.lrange('cache_room_{}'.format(room), 0, -1)
+        for msg in cached:
+            msg = json.loads(msg)
+            self.socket_io.emit(msg['event'], msg['data'], room=sid,
                                     namespace=self.namespace)
 
     def on_leave_room(self, sid, message, connected=True):

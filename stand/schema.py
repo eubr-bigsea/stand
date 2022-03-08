@@ -52,6 +52,7 @@ class OperationIdCreateRequestSchema(EntityIdCreateRequestSchema):
     class Meta:
         unknown = EXCLUDE
 
+
 class WorkflowDefinitionCreateRequestSchema(Schema):
     """
     Workflow definition. Must be in same format as in Tahiti.
@@ -75,7 +76,8 @@ class WorkflowDefinitionCreateRequestSchema(Schema):
                          required=False)
 
     class Meta:
-        unknown = INCLUDE # must be INCLUDE to add cluster info and other dynamic props
+        unknown = INCLUDE  # must be INCLUDE to add cluster info and other dynamic props
+
 
 class TaskDefinitionCreateRequestSchema(Schema):
     id = fields.String(required=True)

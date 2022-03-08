@@ -63,9 +63,10 @@ class ClusterType:
 
 # noinspection PyClassHasNoInit
 class JobType:
-    NORMAL = 'NORMAL'
     APP = 'APP'
     BATCH = 'BATCH'
+    MODEL_BUILDER = 'MODEL_BUILDER'
+    NORMAL = 'NORMAL'
 
     @staticmethod
     def values():
@@ -160,10 +161,12 @@ class ClusterAccess(db.Model):
     # Associations
     cluster_id = Column(Integer,
                         ForeignKey("cluster.id",
-                                   name="fk_cluster_access_cluster_id"), nullable=False,
+                                   name="fk_cluster_access_cluster_id"),
+                        nullable=False,
                         index=True)
     cluster = relationship(
         "Cluster",
+        overlaps='cluster',
         foreign_keys=[cluster_id])
 
     def __str__(self):
@@ -185,10 +188,12 @@ class ClusterConfiguration(db.Model):
     # Associations
     cluster_id = Column(Integer,
                         ForeignKey("cluster.id",
-                                   name="fk_cluster_configuration_cluster_id"), nullable=False,
+                                   name="fk_cluster_configuration_cluster_id"),
+                        nullable=False,
                         index=True)
     cluster = relationship(
         "Cluster",
+        overlaps='cluster',
         foreign_keys=[cluster_id])
 
     def __str__(self):
@@ -211,10 +216,12 @@ class ClusterFlavor(db.Model):
     # Associations
     cluster_id = Column(Integer,
                         ForeignKey("cluster.id",
-                                   name="fk_cluster_flavor_cluster_id"), nullable=False,
+                                   name="fk_cluster_flavor_cluster_id"),
+                        nullable=False,
                         index=True)
     cluster = relationship(
         "Cluster",
+        overlaps='cluster',
         foreign_keys=[cluster_id])
 
     def __str__(self):
@@ -236,10 +243,12 @@ class ClusterPlatform(db.Model):
     # Associations
     cluster_id = Column(Integer,
                         ForeignKey("cluster.id",
-                                   name="fk_cluster_platform_cluster_id"), nullable=False,
+                                   name="fk_cluster_platform_cluster_id"),
+                        nullable=False,
                         index=True)
     cluster = relationship(
         "Cluster",
+        overlaps='cluster',
         foreign_keys=[cluster_id])
 
     def __str__(self):
@@ -297,10 +306,12 @@ class Job(db.Model):
     # Associations
     cluster_id = Column(Integer,
                         ForeignKey("cluster.id",
-                                   name="fk_job_cluster_id"), nullable=False,
+                                   name="fk_job_cluster_id"),
+                        nullable=False,
                         index=True)
     cluster = relationship(
         "Cluster",
+        overlaps='cluster',
         foreign_keys=[cluster_id])
     steps = relationship("JobStep",
                          cascade="all, delete-orphan")
@@ -330,10 +341,12 @@ class JobResult(db.Model):
     # Associations
     job_id = Column(Integer,
                     ForeignKey("job.id",
-                               name="fk_job_result_job_id"), nullable=False,
+                               name="fk_job_result_job_id"),
+                    nullable=False,
                     index=True)
     job = relationship(
         "Job",
+        overlaps='job',
         foreign_keys=[job_id])
 
     def __str__(self):
@@ -360,10 +373,12 @@ class JobStep(db.Model):
     # Associations
     job_id = Column(Integer,
                     ForeignKey("job.id",
-                               name="fk_job_step_job_id"), nullable=False,
+                               name="fk_job_step_job_id"),
+                    nullable=False,
                     index=True)
     job = relationship(
         "Job",
+        overlaps='job',
         foreign_keys=[job_id])
     logs = relationship("JobStepLog",
                         cascade="all, delete-orphan")
@@ -392,10 +407,12 @@ class JobStepLog(db.Model):
     # Associations
     step_id = Column(Integer,
                      ForeignKey("job_step.id",
-                                name="fk_job_step_log_step_id"), nullable=False,
+                                name="fk_job_step_log_step_id"),
+                     nullable=False,
                      index=True)
     step = relationship(
         "JobStep",
+        overlaps='step',
         foreign_keys=[step_id])
 
     def __str__(self):
@@ -438,10 +455,12 @@ class RoomParticipant(db.Model):
     # Associations
     room_id = Column(Integer,
                      ForeignKey("room.id",
-                                name="fk_room_participant_room_id"), nullable=False,
+                                name="fk_room_participant_room_id"),
+                     nullable=False,
                      index=True)
     room = relationship(
         "Room",
+        overlaps='participants',
         foreign_keys=[room_id],
         backref=backref("participants",
                         cascade="all, delete-orphan"))

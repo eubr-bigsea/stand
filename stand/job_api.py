@@ -2,7 +2,7 @@
 import math
 import requests
 
-from flask import g
+from flask import g as flask_global
 from flask import request, current_app
 from flask_babel import gettext
 from flask_restful import Resource
@@ -31,11 +31,11 @@ def apply_filter(query, args, name, transform=None, transform_name=None):
 
 
 def _get_jobs(jobs, permissions):
-    if g.user.id != 0:  # It is not a inter service call
+    if flask_global.user.id != 0:  # It is not a inter service call
         any_permission = ExecutionPermission.query.filter(
             ExecutionPermission.permission.in_(permissions)).all()
         if len(any_permission) == 0:
-            jobs = jobs.filter(Job.user_id == g.user.id)
+            jobs = jobs.filter(Job.user_id == flask_global.user.id)
     return jobs
 
 
@@ -82,7 +82,7 @@ class JobListApi(Resource):
 
         sort = request.args.get('sort', 'name')
         if sort not in ['status', 'id', 'user_name', 'workflow_name',
-                        'workflow_id', 'updated']:
+                        'workflow_id', 'finished', 'started', 'created']:
             sort = 'id'
         sort_option = getattr(Job, sort)
         if request.args.get('asc', 'true') == 'false':
@@ -124,9 +124,9 @@ class JobListApi(Resource):
                 persist = request_json.pop('persist', True)
 
                 request_json['user'] = {
-                    'id': g.user.id,
-                    'login': g.user.login,
-                    'name': f'{g.user.first_name} {g.user.last_name}'
+                    'id': flask_global.user.id,
+                    'login': flask_global.user.login,
+                    'name': f'{flask_global.user.first_name} {flask_global.user.last_name}'
                 }
                 request_json['job_key'] = ''
 
@@ -146,7 +146,8 @@ class JobListApi(Resource):
                 JobService.start(new_job, request_json['workflow'],
                                  request_json.get('app_configs', {}),
                                  persist=persist,
-                                 testing=current_app.testing)
+                                 testing=current_app.testing,
+                                 lang=flask_global.user.locale)
                 result_code = 201
                 if persist:
                     result = dict(data=response_schema.dump(new_job),
@@ -347,7 +348,7 @@ class UpdateJobStatusActionApi(Resource):
         result, result_code = dict(status="ERROR",
                                    message=gettext('Not found')), 404
 
-        if g.user.id == 0:  # Only inter service requests
+        if flask_global.user.id == 0:  # Only inter service requests
             job = Job.query.get(int(job_id))
             if job is not None:
                 try:
@@ -375,7 +376,7 @@ class UpdateJobStepStatusActionApi(Resource):
         result, result_code = dict(status="ERROR",
                                    message=gettext('Not found')), 404
 
-        if g.user.id == 0:  # Only inter service requests
+        if flask_global.user.id == 0:  # Only inter service requests
             step = JobStep.query.filter(and_(
                 JobStep.job_id == int(job_id),
                 JobStep.task_id == task_id)).first()
@@ -527,9 +528,9 @@ class WorkflowStartActionApi(Resource):
             status=StatusExecution.WAITING,
             workflow_id=workflow_id,
             workflow_name=name,
-            user_id=g.user.id,
-            user_login=g.user.login,
-            user_name=g.user.name,
+            user_id=flask_global.user.id,
+            user_login=flask_global.user.login,
+            user_name=flask_global.user.name,
             name=payload.get('name', name),
             type=JobType.BATCH,
         )

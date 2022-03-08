@@ -61,7 +61,7 @@ class JobService:
 
     @staticmethod
     def start(job, workflow, app_configs=None, job_type=None, persist=True,
-              testing=False):
+              testing=False, lang=None):
         if app_configs is None:
             app_configs = {}
         invalid_statuses = [StatusExecution.RUNNING, StatusExecution.PENDING,
@@ -124,6 +124,7 @@ class JobService:
         # Is job persisted in database? If so,
         # its generated source code must be updated by Juicer
         app_configs['persist'] = persist
+        app_configs['locale'] = lang
         msg = json.dumps(dict(workflow_id=job.workflow_id,
                               app_id=job.workflow_id,
                               job_id=job.id,
@@ -161,6 +162,7 @@ class JobService:
                 'INVALID_STATE')
         if job.status in valid_status_in_stop:
             job.status = StatusExecution.CANCELED
+            job.finished = datetime.datetime.utcnow()
             db.session.add(job)
             db.session.flush()
 
