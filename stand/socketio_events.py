@@ -24,21 +24,45 @@ class StandSocketIO:
             'leave': self.on_leave_room,
             'close': self.on_close_room,
             'echo': self.on_echo,
-
+            'more data': self.on_more_data,
+            'export': self.on_export
         }
         for event, handler in list(handlers.items()):
             self.socket_io.on(event, namespace=self.namespace, handler=handler)
 
+    def on_more_data(self, sid, message):
+        workflow_id = message.get('workflow_id', 0)
+        job_id = message.get('job_id', 0)
+        msg = json.dumps(dict(workflow_id=workflow_id,
+                              app_id=workflow_id,
+                              job_id=job_id,
+                              task_id=message.get('task_id'),
+                              size=message.get('size', 50),
+                              page=message.get('page', 1),
+                              type='more data'))
+        self.redis_store.rpush("queue_start", msg)
+
+    def on_export(self, sid, message):
+        self.redis_store.rpush("queue_start", json.dumps(message))
+
     def on_echo(self, sid, message):
-        # print('=' * 20, ' echo ')
-        # print(message)
-        # print('=' * 20)
-        self.socket_io.emit('echo', 'Echo: ' + message, room="echo",
+        print('=' * 20, ' echo ')
+        print(message)
+        print('=' * 20)
+        if isinstance(message, dict):
+            self.socket_io.emit(
+                event=message.get('type','echo'), 
+                data=message, 
+                room=message.get('room', 'echo'),
+                namespace=self.namespace)
+        else:
+            self.socket_io.emit('echo', 'Echo: ' + message, room="echo",
                 namespace=self.namespace)
 
     def on_join_room(self, sid, message):
         # print('=== > ', message)
         room = str(message.get('room'))
+        replay_cached = message.get('cached', True)
 
         self.redis_store.hset(
             'room_{}'.format(room), sid,
@@ -56,11 +80,14 @@ class StandSocketIO:
             room=sid, namespace=self.namespace)
 
         # # Resend all statuses
+        if not replay_cached:
+            return
+
         cached = self.redis_store.lrange('cache_room_{}'.format(room), 0, -1)
         for msg in cached:
             msg = json.loads(msg)
             self.socket_io.emit(msg['event'], msg['data'], room=sid,
-                                namespace=self.namespace)
+                                    namespace=self.namespace)
 
     def on_leave_room(self, sid, message, connected=True):
         room = str(message.get('room'))
