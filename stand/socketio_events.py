@@ -34,12 +34,14 @@ class StandSocketIO:
     def on_analyse_attribute(self, sid, message):
         workflow_id = message.get('workflow_id', 0)
         job_id = message.get('job_id', 0)
-        msg = json.dumps(dict(workflow_id=workflow_id,
+        d = dict(workflow_id=workflow_id,
                               app_id=workflow_id,
                               job_id=job_id,
                               task_id=message.get('task_id'),
                               attribute=message.get('attribute'),
-                              type='analyse attribute'))
+                              type='analyse attribute')
+        d.update(message)
+        msg = json.dumps(d)
         self.redis_store.rpush("queue_start", msg)
 
 
