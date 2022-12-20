@@ -128,6 +128,7 @@ class JobService:
         msg = json.dumps(dict(workflow_id=job.workflow_id,
                               app_id=job.workflow_id,
                               job_id=job.id,
+                              job_type=job.type,
                               type='execute',
                               cluster=cluster_info,
                               app_configs=app_configs,

@@ -7,7 +7,7 @@ import logging.config
 import os
 import rq
 import socketio
-from flask import Flask
+from flask import Flask, request
 from flask_babel import Babel, gettext
 from flask_caching import Cache
 from flask_cors import CORS
@@ -171,9 +171,9 @@ def mocked_emit(original_emit, app_):
                     redis_store):
         logger = logging.getLogger(__name__)
         # print(('-' * 40))
-        # print((data, event, namespace, room, self, skip_sid, use_callback,
-        #       redis_store_))
-        # print(('-' * 40))
+        #print((data, event, namespace, room, self, skip_sid, use_callback,
+        #      redis_store_))
+        #print(('-' * 40))
         try:
             now = datetime.datetime.now().strftime(
                 '%Y-%m-%dT%H:%m:%S')
@@ -181,12 +181,15 @@ def mocked_emit(original_emit, app_):
 
                 if event == 'update job':
                     job_id = int(room)
+                    logger.info(_gettext('Updating job id=%s'), job_id)
                     job = Job.query.get(job_id)
                     if job is not None:
                         final_states = [StatusExecution.COMPLETED,
                                         StatusExecution.CANCELED,
                                         StatusExecution.ERROR]
                         job.status = data.get('status')
+                        logger.info(_gettext('Updating job id=%s to status %s'), 
+                            job_id, job.status)
                         job.status_text = data.get('msg',
                                                    data.get('message', ''))
                         job.exception_stack = data.get('exception_stack')
@@ -359,6 +362,9 @@ def create_socket_io_app(_app):
                           client_manager=mgr,
                           cors_allowed_origins='*',
                           allow_upgrades=True)
+    mgr.server = sio
+    mgr.initialize()
+
 
     return sio, socketio.Middleware(sio, _app)
 
