@@ -363,8 +363,9 @@ def create_socket_io_app(_app):
                           cors_allowed_origins='*',
                           allow_upgrades=True)
     mgr.server = sio
-    mgr.initialize()
-
+    mgr._initialize = mgr.initialize
+    mgr.initialize = lambda: ...
+    mgr._initialize()
 
     return sio, socketio.Middleware(sio, _app)
 
