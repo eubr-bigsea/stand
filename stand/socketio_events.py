@@ -25,10 +25,25 @@ class StandSocketIO:
             'close': self.on_close_room,
             'echo': self.on_echo,
             'more data': self.on_more_data,
+            'analyse attribute': self.on_analyse_attribute,
             'export': self.on_export
         }
         for event, handler in list(handlers.items()):
             self.socket_io.on(event, namespace=self.namespace, handler=handler)
+
+    def on_analyse_attribute(self, sid, message):
+        workflow_id = message.get('workflow_id', 0)
+        job_id = message.get('job_id', 0)
+        d = dict(workflow_id=workflow_id,
+                              app_id=workflow_id,
+                              job_id=job_id,
+                              task_id=message.get('task_id'),
+                              attribute=message.get('attribute'),
+                              type='analyse attribute')
+        d.update(message)
+        msg = json.dumps(d)
+        self.redis_store.rpush("queue_start", msg)
+
 
     def on_more_data(self, sid, message):
         workflow_id = message.get('workflow_id', 0)
