@@ -20,23 +20,7 @@ from stand.models import Job
 from stand.socketio_events import StandSocketIO
 
 
-app = create_app()
-babel = Babel()
-# babel = create_babel_i18n(app)
-babel.init_app(app)
-stand_socket_io = StandSocketIO(app)
-redis_store = create_redis_store(app)
 logger = logging.getLogger(__name__)
-
-@babel.localeselector
-def get_locale():
-    user = getattr(g, 'user', None)
-    if user is not None:
-        return user.locale or 'en'
-    preferred = [x.replace('-', '_') for x in
-                 list(request.accept_languages.values())]
-    return negotiate_locale(preferred, ['pt_BR', 'en_US'])
-
 
 @event.listens_for(Pool, "checkout")
 def check_connection(dbapi_con, con_record, con_proxy):
@@ -62,15 +46,34 @@ def handle_updates(app_, redis_url):
         while True:
             _, msg = redis_conn.blpop('stand_updates')
             msg_json = json.loads(msg)
+            print(msg)
             job = Job.query.get(msg_json.get('id'))
             if logger.isEnabledFor(logging.DEBUG):
                 logger.debug(msg)
 
 
 def main(is_main_module):
+    app = create_app()
+    babel = Babel()
+    # babel = create_babel_i18n(app)
+    babel.init_app(app)
+    stand_socket_io = StandSocketIO(app)
+    redis_store = create_redis_store(app)
+
     config = app.config['STAND_CONFIG']
     port = int(config.get('port', 5000))
     logger.debug(gettext('Running in %s mode'), config.get('environment'))
+
+    @babel.localeselector
+    def get_locale():
+        user = getattr(g, 'user', None)
+        if user is not None:
+            return user.locale or 'en'
+        preferred = [x.replace('-', '_') for x in
+                     list(request.accept_languages.values())]
+        return negotiate_locale(preferred, ['pt_BR', 'en_US'])
+
+
 
     if is_main_module:
         if config.get('environment', 'dev') == 'dev':
@@ -78,11 +81,12 @@ def main(is_main_module):
             # admin.add_view(StorageModelView(Storage, db.session))
             app.run(debug=True, port=port)
         else:
-            # eventlet.spawn(handle_updates, app,
-            #                config.get('servers').get('redis_url'))
+            eventlet.spawn(handle_updates, app,
+                            config.get('servers').get('redis_url'))
             # noinspection PyUnresolvedReferences
             eventlet.wsgi.server(eventlet.listen(('', port)),
                                  stand_socket_io.socket_app)
-
+            pass
+    return stand_socket_io.socket_app 
 
 main(__name__ == '__main__')
