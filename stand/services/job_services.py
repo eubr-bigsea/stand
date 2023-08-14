@@ -244,33 +244,14 @@ class JobService:
         return json.loads(redis_store.blpop(output)[1])
 
     @staticmethod
-    def execute_performance_model(cluster_id, model_id, deadline, cores,
-                                  platform,
-                                  data_size, iterations, batch_size):
+    def trigger_job(name: str, payload: dict, user):
+        print('--------', name, payload)
         redis_store = connect_redis_store(
             None, testing=False, decode_responses=False)
         q = rq.Queue('juicer', connection=redis_store)
-        payload = {'model_id': model_id, 'deadline': deadline, 'cores': cores,
-                   'platform': platform,
-                   'data_size': data_size,
-                   'iterations': iterations,
-                   'batch_size': batch_size,
-                   'cluster_id': cluster_id}
-        log.info("Payload %s", payload)
-        result = q.enqueue('juicer.jobs.estimate_time_with_performance_model',
-                           payload)
+        payload['user'] = dict(user._asdict())
+        result = q.enqueue(f'juicer.jobs.{name}', payload)
         return result.id
-
-    @staticmethod
-    def get_performance_model_result(job_id):
-        redis_store = connect_redis_store(
-            None, testing=False, decode_responses=False)
-        try:
-            rq_job = rq.job.Job(job_id, connection=redis_store)
-            return {'status': rq_job.result.get('status'),
-                    'result': rq_job.result}
-        except NoSuchJobError:
-            return {'status': 'ERROR', 'message': 'Job not found'}
 
     @staticmethod
     def generate_code(workflow_id, template):
@@ -286,12 +267,14 @@ class JobService:
 
     @staticmethod
     def get_generate_code_result(job_id):
+        return JobService.get_result(job_id, null).result.get('code')
+
+    @staticmethod
+    def get_result(key:str, user):
         redis_store = connect_redis_store(
             None, testing=False, decode_responses=False)
         try:
-            rq_job = rq.job.Job(job_id, connection=redis_store)
-            # return {'status': rq_job.result.get('status'),
-            #        'code': rq_job.result.get('code')}
-            return rq_job.result.get('code')
+            rq_job = rq.job.Job(key, connection=redis_store)
+            return rq_job
         except NoSuchJobError:
             return {'status': 'ERROR', 'message': 'Not found'}

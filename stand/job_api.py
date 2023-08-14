@@ -597,3 +597,45 @@ class WorkflowSourceCodeApi(Resource):
 
         return JobService.generate_code(workflow_id,
                                         request.json.get('template', 'python'))
+    
+class TriggerJobApi(Resource):
+    SUPPORTED = {
+        'convert_data_source': gettext('Convert data source'),
+    }
+    @staticmethod
+    @requires_auth
+    def get(name: str):
+        if request.json is None:
+            return {'status': 'ERROR',
+                    'message': gettext('You need to inform the parameters')}
+        return JobService.get_result(request.json.get('key'), flask_global.user).result
+
+    @staticmethod
+    @requires_auth
+    def post(name: str):
+        if request.json is None:
+            return {'status': 'ERROR',
+                    'message': gettext('You need to inform the parameters')}
+        if name not in TriggerJobApi.SUPPORTED:
+            return {'status': 'ERROR',
+                    'message': gettext('Unsupported job name: {name}').format(
+                        name)
+            }
+        job_key = JobService.trigger_job(name, request.json, flask_global.user)
+        job = Job(
+            name=TriggerJobApi.SUPPORTED.get(name),
+            created=datetime.datetime.utcnow(),
+            started=datetime.datetime.utcnow(),
+            status='WAITING',
+            workflow_id=0,
+            workflow_name='',
+            user_id=flask_global.user.id,
+            user_name=flask_global.user.name,
+            user_login=flask_global.user.login,
+            cluster_id=1,
+            type='BATCH',
+            source_code=json.dumps(request.json),
+            job_key=job_key)
+        db.session.add(job)
+        db.session.commit()
+        return {'id': job_key}
