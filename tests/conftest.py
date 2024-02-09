@@ -94,3 +94,29 @@ def client(app):
             client.secret = app.config['STAND_CONFIG']['secret']
             db.session.commit()
         yield client
+
+@pytest.fixture(scope='session')
+def get_pipelines():
+    return [
+        {
+            'id': 1,
+            'name': 'Pipeline 1',
+            'enabled': True,
+            'steps': [
+                {
+                    'id': 1,
+                    'name': 'Step 1',
+                    'workflow_id': 1,
+                    'workflow_name': 'WF1',
+                    'scheduling': {}
+                },
+                {
+                    'id': 2,
+                    'name': 'Step 2',
+                    'workflow_id': 2,
+                    'workflow_name': 'WF2',
+                    'scheduling': {}
+                }
+            ]
+        }
+    ]
