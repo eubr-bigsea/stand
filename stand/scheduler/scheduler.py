@@ -88,8 +88,9 @@ async def main(engine):
         result = await session.execute(select(Job).filter(Job.id == 1).limit(1))
     # async with engine.begin() as conn:
     #    result = await conn.execute(select(Job).filter(Job.id == 1))
-    job: Job = result.one()
-    print(type(job))
+    #job: Job = result.one()
+    job: Job = result.scalars().one()
+    print('>>>>>>>>', job)
     await session.close()
     await engine.dispose()
 
