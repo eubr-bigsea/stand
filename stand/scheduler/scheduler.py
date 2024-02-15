@@ -6,16 +6,16 @@ import os
 from croniter import croniter
 import yaml
 # from . import all_cron_executions
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 import typing
 from sqlalchemy import ForeignKey
 from sqlalchemy import func
 from sqlalchemy import select
-from stand.models import Job
+from stand.models import Job, PipelineRun, StatusExecution
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
-
+import requests
 
 def load_config():
     config_file = os.environ.get('STAND_CONFIG')
@@ -32,16 +32,41 @@ def create_sql_alchemy_async_engine(config: typing.Dict):
                                echo=True,
                                future=True)
 
+def build_session_maker(engine: AsyncEngine):
+    return sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
-def update_pipelines_window():
-    # Read pipelines
-    # Read current windows
+async def update_pipelines_run(config: typing.Dict, engine: AsyncEngine):
+    """ Update pipelines' run
+    """
+    tahiti_config = config['stand']['services']['tahiti']
+    tahiti_api_url = tahiti_config['url']
+    # Read pipelines from tahiti API
+    params = {}
+    headers = {
+        'X-Auth-Token': tahiti_config['auth_token']
+    }
+    resp = requests.get(f'{tahiti_api_url}/pipelines', params, headers=headers)
+    if resp.status_code != 200:
+        raise Exception(f'Error {resp.status_code} while getting pipelines')
+    
+    async_session = build_session_maker(engine)
+    async with async_session() as session:
+        # FIXME: Add more filters
+        # Add run for new pipelines
+        new_pipelines = dict([[p['id'], p] for p in resp.json()['list']])
+        # Create expected steps run for pipeline
 
-    # Remove window for cancelled pipelines
-    # Add window for new pipelines
-    # Update window for running pipelines
-
-    # Create expected steps window for pipeline
+        # Read current runs
+        active = await session.execute(
+            select(PipelineRun)
+                .filter(
+                    PipelineRun.status == StatusExecution.PENDING)
+                    ).fetchall()
+        # Remove run for cancelled pipelines
+        canceled = await session.execute(
+            select(PipelineRun)
+                .filter(PipelineRun.status == StatusExecution.CANCELED)).fetchall()
+        # Update run for running pipelines
     pass
 
 
@@ -81,16 +106,15 @@ async def check_and_execute():
 
 async def main(engine):
     # await check_and_execute()
-    async_session = sessionmaker(
-        engine, expire_on_commit=False, class_=AsyncSession
-    )
+    async_session = build_session_maker(engine)
+
     async with async_session() as session:
         result = await session.execute(select(Job).filter(Job.id == 1).limit(1))
     # async with engine.begin() as conn:
     #    result = await conn.execute(select(Job).filter(Job.id == 1))
     #job: Job = result.one()
     job: Job = result.scalars().one()
-    print('>>>>>>>>', job)
+    print('>>>>>>>>', job, type(job))
     await session.close()
     await engine.dispose()
 

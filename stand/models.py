@@ -4,11 +4,6 @@ from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Enum, \
     DateTime, Text
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship, backref
-from sqlalchemy_i18n import make_translatable, translation_base, Translatable
-
-make_translatable(options={'locales': ['pt', 'en'],
-                           'auto_create_locales': False,
-                           'fallback_locale': 'pt'})
 
 db = SQLAlchemy()
 
@@ -121,10 +116,10 @@ class JobException(BaseException):
 
 # Association tables definition
     # noinspection PyUnresolvedReferences
-job_pipeline_step_window = db.Table(
-    'job_pipeline_step_window',
-    Column('pipeline_step_window_id', Integer,
-           ForeignKey('pipeline_step_window.id'),
+job_pipeline_step_run = db.Table(
+    'job_pipeline_step_run',
+    Column('pipeline_step_run_id', Integer,
+           ForeignKey('pipeline_step_run.id'),
            nullable=False, index=True),
     Column('job_id', Integer,
            ForeignKey('job.id'),
@@ -180,11 +175,12 @@ class ClusterAccess(db.Model):
     user_name = Column(String(200), nullable=False)
 
     # Associations
-    cluster_id = Column(Integer,
-                        ForeignKey("cluster.id",
-                                   name="fk_cluster_access_cluster_id"),
-                        nullable=False,
-                        index=True)
+    cluster_id = Column(
+        Integer,
+        ForeignKey("cluster.id",
+                   name="fk_cluster_access_cluster_id"),
+        nullable=False,
+        index=True)
     cluster = relationship(
         "Cluster",
         overlaps='cluster',
@@ -207,11 +203,12 @@ class ClusterConfiguration(db.Model):
     value = Column(String(500), nullable=False)
 
     # Associations
-    cluster_id = Column(Integer,
-                        ForeignKey("cluster.id",
-                                   name="fk_cluster_configuration_cluster_id"),
-                        nullable=False,
-                        index=True)
+    cluster_id = Column(
+        Integer,
+        ForeignKey("cluster.id",
+                   name="fk_cluster_configuration_cluster_id"),
+        nullable=False,
+        index=True)
     cluster = relationship(
         "Cluster",
         overlaps='cluster',
@@ -235,11 +232,12 @@ class ClusterFlavor(db.Model):
     parameters = Column(Text(4294000000), nullable=False)
 
     # Associations
-    cluster_id = Column(Integer,
-                        ForeignKey("cluster.id",
-                                   name="fk_cluster_flavor_cluster_id"),
-                        nullable=False,
-                        index=True)
+    cluster_id = Column(
+        Integer,
+        ForeignKey("cluster.id",
+                   name="fk_cluster_flavor_cluster_id"),
+        nullable=False,
+        index=True)
     cluster = relationship(
         "Cluster",
         overlaps='flavors',
@@ -264,11 +262,12 @@ class ClusterPlatform(db.Model):
                          default=1, nullable=False)
 
     # Associations
-    cluster_id = Column(Integer,
-                        ForeignKey("cluster.id",
-                                   name="fk_cluster_platform_cluster_id"),
-                        nullable=False,
-                        index=True)
+    cluster_id = Column(
+        Integer,
+        ForeignKey("cluster.id",
+                   name="fk_cluster_platform_cluster_id"),
+        nullable=False,
+        index=True)
     cluster = relationship(
         "Cluster",
         overlaps='platforms',
@@ -332,11 +331,12 @@ class Job(db.Model):
                           default=TriggerType.MANUAL, nullable=False)
 
     # Associations
-    cluster_id = Column(Integer,
-                        ForeignKey("cluster.id",
-                                   name="fk_job_cluster_id"),
-                        nullable=False,
-                        index=True)
+    cluster_id = Column(
+        Integer,
+        ForeignKey("cluster.id",
+                   name="fk_job_cluster_id"),
+        nullable=False,
+        index=True)
     cluster = relationship(
         "Cluster",
         overlaps='cluster',
@@ -367,11 +367,12 @@ class JobResult(db.Model):
     content = Column(Text(4294000000))
 
     # Associations
-    job_id = Column(Integer,
-                    ForeignKey("job.id",
-                               name="fk_job_result_job_id"),
-                    nullable=False,
-                    index=True)
+    job_id = Column(
+        Integer,
+        ForeignKey("job.id",
+                   name="fk_job_result_job_id"),
+        nullable=False,
+        index=True)
     job = relationship(
         "Job",
         overlaps='results',
@@ -401,11 +402,12 @@ class JobStep(db.Model):
     operation_name = Column(String(200), nullable=False)
 
     # Associations
-    job_id = Column(Integer,
-                    ForeignKey("job.id",
-                               name="fk_job_step_job_id"),
-                    nullable=False,
-                    index=True)
+    job_id = Column(
+        Integer,
+        ForeignKey("job.id",
+                   name="fk_job_step_job_id"),
+        nullable=False,
+        index=True)
     job = relationship(
         "Job",
         overlaps='steps',
@@ -437,11 +439,12 @@ class JobStepLog(db.Model):
                   default='TEXT', nullable=False)
 
     # Associations
-    step_id = Column(Integer,
-                     ForeignKey("job_step.id",
-                                name="fk_job_step_log_step_id"),
-                     nullable=False,
-                     index=True)
+    step_id = Column(
+        Integer,
+        ForeignKey("job_step.id",
+                   name="fk_job_step_log_step_id"),
+        nullable=False,
+        index=True)
     step = relationship(
         "JobStep",
         overlaps='logs',
@@ -456,9 +459,34 @@ class JobStepLog(db.Model):
         return '<Instance {}: {}>'.format(self.__class__, self.id)
 
 
-class PipelineStepWindow(db.Model):
-    """ Pipeline step window """
-    __tablename__ = 'pipeline_step_window'
+class PipelineRun(db.Model):
+    """ Pipeline run """
+    __tablename__ = 'pipeline_run'
+
+    # Fields
+    id = Column(Integer, primary_key=True)
+    start = Column(DateTime, nullable=False, index=True)
+    end = Column(DateTime, nullable=False, index=True)
+    pipeline_id = Column(Integer, nullable=False, index=True)
+    comment = Column(String(200))
+    status = Column(Enum(*list(StatusExecution.values()),
+                         name='StatusExecutionEnumType'), nullable=False)
+    final_status = Column(Enum(*list(StatusExecution.values()),
+                               name='StatusExecutionEnumType'))
+
+    # Associations
+    steps = relationship("PipelineStepRun", back_populates="pipeline_run")
+
+    def __str__(self):
+        return self.start
+
+    def __repr__(self):
+        return '<Instance {}: {}>'.format(self.__class__, self.id)
+
+
+class PipelineStepRun(db.Model):
+    """ Pipeline step run """
+    __tablename__ = 'pipeline_step_run'
 
     # Fields
     id = Column(Integer, primary_key=True)
@@ -477,20 +505,21 @@ class PipelineStepWindow(db.Model):
     # Associations
     jobs = relationship(
         "Job",
-        overlaps="pipeline_step_windows",
-        secondary=job_pipeline_step_window)
-    pipeline_window_id = Column(Integer,
-                                ForeignKey("pipeline_window.id",
-                                           name="fk_pipeline_step_window_pipeline_window_id"),
-                                nullable=False,
-                                index=True)
-    pipeline_window = relationship(
-        "PipelineWindow",
+        overlaps="pipeline_step_runs",
+        secondary=job_pipeline_step_run)
+    pipeline_run_id = Column(
+        Integer,
+        ForeignKey("pipeline_run.id",
+                   name="fk_pipeline_step_run_pipeline_run_id"),
+        nullable=False,
+        index=True)
+    pipeline_run = relationship(
+        "PipelineRun",
         overlaps='steps',
-        foreign_keys=[pipeline_window_id],
+        foreign_keys=[pipeline_run_id],
         back_populates="steps"
     )
-    logs = relationship("PipelineStepWindowLog")
+    logs = relationship("PipelineStepRunLog")
 
     def __str__(self):
         return self.created
@@ -499,9 +528,9 @@ class PipelineStepWindow(db.Model):
         return '<Instance {}: {}>'.format(self.__class__, self.id)
 
 
-class PipelineStepWindowLog(db.Model):
-    """ Pipeline step window log """
-    __tablename__ = 'pipeline_step_window_log'
+class PipelineStepRunLog(db.Model):
+    """ Pipeline step run log """
+    __tablename__ = 'pipeline_step_run_log'
 
     # Fields
     id = Column(Integer, primary_key=True)
@@ -513,35 +542,22 @@ class PipelineStepWindowLog(db.Model):
     user_name = Column(String(200), nullable=False)
     comment = Column(String(200))
 
+    # Associations
+    pipeline_step_run_id = Column(
+        Integer,
+        ForeignKey("pipeline_step_run.id",
+                   name="fk_pipeline_step_run_log_pipeline_step_run_id"),
+        nullable=False,
+        index=True)
+    pipeline_step_run = relationship(
+        "PipelineStepRun",
+        overlaps='logs',
+        foreign_keys=[pipeline_step_run_id],
+        back_populates="logs"
+    )
+
     def __str__(self):
         return self.created
-
-    def __repr__(self):
-        return '<Instance {}: {}>'.format(self.__class__, self.id)
-
-
-class PipelineWindow(db.Model):
-    """ Pipeline window """
-    __tablename__ = 'pipeline_window'
-
-    # Fields
-    id = Column(Integer, primary_key=True)
-    start = Column(DateTime, nullable=False, index=True)
-    end = Column(DateTime, nullable=False, index=True)
-    pipeline_id = Column(Integer, nullable=False, index=True)
-    comment = Column(String(200))
-    status = Column(Enum(*list(StatusExecution.values()),
-                         name='StatusExecutionEnumType'), nullable=False)
-    final_status = Column(Enum(*list(StatusExecution.values()),
-                               name='StatusExecutionEnumType'))
-
-    # Associations
-    steps = relationship(
-        "PipelineStepWindow",
-        back_populates="pipeline_window")
-
-    def __str__(self):
-        return self.start
 
     def __repr__(self):
         return '<Instance {}: {}>'.format(self.__class__, self.id)
@@ -578,11 +594,12 @@ class RoomParticipant(db.Model):
     leave_date = Column(DateTime)
 
     # Associations
-    room_id = Column(Integer,
-                     ForeignKey("room.id",
-                                name="fk_room_participant_room_id"),
-                     nullable=False,
-                     index=True)
+    room_id = Column(
+        Integer,
+        ForeignKey("room.id",
+                   name="fk_room_participant_room_id"),
+        nullable=False,
+        index=True)
     room = relationship(
         "Room",
         overlaps='participants',
