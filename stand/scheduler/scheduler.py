@@ -1,9 +1,10 @@
 # Basic code to start a scheduler using aiocron package
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta, date
 import os
 
 from croniter import croniter
+from sqlalchemy.sql import and_
 import yaml
 # from . import all_cron_executions
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
@@ -35,39 +36,75 @@ def create_sql_alchemy_async_engine(config: typing.Dict):
 def build_session_maker(engine: AsyncEngine):
     return sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
-async def update_pipelines_run(config: typing.Dict, engine: AsyncEngine):
-    """ Update pipelines' run
+async def update_pipelines_runs(config: typing.Dict, engine: AsyncEngine):
+    """ Update pipelines' runs
     """
     tahiti_config = config['stand']['services']['tahiti']
+    
+    # Window is defined in config file (default = 7 days)
+    days = config['stand'].get('pipeline').get('days', 7)
+    updated_pipelines = get_pipelines(tahiti_config, days)
+    
+    async_session = build_session_maker(engine)
+    async with async_session() as session:
+        # FIXME: Add more filters
+        # Add run for new pipelines
+        # Create expected steps run for pipeline
+
+        # Read current runs
+        runs = await get_runs(session, updated_pipelines.keys())
+
+        # Remove run for cancelled pipelines
+        # canceled = await get_canceled_runs(session)
+        # Update run for running pipelines
+    pass
+
+def get_pipelines(tahiti_config: typing.Dict, days: int) -> typing.Dict[int, typing.Dict]:
+    """ Read pipelines from tahiti API.
+    Don't need to read all pipelines, only those updated in the last window.
+    """
+    
     tahiti_api_url = tahiti_config['url']
-    # Read pipelines from tahiti API
-    params = {}
+    reference = date.today() - timedelta(days=days)
+    params = {
+        'after': reference
+    }
     headers = {
         'X-Auth-Token': tahiti_config['auth_token']
     }
     resp = requests.get(f'{tahiti_api_url}/pipelines', params, headers=headers)
     if resp.status_code != 200:
         raise Exception(f'Error {resp.status_code} while getting pipelines')
-    
-    async_session = build_session_maker(engine)
-    async with async_session() as session:
-        # FIXME: Add more filters
-        # Add run for new pipelines
-        new_pipelines = dict([[p['id'], p] for p in resp.json()['list']])
-        # Create expected steps run for pipeline
+    updated_pipelines = dict([[p['id'], p] for p in resp.json()['list']])
+    return updated_pipelines
 
-        # Read current runs
-        active = await session.execute(
-            select(PipelineRun)
-                .filter(
-                    PipelineRun.status == StatusExecution.PENDING)
-                    ).fetchall()
-        # Remove run for cancelled pipelines
-        canceled = await session.execute(
+async def get_canceled_runs(session):
+    return await session.execute(
             select(PipelineRun)
                 .filter(PipelineRun.status == StatusExecution.CANCELED)).fetchall()
-        # Update run for running pipelines
-    pass
+
+async def get_runs(session, pipeline_ids):
+    # Subquery to get the most recent run for each pipeline_id
+    subquery = (
+        session.query(
+            PipelineRun.pipeline_id,
+            func.max(PipelineRun.start).label("max_start")
+        )
+        .group_by(PipelineRun.pipeline_id)
+        .subquery()
+    )
+
+    # Join the subquery with the PipelineRun table to get the full 
+    # PipelineRun entities
+    query = (
+        session.query(PipelineRun)
+        .join(subquery, and_(
+            PipelineRun.pipeline_id == subquery.c.pipeline_id,
+            PipelineRun.start == subquery.c.max_start
+        ))
+        .order_by(PipelineRun.pipeline_id)
+    )
+    return await query.all()
 
 
 def update_pipeline_steps_status():
