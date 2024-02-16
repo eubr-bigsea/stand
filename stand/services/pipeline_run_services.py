@@ -1,45 +1,48 @@
-from stand.models import PipelineWindow, StatusExecution, PipelineStepWindowLog
+from stand.models import PipelineRun, StatusExecution, PipelineStepRunLog
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from gettext import gettext
 from typing import Tuple
 import calendar
 
-# Create new pipeline window from a list of dictionaries containing the info
-def create_pipeline_window(session: Session, pipeline_info_list, 
+
+
+# Create new pipeline run from a list of dictionaries containing the info
+def xcreate_pipeline_run(session: Session, pipeline_info_list, 
                            reference: datetime, user):
 
     pipeline_ids = dict([(p['id'], p) for p in pipeline_info_list])
 
     
-    canceled_windows = session.query(PipelineWindow).filter(
-        PipelineWindow.pipeline_id.not_in_(pipeline_ids.keys())
-    ).filter(PipelineWindow.status != StatusExecution.CANCELED)
+    canceled_runs = session.query(PipelineRun).filter(
+        PipelineRun.pipeline_id.not_in_(pipeline_ids.keys())
+    ).filter(PipelineRun.status != StatusExecution.CANCELED)
     
-    update_when_pipeline_canceled(user, canceled_windows)
+    update_when_pipeline_canceled(user, canceled_runs)
 
 
-    existing_windows = session.query(PipelineWindow).filter(
-        PipelineWindow.pipeline_id.in_(pipeline_ids.keys())
-    ).filter(PipelineWindow.status != StatusExecution.CANCELED)
+    existing_runs = session.query(PipelineRun).filter(
+        PipelineRun.pipeline_id.in_(pipeline_ids.keys())
+    ).filter(PipelineRun.status != StatusExecution.CANCELED)
 
     for pipeline_info in pipeline_info_list:
         exists = False
         start, end = get_periodicity(pipeline_info, reference)
-        # Test if exist a window for this pipeline and periodicity
-        for window in existing_windows:
-            if (window.pipeline_id == pipeline_info["id"] 
-                    and window.start == start and window.end == end):
+        # Test if exist a run for this pipeline and periodicity
+        for run in existing_runs:
+            if (run.pipeline_id == pipeline_info["id"] 
+                    and run.start == start and run.end == end):
                 exists = True
                 break
         if not exists:
-            pipeline_window = PipelineWindow(
+            pipeline_run = PipelineRun(
                 pipeline_id=pipeline_info["id"],
                 start=None,
                 end=None,
                 status=StatusExecution.PENDING,
+                steps=[]
             )
-            session.add(pipeline_window)
+            session.add(pipeline_run)
             session.commit()
 
 def get_periodicity(pipeline_info, reference: datetime) -> Tuple[datetime, datetime]:
@@ -68,8 +71,8 @@ def get_periodicity(pipeline_info, reference: datetime) -> Tuple[datetime, datet
     return (start, end)
     
 
-def update_when_pipeline_canceled(user, canceled_windows):
-    for canceled in canceled_windows:
+def update_when_pipeline_canceled(user, canceled_runs):
+    for canceled in canceled_runs:
         canceled.status = StatusExecution.CANCELED
         canceled.final_status = StatusExecution.CANCELED
         for step in canceled.steps:
@@ -77,7 +80,7 @@ def update_when_pipeline_canceled(user, canceled_windows):
             step.comment = gettext('Pipeline was canceled or removed.')
             step.final_status = StatusExecution.CANCELED
             step.status = StatusExecution.CANCELED
-            log = PipelineStepWindowLog(
+            log = PipelineStepRunLog(
                 action='CANCELED',
                 user_id=user.id,
                 user_login=user.login,
