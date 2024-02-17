@@ -466,7 +466,7 @@ class PipelineRun(db.Model):
     # Fields
     id = Column(Integer, primary_key=True)
     start = Column(DateTime, nullable=False, index=True)
-    end = Column(DateTime, nullable=False, index=True)
+    finish = Column(DateTime, nullable=False, index=True)
     pipeline_id = Column(Integer, nullable=False, index=True)
     comment = Column(String(200))
     status = Column(Enum(*list(StatusExecution.values()),
