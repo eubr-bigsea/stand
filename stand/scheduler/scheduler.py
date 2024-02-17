@@ -1,23 +1,19 @@
 # Basic code to start a scheduler using aiocron package
 import asyncio
-from datetime import datetime, timedelta, date
 import os
-
-from croniter import croniter
-from sqlalchemy.sql import and_
-import yaml
-
-# from . import all_cron_executions
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
-
 import typing
-from sqlalchemy import ForeignKey
-from sqlalchemy import func
-from sqlalchemy import select
-from stand.models import Job, PipelineRun, StatusExecution
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import date, datetime, timedelta
+
 import requests
+import yaml
+from croniter import croniter
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine, AsyncSession, create_async_engine)
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.sql import and_
+
+from stand.models import (Job, PipelineRun, StatusExecution)
 
 
 def load_config():
@@ -38,6 +34,13 @@ def build_session_maker(engine: AsyncEngine):
     return sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 
+async def change_run_state(session: AsyncSession, run: PipelineRun,
+                           state: StatusExecution) -> None:
+    run: PipelineRun = session.merge(run)
+    run.status = state
+    await session.commit()
+
+
 async def update_pipelines_runs(config: typing.Dict, engine: AsyncEngine):
     """Update pipelines' runs"""
     tahiti_config = config["stand"]["services"]["tahiti"]
@@ -45,6 +48,7 @@ async def update_pipelines_runs(config: typing.Dict, engine: AsyncEngine):
     # Window is defined in config file (default = 7 days)
     days = config["stand"].get("pipeline").get("days", 7)
     updated_pipelines = get_pipelines(tahiti_config, days)
+    now = datetime.now()
 
     async_session = build_session_maker(engine)
     async with async_session() as session:
@@ -60,21 +64,46 @@ async def update_pipelines_runs(config: typing.Dict, engine: AsyncEngine):
             ]
         )
 
-        running_statuses = [StatusExecution.PENDING, StatusExecution.RUNNING]
         for pipeline in updated_pipelines.values():
-            if pipeline["id"] in runs:
-                # Remove run for disabled pipelines
-                run = runs[pipeline["id"]]
-                if pipeline["enabled"] is False and run.status in running_statuses:
-                    await cancel_run(session, run)
-                continue
+            run: PipelineRun = runs.get(pipeline["id"])
+            if run:
+                if pipeline['enabled'] is False:
+                    if run.status != StatusExecution.CANCELED:
+                        # Remove run for disabled pipelines
+                        await cancel_run(session, run)
+                elif run.status == StatusExecution.RUNNING:
+                    if run.finish < now:
+                        await change_run_state(session, run,
+                                               StatusExecution.PENDING)
+                        await create_pipeline_run(session, pipeline, user={})
+                    # Test if run is using latest pipeline data
+                    elif run.updated < pipeline["updated"]:
+                        await update_run(session, pipeline['updated'], run)
+
+                elif run.status == StatusExecution.PENDING:
+                    pass
+                elif (run.status == StatusExecution.CANCELED and
+                        pipeline["enabled"]):
+                    # Create run for pipeline
+                    await create_pipeline_run(session, pipeline, user={})
+                elif run.status == StatusExecution.INTERRUPTED:
+                    if run.finish < now:
+                        await create_pipeline_run(session, pipeline, user={})
             else:
                 # Create run for pipeline
-                create_pipeline_run(session, pipeline, user={})
+                await create_pipeline_run(session, pipeline, user={})
             pass
-        # canceled = await get_canceled_runs(session)
-        # Update run for running pipelines
-    pass
+
+
+async def update_run(session: AsyncSession, updated: datetime,
+                     run: PipelineRun) -> None:
+    """
+    Update run with latest pipeline data
+    """
+    run.updated = updated
+    run.status = StatusExecution.PENDING
+    await session.commit()
+    # Create expected steps run for pipeline
 
 
 async def cancel_run(session, run):
@@ -82,15 +111,13 @@ async def cancel_run(session, run):
     await session.commit()
 
 
-def create_pipeline_run(
-    session: AsyncSession, pipeline: typing.Dict, user: typing.Dict
-) -> None:
+async def create_pipeline_run(
+        session: AsyncSession, pipeline: typing.Dict, user: typing.Dict) -> None:
     pass
 
 
-def get_pipelines(
-    tahiti_config: typing.Dict, days: int
-) -> typing.Dict[int, typing.Dict]:
+def get_pipelines(tahiti_config: typing.Dict, days: int
+                  ) -> typing.Dict[int, typing.Dict]:
     """Read pipelines from tahiti API.
     Don't need to read all pipelines, only those updated in the last window.
     """
@@ -109,14 +136,16 @@ def get_pipelines(
 
 async def get_canceled_runs(session):
     return await session.execute(
-        select(PipelineRun).filter(PipelineRun.status == StatusExecution.CANCELED)
+        select(PipelineRun).filter(
+            PipelineRun.status == StatusExecution.CANCELED)
     ).fetchall()
 
 
 async def get_runs(session, pipeline_ids):
     # Subquery to get the most recent run for each pipeline_id
     subquery = (
-        select(PipelineRun.pipeline_id, func.max(PipelineRun.start).label("max_start"))
+        select(PipelineRun.pipeline_id, func.max(
+            PipelineRun.start).label("max_start"))
         .filter(PipelineRun.pipeline_id.in_(pipeline_ids))
         .group_by(PipelineRun.pipeline_id)
         .subquery()
@@ -170,11 +199,11 @@ async def check_and_execute():
             60 - current_time.second - (current_time.microsecond / 1_000_000)
         )
         await asyncio.sleep(remaining_seconds)  # Sleep until next minute
-        for crontab_exp, func in crontab_mapping.items():
+        for crontab_exp, func_ in crontab_mapping.items():
             matches = croniter.match(crontab_exp, current_time)
             print(crontab_exp, current_time, matches)
             if matches:
-                asyncio.create_task(func())
+                asyncio.create_task(func_())
 
 
 async def main(engine):

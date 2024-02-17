@@ -3,7 +3,7 @@ from stand.factory import create_babel_i18n
 import pytest
 import datetime
 import flask_migrate
-from stand.app import create_app
+
 from stand.models import (Job, ClusterType, Cluster,
                           JobType, StatusExecution, db)
 from stand.services.redis_service import connect_redis_store
@@ -71,6 +71,7 @@ def get_jobs():
 
 @pytest.fixture(scope='session')
 def app():
+    from stand.app import create_app
     return create_app()
 
 @pytest.fixture(scope='session')
