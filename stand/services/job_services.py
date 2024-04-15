@@ -35,7 +35,7 @@ class JobService:
         result = (True, '')
         tahiti_config = self.config.get('services', {}).get('tahiti', {})
         if all(['url' in tahiti_config, 'token' in tahiti_config]):
-            service_url = f'{tahiti_config['url']}/{job['workflow_id']}'
+            service_url = f"{tahiti_config['url']}/{job['workflow_id']}"
             r = requests.get(service_url,
                              headers={'X-Auth-Token': tahiti_config['token']})
             if r.status_code == 200:
@@ -100,8 +100,8 @@ class JobService:
 
         # Test if workflow has a variable indicating the Redis db to be used.
         # Useful when debugging a shared environment
-        redis_db = next([v for v in workflow.get('variables', [])
-                         if v.get('name') == 'redis_db'], None)
+        redis_db = next((v for v in workflow.get('variables', [])
+                         if v.get('name') == 'redis_db'), None)
         if redis_db is not None:
             redis_store = JobService._get_redis_store(
                 None, testing, db=int(redis_db.get('default_value')))
@@ -284,7 +284,8 @@ class JobService:
             return {'status': 'ERROR', 'message': 'Not found'}
 
     @staticmethod
-    def _get_redis_store(url: str, testing: bool = False) -> None:
+    def _get_redis_store(url: str, testing: bool = False, db: int = 0) -> None:
         redis_store = connect_redis_store(url, testing=testing,
-                                          decode_responses=False)
+                                          decode_responses=False,
+                                          db=db)
         return redis_store
