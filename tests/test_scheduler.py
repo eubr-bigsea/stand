@@ -4,12 +4,14 @@ from datetime import date, datetime, timedelta
 import pytest
 from mock import ANY, patch
 from mock.mock import AsyncMock
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from stand.models import PipelineRun, StatusExecution
+from stand.models import (PipelineRun, PipelineStepRun, StatusExecution)
 from stand.scheduler.scheduler import (
     create_sql_alchemy_async_engine,
     get_pipelines,
-    update_pipelines_runs,
+    update_pipelines_runs, 
+    update_pipelines_runs_from_jobs,
 )
 
 config = {
@@ -157,7 +159,7 @@ async def test_update_pipeline_runs_create_because_interrupted_run_expired(
     mocked_get_runs.assert_called_with(ANY, KeysView([pipeline["id"]]))
 
     mocked_create_pipeline_run.assert_called_with(ANY, pipeline, user={})
- 
+
 
 @pytest.mark.asyncio
 @patch("requests.get")
@@ -229,9 +231,11 @@ async def test_update_pipeline_runs_ignore_run_previously_canceled(
 @patch("requests.get")
 @patch("stand.scheduler.scheduler.get_runs")
 @patch("stand.scheduler.scheduler.create_pipeline_run")
-@patch("stand.scheduler.scheduler.change_run_state")
+@patch("sqlalchemy.ext.asyncio.AsyncSession.merge")
+@patch("sqlalchemy.ext.asyncio.AsyncSession.commit")
 async def test_update_pipeline_runs_after_valid_period(
-        mocked_change_run_state: AsyncMock,
+        mocked_commit,
+        mocked_merge,
         mocked_create_pipeline_run: AsyncMock,
         mocked_get_runs: AsyncMock, mocked_get):
     """
@@ -252,6 +256,57 @@ async def test_update_pipeline_runs_after_valid_period(
 
     engine = create_sql_alchemy_async_engine(config)
     await update_pipelines_runs(config, engine)
+    mocked_get_runs.assert_called_with(
+        ANY, KeysView([pipelines[0]["id"]])
+    )
+
+    mocked_create_pipeline_run.assert_called_once_with(
+        ANY, pipelines[0], user={})
+    
+    mocked_merge.assert_called_once_with(runs[0])
+    assert mocked_merge.call_args[0][0].status == StatusExecution.PENDING
+    mocked_commit.assert_called_once()
+
+
+@pytest.mark.asyncio
+@patch("requests.get")
+@patch("stand.scheduler.scheduler.get_runs")
+@patch("stand.scheduler.scheduler.create_pipeline_run")
+@patch("stand.scheduler.scheduler.change_run_state")
+async def xtest_update_pipeline_runs_as_finished(
+        mocked_change_run_state: AsyncMock,
+        mocked_create_pipeline_run: AsyncMock,
+        mocked_get_runs: AsyncMock, mocked_get):
+    """
+    Test if after finishing the successful execution of the last step, the run 
+    is marked as FINISHED
+    """
+    pipelines = [
+        {
+            "id": 10, "name": "Pipeline is finishing", "enabled": True,
+            "steps": []
+        },
+    ]
+
+    now = datetime.now()
+    mocked_get.side_effect = fake_req(200, pipelines)
+    runs = [
+        PipelineRun(pipeline_id=pipelines[0]["id"],
+                    status=StatusExecution.RUNNING,
+                    finish=now + timedelta(10),
+                    steps=[
+                        PipelineStepRun(id=1, created=now, updated=now,
+                                        workflow_id=1000, retries=1,
+                                        status=StatusExecution.PENDING,
+                                        final_status=StatusExecution.PENDING,
+                                        )
+        ]
+        ),
+    ]
+    mocked_get_runs.side_effect = [runs]
+
+    engine = create_sql_alchemy_async_engine(config)
+    await update_pipelines_runs_from_jobs(config, engine)
     mocked_get_runs.assert_called_with(
         ANY, KeysView([pipelines[0]["id"]])
     )

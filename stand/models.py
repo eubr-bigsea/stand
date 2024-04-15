@@ -341,6 +341,15 @@ class Job(db.Model):
         "Cluster",
         overlaps='cluster',
         foreign_keys=[cluster_id])
+    pipeline_step_run_id = Column(
+        Integer,
+        ForeignKey("pipeline_step_run.id",
+                   name="fk_job_pipeline_step_run_id"),
+        index=True)
+    pipeline_step_run = relationship(
+        "PipelineStepRun",
+        overlaps='jobs',
+        foreign_keys=[pipeline_step_run_id])
     steps = relationship("JobStep",
                          cascade="all, delete-orphan")
     results = relationship("JobResult",
