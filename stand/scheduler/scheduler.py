@@ -8,12 +8,11 @@ import requests
 import yaml
 from croniter import croniter
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import (
-    AsyncEngine, AsyncSession, create_async_engine)
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import and_
 
-from stand.models import (Job, PipelineRun, StatusExecution)
+from stand.models import Job, PipelineRun, PipelineStepRun, StatusExecution
 
 
 def load_config():
@@ -36,8 +35,8 @@ def build_session_maker(engine: AsyncEngine):
 
 async def change_run_state(session: AsyncSession, run: PipelineRun,
                            state: StatusExecution) -> None:
-    run: PipelineRun = session.merge(run)
     run.status = state
+    await session.merge(run)
     await session.commit()
 
 
@@ -78,6 +77,8 @@ async def update_pipelines_runs(config: typing.Dict, engine: AsyncEngine):
                         await create_pipeline_run(session, pipeline, user={})
                     # Test if run is using latest pipeline data
                     elif run.updated < pipeline["updated"]:
+                        # FIXME: Test if all steps were executed and if so,
+                        # marks run as FINISHED
                         await update_run(session, pipeline['updated'], run)
 
                 elif run.status == StatusExecution.PENDING:
@@ -95,15 +96,60 @@ async def update_pipelines_runs(config: typing.Dict, engine: AsyncEngine):
             pass
 
 
+async def update_pipelines_runs_from_jobs(config: typing.Dict, engine: AsyncEngine):
+    """Update pipelines' runs from jobs results """
+    async_session = build_session_maker(engine)
+    async with async_session() as session:
+        jobs = get_jobs(session)
+
+        for job in jobs:
+            if job.status in (StatusExecution.ERROR, StatusExecution.RUNNING):
+                change_run_step_state(session,
+                                      job.pipeline_step_run,
+                                      job.status, job.status, True)
+            elif job.status == StatusExecution.FINISHED:
+                pass
+                #job.pipeline_step_run.pipeline_run.steps
+                # FIXME test if it's the last step of the pipeline
+                # if so, change run state to FINISHED
+                change_run_step_state(session,
+                                      job.pipeline_step_run,
+                                      job.status, job.status, True)
+            elif job.status == StatusExecution.PENDING:
+                pass
+
+
+async def change_run_step_state(session: AsyncSession,
+                                step_run: PipelineStepRun,
+                                run_status: StatusExecution,
+                                step_status: StatusExecution,
+                                commit: bool = False) -> None:
+
+    # Begin trans
+
+    await change_run_state(session,
+                           step_run.pipeline_run,
+                           run_status)
+    step_run.status = step_status
+    session.add(step_run)
+    if commit:
+        await session.commit()
+
+
 async def update_run(session: AsyncSession, updated: datetime,
-                     run: PipelineRun) -> None:
+                     run: PipelineRun, commit: bool = False) -> None:
     """
     Update run with latest pipeline data
     """
     run.updated = updated
     run.status = StatusExecution.PENDING
-    await session.commit()
+    if commit:
+        await session.commit()
     # Create expected steps run for pipeline
+
+
+async def get_jobs(session: AsyncSession) -> typing.List[Job]:
+    return []
 
 
 async def cancel_run(session, run):
@@ -112,8 +158,20 @@ async def cancel_run(session, run):
 
 
 async def create_pipeline_run(
-        session: AsyncSession, pipeline: typing.Dict, user: typing.Dict) -> None:
-    pass
+        session: AsyncSession, pipeline: typing.Dict, user: typing.Dic, commit: bool = False) -> None:
+    run: PipelineRun = PipelineRun(
+        pipeline_id=pipeline["id"],
+        updated=pipeline["updated"],
+        user=user,
+        status=StatusExecution.WAITING,
+        final_status=StatusExecution.WAITING,
+        start=datetime.now(),  # FIXME
+        finish=datetime.now(),  # FIXME
+        steps=[]  # FIXME
+    )
+    session.add(run)
+    if commit:
+        await session.commit()
 
 
 def get_pipelines(tahiti_config: typing.Dict, days: int
