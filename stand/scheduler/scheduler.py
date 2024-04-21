@@ -3,7 +3,7 @@ import asyncio
 import os
 import typing
 from datetime import date, datetime, timedelta
-
+from typing import List 
 import requests
 import yaml
 from croniter import croniter
@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import and_
 
-from stand.models import (Job, PipelineRun, StatusExecution)
+from stand.models import (Job, PipelineRun, StatusExecution,Pipeline,PipelineStep)
 
 
 def load_config():
@@ -41,7 +41,9 @@ async def change_run_state(session: AsyncSession, run: PipelineRun,
     await session.commit()
 
 
+
 async def update_pipelines_runs(config: typing.Dict, engine: AsyncEngine):
+    
     """Update pipelines' runs"""
     tahiti_config = config["stand"]["services"]["tahiti"]
 
@@ -63,15 +65,16 @@ async def update_pipelines_runs(config: typing.Dict, engine: AsyncEngine):
                 for r in await get_runs(session, updated_pipelines.keys())
             ]
         )
-
+       
         for pipeline in updated_pipelines.values():
+         
             run: PipelineRun = runs.get(pipeline["id"])
             if run:
                 if pipeline['enabled'] is False:
                     if run.status != StatusExecution.CANCELED:
                         # Remove run for disabled pipelines
                         await cancel_run(session, run)
-                elif run.status == StatusExecution.RUNNING:
+                elif run.status == StatusExecution.RUNNING:   
                     if run.finish < now:
                         await change_run_state(session, run,
                                                StatusExecution.PENDING)
@@ -82,17 +85,20 @@ async def update_pipelines_runs(config: typing.Dict, engine: AsyncEngine):
 
                 elif run.status == StatusExecution.PENDING:
                     pass
-                elif (run.status == StatusExecution.CANCELED and
-                        pipeline["enabled"]):
-                    # Create run for pipeline
+                
+                elif (run.status == StatusExecution.CANCELED ):
+                   
                     await create_pipeline_run(session, pipeline, user={})
                 elif run.status == StatusExecution.INTERRUPTED:
                     if run.finish < now:
                         await create_pipeline_run(session, pipeline, user={})
             else:
-                # Create run for pipeline
-                await create_pipeline_run(session, pipeline, user={})
-            pass
+                if pipeline['enabled']:
+                    await create_pipeline_run(session, pipeline, user={})
+            
+    
+
+
 
 
 async def update_run(session: AsyncSession, updated: datetime,
@@ -176,34 +182,48 @@ def update_pipeline_steps_status():
     pass
 
 
-# Define your functions here
-async def function1():
-    print("Executing function 1")
 
 
-async def function2():
-    print("Executing function 2")
 
+def get_next_scheduled_date(cron_expr:str,
+                                    current_time: datetime,
+                                    )->datetime:
+    """
+    receives a cron_exp and current_time, 
+    returns datetime of next occurence of the scheduling
+    based on current_time argument
+    """
+  
+    iter = croniter(cron_expr,current_time)
+    next_occurrence = iter.get_next(datetime)
+    
+    return next_occurrence
+    
+    #bad name
+def pipeline_run_should_be_created(current_time: datetime,
+                                   first_step: PipelineStep,
+                                   last_step :PipelineStep)-> bool:
+    """
+    Checks if a pipeline run should be created based on its
+    associated pipeline step runs. If first_step isnt the first
+    next scheduled one , then dont create it.
+    """
+    ## this function will probably get more complex
+    first_step_expr = first_step.scheduling
+    first_step_next_date= get_next_scheduled_date(cron_expr=first_step_expr,
+                                                           current_time=current_time)
+    last_step_expr = last_step.scheduling
+    last_step_next_date = get_next_scheduled_date(cron_expr=last_step_expr,
+                                                           current_time=current_time)
+    #last step is scheduled first than last step
+    #it implies  current time is betwween fist and last step
+    if (first_step_next_date>last_step_next_date):
+        return False
+    else:
+        return True
+    
+    
 
-# Mapping crontab expressions to functions
-crontab_mapping = {
-    "* * * * *": function1,  # Every minute
-    "*/2 * * * *": function2,  # Every two minutes
-}
-
-
-async def check_and_execute():
-    while True:
-        current_time = datetime.now()
-        remaining_seconds = (
-            60 - current_time.second - (current_time.microsecond / 1_000_000)
-        )
-        await asyncio.sleep(remaining_seconds)  # Sleep until next minute
-        for crontab_exp, func_ in crontab_mapping.items():
-            matches = croniter.match(crontab_exp, current_time)
-            print(crontab_exp, current_time, matches)
-            if matches:
-                asyncio.create_task(func_())
 
 
 async def main(engine):

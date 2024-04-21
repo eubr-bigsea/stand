@@ -613,3 +613,52 @@ class RoomParticipant(db.Model):
     def __repr__(self):
         return '<Instance {}: {}>'.format(self.__class__, self.id)
 
+
+## duplicated model that also exists in tahiti
+## this class should be used only for convenience
+class Pipeline():
+    """ Pipeline """
+    # Fields
+    id = None
+    name = None 
+    description = None 
+    user_id = None 
+    user_login = None 
+    user_name = None
+    created = None 
+    updated = None 
+    version = None 
+ 
+    execution_window = None
+    variables = None
+    preferred_cluster_id = None
+    
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return '<Instance {}: {}>'.format(self.__class__, self.id)
+    
+## duplicated model that also exists in tahiti
+## this class should be used only for convenience
+class PipelineStep():
+    """ Pipeline step """
+    
+    def __init__(self, id=None, name=None, order=None, 
+                 scheduling=None, trigger_type=None,description=None, enabled=None,
+                 workflow_type=None):
+        self.id = id
+        self.name = name
+        self.order = order
+        self.scheduling = scheduling
+        self.trigger_type =trigger_type
+        self.description = description
+        self.enabled = enabled
+        self.workflow_type = workflow_type
+
+  
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return '<Instance {}: {}>'.format(self.__class__, self.id)
