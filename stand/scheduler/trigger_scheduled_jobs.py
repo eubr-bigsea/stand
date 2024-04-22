@@ -16,15 +16,18 @@ from stand.models import (Job, PipelineRun, PipelineStepRun, StatusExecution,Pip
 from stand.scheduler.utils import *
 
 def get_order_of_last_completed_step(steps:typing.List)-> int:
-    last_completed = 0
-    for step in steps:
-        if(step.status==StatusExecution.COMPLETED):
-            last_completed== step.order
-    return last_completed
-        
+    """
+    retuns the order of the last completed job associated steprun
+    """
+    pass
+def step_has_associated_active_job():
+    "name"
+    pass
+
 def trigger_scheduled_pipeline_steps(pipeline_run:PipelineRun, time:datetime):
     
     steps= get_pipeline_steps(pipeline_run)
+    
     for step in steps:
         if(step.trigger_type == TriggerType.TIME_SCHEDULE):
             if(croniter.match(step.scheduling,time)): #time match
@@ -39,11 +42,12 @@ def trigger_scheduled_pipeline_steps(pipeline_run:PipelineRun, time:datetime):
                     return step
         
         if(step.trigger_type == "immediate"): # steps that occur exactly after the last one
-            next_step = get_order_of_last_completed_step(steps) +1
-            if(next_step== step.order): #order match
-                    create_step_run(step)
-                    return step
-            
+            if(not step_has_associated_active_job()):
+                next_step = get_order_of_last_completed_step(steps) +1
+                if(next_step== step.order): #order match
+                        create_step_run(step)
+                        return step
+                
             
     
     

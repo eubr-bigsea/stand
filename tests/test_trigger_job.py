@@ -16,13 +16,16 @@ def mocked_functions():
          patch("stand.scheduler.trigger_scheduled_jobs.get_order_of_last_completed_step") as mocked_get_order_of_last_completed_step, \
          patch("stand.scheduler.trigger_scheduled_jobs.create_step_run") as mocked_create_step_run, \
          patch("stand.scheduler.trigger_scheduled_jobs.update_pipeline_step_run_status") as mocked_update_pipeline_step_run_status,\
-         patch("stand.scheduler.trigger_scheduled_jobs.update_pipeline_run_status") as mocked_update_pipeline_run_status:
+         patch("stand.scheduler.trigger_scheduled_jobs.update_pipeline_run_status") as mocked_update_pipeline_run_status,\
+         patch("stand.scheduler.trigger_scheduled_jobs.step_has_associated_active_job") as mocked_step_has_associated_active_job:
         
         yield (mocked_get_pipeline_steps,
                mocked_get_order_of_last_completed_step,
                mocked_create_step_run,
                mocked_update_pipeline_step_run_status,
-               mocked_update_pipeline_run_status)
+               mocked_update_pipeline_run_status,
+               mocked_step_has_associated_active_job
+              )
 
 
 def test_time_scheduled_job_is_triggered(mocked_functions):
@@ -35,7 +38,8 @@ def test_time_scheduled_job_is_triggered(mocked_functions):
     mocked_get_order_of_last_completed_step,\
     mocked_create_step_run,\
     mocked_update_pipeline_step_run_status,\
-    mocked_update_pipeline_run_status = mocked_functions
+    mocked_update_pipeline_run_status,\
+    mocked_step_has_associated_active_job = mocked_functions
     
     
     steps =[PipelineStep(id="1",order=1, 
@@ -51,7 +55,7 @@ def test_time_scheduled_job_is_triggered(mocked_functions):
     
     time = datetime(hour=17,day=15, month =5, year=2024)
     trigger_scheduled_pipeline_steps(pipeline_run,time)
-    
+    #order and time matched , so step run should be created
     mocked_create_step_run.assert_called_once()
     
     
@@ -66,9 +70,9 @@ def test_time_scheduled_job_isnt_triggered_out_of_order(mocked_functions):
     mocked_get_order_of_last_completed_step,\
     mocked_create_step_run,\
     mocked_update_pipeline_step_run_status ,\
-    mocked_update_pipeline_run_status = mocked_functions
-    
-    latest_job =Job(id=1, status = StatusExecution.RUNNING)
+    mocked_update_pipeline_run_status,\
+      mocked_step_has_associated_active_job = mocked_functions
+  
     
     steps =[PipelineStep(id="1",order=1, 
                         trigger_type= TriggerType.TIME_SCHEDULE,
@@ -93,6 +97,7 @@ def test_time_scheduled_job_isnt_triggered_out_of_order(mocked_functions):
     time = datetime(hour=17,day=15, month =5, year=2024)
     
     trigger_scheduled_pipeline_steps(pipeline_run,time)
+    #time matched , but order didnt, pipeline_run goes to pending
     mocked_update_pipeline_run_status.assert_called_once_with(pipeline_run,StatusExecution.PENDING)
     
     
@@ -106,7 +111,90 @@ def test_imediate_job_is_triggered(mocked_functions):
     mocked_get_order_of_last_completed_step,\
     mocked_create_step_run,\
     mocked_update_pipeline_step_run_status ,\
-    mocked_update_pipeline_run_status = mocked_functions
+    mocked_update_pipeline_run_status,\
+      mocked_step_has_associated_active_job = mocked_functions
+    
+   
+    
+    steps =[PipelineStep(id="1",order=1, 
+                        trigger_type= TriggerType.TIME_SCHEDULE,
+                        scheduling = "0 17 13 * *" ## trigger 17:00, day 13 , every month,
+            ),
+            PipelineStep(id="1",order=2, 
+                        trigger_type= TriggerType.TIME_SCHEDULE,
+                        scheduling = "0 17 15 * *" 
+            ),
+            PipelineStep(id="1",order=3, 
+                        trigger_type= "immediate", # fix , decide the TriggerType 
+                        )]
+    
+    pipeline_run = PipelineRun(id= "1",
+                               status= StatusExecution.WAITING)
+    
+    mocked_get_pipeline_steps.return_value =steps
+    #no associated active job with the immediate step
+    mocked_step_has_associated_active_job.return_value =False
+    #step 2 was completed
+    mocked_get_order_of_last_completed_step.return_value =2
+    time = datetime(hour=18,day=15, month =5, year=2024)
+    
+    trigger_scheduled_pipeline_steps(pipeline_run,time)
+    
+    #order match , immediate type job dont care abut time, so step_run should be created
+    mocked_create_step_run.assert_called_once_with(steps[2])
+
+def test_imediate_job_isnt_triggered_out_of_order(mocked_functions):
+    """
+    tests if a job with the "execute imediately after the step before"
+    option is not trigerred if the previous step isnt completed
+    """
+    
+    mocked_get_pipeline_steps,\
+    mocked_get_order_of_last_completed_step,\
+    mocked_create_step_run,\
+    mocked_update_pipeline_step_run_status ,\
+    mocked_update_pipeline_run_status,\
+      mocked_step_has_associated_active_job = mocked_functions
+    
+   
+    
+    steps =[PipelineStep(id="1",order=1, 
+                        trigger_type= TriggerType.TIME_SCHEDULE,
+                        scheduling = "0 17 13 * *" ## trigger 17:00, day 13 , every month,
+            ),
+            PipelineStep(id="1",order=2, 
+                        trigger_type= TriggerType.TIME_SCHEDULE,
+                        scheduling = "0 17 15 * *" 
+            ),
+            PipelineStep(id="1",order=3, 
+                        trigger_type= "immediate", # fix , decide the TriggerType 
+                        )]
+    
+    pipeline_run = PipelineRun(id= "1",
+                               status= StatusExecution.WAITING)
+    
+    mocked_get_pipeline_steps.return_value =steps
+    mocked_step_has_associated_active_job.return_value =False
+    #step 1 was completed
+    mocked_get_order_of_last_completed_step.return_value =1
+    time = datetime(hour=18,day=15, month =5, year=2024)
+    
+    trigger_scheduled_pipeline_steps(pipeline_run,time)
+    #order wasnt match, so step should be ignored
+    mocked_create_step_run.assert_not_called()
+
+def test_imediate_job_isnt_triggered_twice(mocked_functions):
+    """
+    tests if a job with the "execute imediately after the step before"
+    option is not trigerred if the pipeline_step already have an active job
+    """
+    
+    mocked_get_pipeline_steps,\
+    mocked_get_order_of_last_completed_step,\
+    mocked_create_step_run,\
+    mocked_update_pipeline_step_run_status ,\
+    mocked_update_pipeline_run_status,\
+      mocked_step_has_associated_active_job = mocked_functions
     
     latest_job =Job(id=1, status = StatusExecution.RUNNING)
     
@@ -126,11 +214,12 @@ def test_imediate_job_is_triggered(mocked_functions):
                                status= StatusExecution.WAITING)
     
     mocked_get_pipeline_steps.return_value =steps
-    #step 2 was completed
+    #the immediate step already have an associated job
+    mocked_step_has_associated_active_job.return_value =True
+    #step 1 was completed
     mocked_get_order_of_last_completed_step.return_value =2
     time = datetime(hour=18,day=15, month =5, year=2024)
     
     trigger_scheduled_pipeline_steps(pipeline_run,time)
-    
-    mocked_create_step_run.assert_called_once_with(steps[2])
-    
+    # there was already an associated job with the step, so step_run shouldt be created
+    mocked_create_step_run.assert_not_called()
