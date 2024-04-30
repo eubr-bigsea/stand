@@ -34,6 +34,10 @@ def time_match(scheduling,current_time:datetime)->bool:
     
     start_time = get_step_start_time(scheduling)
     
+    #prevents matches before start_time
+    if(start_time > current_time):
+            return False
+    
     if(parsed_scheduling["stepSchedule"]["frequency"]=="once"):
         if (start_time==current_time):
             return True
@@ -41,18 +45,18 @@ def time_match(scheduling,current_time:datetime)->bool:
             return False
         
     if(parsed_scheduling["stepSchedule"]["frequency"]=="daily"):
-        #prevents matches before start_time
-        if(start_time <= current_time):
-            delta = abs(current_time- start_time)
-            difference_in_minutes = delta.total_seconds() / 60
-            
-            frequency =parsed_scheduling["stepSchedule"]["intervalDays"]
-            #diference in days  is divisible by frenquency in days , so match 
-            return difference_in_minutes % (int(frequency)*1440) == 0
-        else:
-            return False
+   
+        delta = abs(current_time- start_time)
+        difference_in_minutes = delta.total_seconds() / 60
         
-  
+        frequency_in_days =parsed_scheduling["stepSchedule"]["intervalDays"]
+        #diference in days  is divisible by frenquency in days , so match 
+        return difference_in_minutes % (int(frequency_in_days)*1440) == 0
+       
+        
+    # if(parsed_scheduling["stepSchedule"]["frequency"]=="weekly"):
+        
+            
         
         
     
