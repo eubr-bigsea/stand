@@ -15,10 +15,9 @@ import json
 from stand.models import (Job, PipelineRun, PipelineStepRun, StatusExecution,Pipeline,PipelineStep,TriggerType)
 from stand.scheduler.utils import *
 
-def get_order_of_last_completed_step(steps:typing.List)-> int:
-    """
-    retuns the order of the last completed job associated steprun
-    """
+
+def is_next_step_in_order(step:PipelineStep,pipeline_run:PipelineRun)-> bool:
+    "returns if step is the next step in a pipeline run execution"
     pass
 
 def step_has_associated_active_job():
@@ -54,8 +53,6 @@ def time_match(scheduling,current_time:datetime)->bool:
         #diference in days  is divisible by frenquency in days , so match 
         return difference_in_minutes % (int(frequency_in_days)*1440) == 0
     
-    
-        
     if(parsed_scheduling["stepSchedule"]["frequency"]=="monthly"):
         current_month = str(current_time.month)
         current_day  = str(current_time.day)
@@ -92,25 +89,22 @@ def trigger_scheduled_pipeline_steps(pipeline_run:PipelineRun, time:datetime):
     steps= get_pipeline_steps(pipeline_run)
     
     for step in steps:
+        #scheduled job
         if(not get_step_is_immediate(step.scheduling)):
-            if(time_match(step.scheduling,time)): #time match
-                
-                next_step = get_order_of_last_completed_step(steps) +1
-                if(step.order ==next_step): 
+            if(time_match(step.scheduling,time)): 
+                if(is_next_step_in_order(step,pipeline_run)):
+                    #both time and order match
                     create_step_run(step)
                     return step
-                #time match , order didnt
                 else:
+                    #only time match, execution out of order
                     update_pipeline_run_status(pipeline_run,StatusExecution.PENDING)
                     return step
         
         if(get_step_is_immediate(step.scheduling)): # steps that occur imediatelly after the last one
-           
-            next_step = get_order_of_last_completed_step(steps) +1
-            if(next_step== step.order): #order match
-                if(not step_has_associated_active_job()):
-                        create_step_run(step)
-                        return step
+           if(is_next_step_in_order(step,pipeline_run)):
+                create_step_run(step)
+                return step
                 
             
     
