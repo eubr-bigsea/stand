@@ -17,13 +17,13 @@ from stand.scheduler.trigger_scheduled_jobs  import *
 ])
 def test_time_match_once(current_time, expected_result):
     """
-    tests if steps with "repeat once" option are triggered correctly
+    tests if steps with "repeat once" option are matched correctly
     """
+    #start time = 2024-04-24 , 11:00:00
     scheduling = "{\"stepSchedule\":{\"executeImmediately\":false,\"frequency\":\"once\",\
     \"startDateTime\":\"2024-04-24T11:00:00\",\"intervalDays\":null,\"intervalWeeks\":null,\
     \"weekDays\":[],\"months\":[],\"days\":[]}}"
    
-  
     assert time_match(scheduling, current_time) ==  expected_result
 
 @pytest.mark.parametrize("current_time, expected_result", [
@@ -36,11 +36,33 @@ def test_time_match_once(current_time, expected_result):
 ])
 def test_time_match_daily(current_time, expected_result):
     """
-    tests if steps with interval in days are triggered correctly
+    tests if steps with interval in days are matched correctly
     """
+    #start time = 2024-04-24 , 11:00:00
     scheduling ="{\"stepSchedule\":{\"executeImmediately\":false,\"frequency\":\"daily\",\
     \"startDateTime\":\"2024-04-24T11:00:00\",\"intervalDays\":\"4\",\"intervalWeeks\":null,\
     \"weekDays\":[],\"months\":[],\"days\":[]}}"
+
+    assert time_match(scheduling, current_time) ==  expected_result
+
+
+@pytest.mark.parametrize("current_time, expected_result", [
+    (datetime(year=2024, month=3, day=24, hour=11, minute=0, second=0), False),
+    (datetime(year=2024, month=4, day=24, hour=11, minute=0, second=0), True),  
+    (datetime(year=2024, month=5, day=24, hour=11, minute=0, second=0), True),   
+    (datetime(year=2024, month=6, day=24, hour=12, minute=0, second=0), False),
+    (datetime(year=2024, month=7, day=24, hour=11, minute=1, second=0), False),   
+    (datetime(year=2024, month=8, day=23, hour=11, minute=0, second=0), False)   
+])
+def test_time_match_monthly(current_time, expected_result):
+    """
+    tests if steps with interval in months are matched correctly
+    """
+      #start time = 2024-04-24 , 11:00:00
+    scheduling ="{\"stepSchedule\":{\"executeImmediately\":false,\"frequency\":\"monthly\",\
+    \"startDateTime\":\"2024-04-24T11:00:00\",\"intervalDays\":null,\"intervalWeeks\":null,\
+    \"weekDays\":[],\"months\":[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\",\"9\",\"10\",\"11\",\"12\"],\
+    \"days\":[\"24\"]}}"
 
     assert time_match(scheduling, current_time) ==  expected_result
 
@@ -51,6 +73,7 @@ def test_immediate_step_detected_correctly(execute_immediately,expected_result):
     tests if  the trigger type "immediate" is detected correctly on
     a json scheduling
     """
+   
     scheduling= "{\"stepSchedule\":{\"executeImmediately\":"+ execute_immediately+\
     ",\"frequency\":\"once\",\
     \"startDateTime\":\"2024-04-24T11:00:00\",\"intervalDays\":null,\
