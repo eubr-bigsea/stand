@@ -33,52 +33,63 @@ def step_has_associated_active_job():
     pass
 
 
-def time_match(scheduling, current_time: datetime) -> bool:
+def time_match(scheduling,current_time:datetime)->bool:
+    
     """
     returns if datetime matchs with scheduling json format from a pipeline_step
     to the minute
     """
-
     parsed_scheduling = json.loads(scheduling)
+    
     start_time = get_step_start_time(scheduling)
+    
+    #prevents matches before start_time
+    if(start_time > current_time):
+            return False
+    
+    function_dict ={"once":once_schedule,
+                    "daily":daily_schedule,
+                    "monthly":monthly_schedule
+                    }
+    frequency = parsed_scheduling["stepSchedule"]["frequency"] 
+    if(frequency in function_dict):
+        return function_dict[frequency](scheduling,current_time)
+    else:
+        pass
 
-    # prevents matches before start_time
-    if start_time > current_time:
-
-        return False
-
-    if parsed_scheduling["stepSchedule"]["frequency"] == "once":
-
-        if start_time == current_time:
+def once_schedule(scheduling,current_time:date)->bool:
+        start_time = get_step_start_time(scheduling)
+        if (start_time==current_time):
             return True
         else:
             return False
-
-    if parsed_scheduling["stepSchedule"]["frequency"] == "daily":
-
-        delta = abs(current_time - start_time)
+        
+def daily_schedule(scheduling,current_time:datetime)->bool:
+        parsed_scheduling = json.loads(scheduling)
+        start_time = get_step_start_time(scheduling)
+        delta = abs(current_time- start_time)
         difference_in_minutes = delta.total_seconds() / 60
+        
+        frequency_in_days =parsed_scheduling["stepSchedule"]["intervalDays"]
+        #diference in days  is divisible by frenquency in days , so match 
+        return difference_in_minutes % (int(frequency_in_days)*1440) == 0
 
-        frequency_in_days = parsed_scheduling["stepSchedule"]["intervalDays"]
-        # diference in days  is divisible by frenquency in days , so match
-        return difference_in_minutes % (int(frequency_in_days) * 1440) == 0
-
-    if parsed_scheduling["stepSchedule"]["frequency"] == "monthly":
-
+def monthly_schedule(scheduling,current_time:datetime)->bool:
+        parsed_scheduling = json.loads(scheduling)
+        start_time = get_step_start_time(scheduling)
         current_month = str(current_time.month)
-        current_day = str(current_time.day)
+        current_day  = str(current_time.day)
         current_hour = current_time.hour
-        currrent_minute = current_time.minute
-        scheduled_months = parsed_scheduling["stepSchedule"]["months"]
-        scheduled_days = parsed_scheduling["stepSchedule"]["days"]
+        currrent_minute =current_time.minute
+        scheduled_months =  parsed_scheduling["stepSchedule"]["months"]
+        scheduled_days  =  parsed_scheduling["stepSchedule"]["days"]
         scheduled_hour = start_time.hour
         scheduled_minute = start_time.minute
-
-        if scheduled_hour == current_hour and scheduled_minute == currrent_minute:
-            if current_month in scheduled_months and current_day in scheduled_days:
+       
+        if(scheduled_hour==current_hour and scheduled_minute==currrent_minute):
+            if(current_month in scheduled_months and current_day in scheduled_days):
                 return True
         return False
-
 
 def get_step_is_immediate(scheduling) -> bool:
 
