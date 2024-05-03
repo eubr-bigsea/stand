@@ -474,6 +474,9 @@ class PipelineRun(db.Model):
     final_status = Column(Enum(*list(StatusExecution.values()),
                                name='StatusExecutionEnumType'))
 
+    #new field sugestion
+    last_completed_step = Column(Integer, nullable=False, index=True)
+    #
     # Associations
     steps = relationship("PipelineStepRun", back_populates="pipeline_run")
 

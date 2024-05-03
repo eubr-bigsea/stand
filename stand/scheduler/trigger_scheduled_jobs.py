@@ -25,7 +25,10 @@ from stand.scheduler.utils import *
 
 def is_next_step_in_order(step: PipelineStep, pipeline_run: PipelineRun) -> bool:
     "returns if step is the next step in a pipeline run execution"
-    pass
+    if(step.order == pipeline_run.last_completed_step +1):
+        return True
+    else:
+        return False
 
 
 def step_has_associated_active_job():
@@ -113,6 +116,7 @@ def trigger_scheduled_pipeline_steps(pipeline_run: PipelineRun, time: datetime):
 
         # time scheduled job
         if not get_step_is_immediate(step.scheduling):
+            
             if is_next_step_in_order(step, pipeline_run):
                 if time_match(step.scheduling, time):
 

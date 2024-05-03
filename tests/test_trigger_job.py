@@ -124,8 +124,6 @@ def mocked_functions():
     with patch(
         "stand.scheduler.trigger_scheduled_jobs.get_pipeline_steps"
     ) as mocked_get_pipeline_steps, patch(
-        "stand.scheduler.trigger_scheduled_jobs.is_next_step_in_order"
-    ) as mocked_is_next_step_in_order, patch(
         "stand.scheduler.trigger_scheduled_jobs.create_step_run"
     ) as mocked_create_step_run, patch(
         "stand.scheduler.trigger_scheduled_jobs.update_pipeline_step_run_status"
@@ -137,7 +135,6 @@ def mocked_functions():
 
         yield (
             mocked_get_pipeline_steps,
-            mocked_is_next_step_in_order,
             mocked_create_step_run,
             mocked_update_pipeline_step_run_status,
             mocked_update_pipeline_run_status,
@@ -153,7 +150,6 @@ def test_time_scheduled_job_is_triggered(mocked_functions):
 
     (
         mocked_get_pipeline_steps,
-        mocked_is_next_step_in_order,
         mocked_create_step_run,
         mocked_update_pipeline_step_run_status,
         mocked_update_pipeline_run_status,
@@ -170,10 +166,11 @@ def test_time_scheduled_job_is_triggered(mocked_functions):
         )
     ]
 
-    pipeline_run = PipelineRun(id="1", status=StatusExecution.WAITING)
+    pipeline_run = PipelineRun(
+        id="1", status=StatusExecution.WAITING, last_completed_step=0
+    )
 
     mocked_get_pipeline_steps.return_value = steps
-    mocked_is_next_step_in_order.return_value = True
 
     time = datetime(hour=11, day=24, month=4, year=2024)
     trigger_scheduled_pipeline_steps(pipeline_run, time)
@@ -190,7 +187,6 @@ def test_time_scheduled_job_isnt_triggered_out_of_order(mocked_functions):
 
     (
         mocked_get_pipeline_steps,
-        mocked_is_next_step_in_order,
         mocked_create_step_run,
         mocked_update_pipeline_step_run_status,
         mocked_update_pipeline_run_status,
@@ -218,11 +214,11 @@ def test_time_scheduled_job_isnt_triggered_out_of_order(mocked_functions):
         ),
     ]
 
-    pipeline_run = PipelineRun(id="1", status=StatusExecution.WAITING)
+    pipeline_run = PipelineRun(
+        id="1", status=StatusExecution.WAITING, last_completed_step=0
+    )
 
     mocked_get_pipeline_steps.return_value = steps
-    # only the third function call of is_next_step_in_order returns true
-    mocked_is_next_step_in_order.side_effect = [False, False, True]
     # time to match step 2
     time = datetime(hour=11, day=24, month=4, year=2024)
 
@@ -241,7 +237,6 @@ def test_imediate_job_is_triggered_correctly(mocked_functions):
 
     (
         mocked_get_pipeline_steps,
-        mocked_is_next_step_in_order,
         mocked_create_step_run,
         mocked_update_pipeline_step_run_status,
         mocked_update_pipeline_run_status,
@@ -268,20 +263,17 @@ def test_imediate_job_is_triggered_correctly(mocked_functions):
         ),
     ]
 
-    pipeline_run = PipelineRun(id="1", status=StatusExecution.WAITING)
+    pipeline_run = PipelineRun(
+        id="1", status=StatusExecution.WAITING, last_completed_step=2
+    )
 
     mocked_get_pipeline_steps.return_value = steps
     # no associated active job with the immediate step
     mocked_step_has_associated_active_job.return_value = False
-    # Third step is the next step
-    mocked_is_next_step_in_order.side_effect = [False, False, True]
+
     time = datetime(hour=18, day=15, month=5, year=2024)
 
     trigger_scheduled_pipeline_steps(pipeline_run, time)
 
     # order match , immediate type job dont care abut time, so step_run should be created
     mocked_create_step_run.assert_called_once_with(steps[2])
-
-
-
-
