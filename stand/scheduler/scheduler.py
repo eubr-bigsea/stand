@@ -39,7 +39,7 @@ async def check_and_execute():
         pipeline_runs=active_pipeline_runs,
         engine= engine,
         current_time=current_time)
-        
+        # TODO: pass session as arguments 
         for run in active_pipeline_runs :
             trigger_scheduled_pipeline_steps(pipeline_run=run,time=current_time)
             propagate_job_status(run=run)
