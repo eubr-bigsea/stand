@@ -16,8 +16,13 @@ from sqlalchemy.sql import and_
 from stand.models import (Job, PipelineRun, StatusExecution,Pipeline,PipelineStep)
 
 from stand.scheduler.utils import *
+from stand.scheduler.status_control import *
+from stand.scheduler.trigger_scheduled_jobs import *
+from stand.scheduler.update_pipeline_runs import *
 
 async def check_and_execute():
+    engine = create_sql_alchemy_async_engine(config)
+    session = build_session_maker(engine=engine)
     while True:
         current_time = datetime.now()
         remaining_seconds = (
@@ -25,6 +30,19 @@ async def check_and_execute():
         )
         await asyncio.sleep(remaining_seconds)  # Sleep until next minute
         
+        updated_pipelines = get_pipelines(tahiti_config=config,days=7)
+        active_pipeline_runs = get_runs(session=session, pipeline_ids= updated_pipelines.keys())
+        
+        
+        await update_pipelines_runs(
+        updated_pipelines=updated_pipelines,
+        pipeline_runs=active_pipeline_runs,
+        engine= engine,
+        current_time=current_time)
+        
+        for run in active_pipeline_runs :
+            trigger_scheduled_pipeline_steps(pipeline_run=run,time=current_time)
+            propagate_job_status(run=run)
 
 async def main(engine):
     # await check_and_execute()
