@@ -58,7 +58,7 @@ def time_match(scheduling,current_time:datetime)->bool:
     if(frequency in function_dict):
         return function_dict[frequency](scheduling,current_time)
     else:
-        pass
+        return False
 
 def once_schedule(scheduling,current_time:date)->bool:
         start_time = get_step_start_time(scheduling)
@@ -72,9 +72,8 @@ def daily_schedule(scheduling,current_time:datetime)->bool:
         start_time = get_step_start_time(scheduling)
         delta = abs(current_time- start_time)
         difference_in_minutes = delta.total_seconds() / 60
-        
         frequency_in_days =parsed_scheduling["stepSchedule"]["intervalDays"]
-        #diference in days  is divisible by frenquency in days , so match 
+        #diference  is divisible by frenquency , so match 
         return difference_in_minutes % (int(frequency_in_days)*1440) == 0
 
 def monthly_schedule(scheduling,current_time:datetime)->bool:

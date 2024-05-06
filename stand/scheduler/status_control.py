@@ -16,7 +16,7 @@ from stand.models import (
 from stand.scheduler.utils import *
 
 
-def propagate_job_status(run: PipelineRun):
+async def propagate_job_status(run: PipelineRun):
     """
     Checks status of latest job and propagate it to
     its associated step run and pipeline run
@@ -35,25 +35,27 @@ def propagate_job_status(run: PipelineRun):
             run.status == StatusExecution.RUNNING
             and latest_job_status == StatusExecution.COMPLETED
         ):
-            update_pipeline_run_status(run, StatusExecution.WAITING)
+            await update_pipeline_run_status(run, StatusExecution.WAITING)
             update_pipeline_step_run_status(active_step_run, StatusExecution.COMPLETED)
+            #job completed so last conmpleted step must be increased
+            increase_last_completed_step(run)
 
         # run was waiting and a step was triggered
         elif (
             run.status == StatusExecution.WAITING
             and latest_job_status == StatusExecution.RUNNING
         ):
-            update_pipeline_run_status(run, StatusExecution.RUNNING)
+            await update_pipeline_run_status(run, StatusExecution.RUNNING)
 
         # error in job during run
         elif (
             run.status == StatusExecution.RUNNING
             and latest_job_status == StatusExecution.ERROR
         ):
-            update_pipeline_run_status(run, StatusExecution.ERROR)
+            await update_pipeline_run_status(run, StatusExecution.ERROR)
             update_pipeline_step_run_status(active_step_run, StatusExecution.ERROR)
 
         # propagates other status without special interactions
         else:
-            update_pipeline_run_status(run, latest_job_status)
+            await update_pipeline_run_status(run, latest_job_status)
             update_pipeline_step_run_status(active_step_run, latest_job_status)
