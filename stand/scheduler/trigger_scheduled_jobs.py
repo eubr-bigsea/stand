@@ -21,7 +21,7 @@ from stand.models import (
     TriggerType,
 )
 from stand.scheduler.utils import *
-
+from stand.scheduler.commands import *
 
 def is_next_step_in_order(step: PipelineStep, pipeline_run: PipelineRun) -> bool:
     "returns if step is the next step in a pipeline run execution"
@@ -107,9 +107,7 @@ def get_step_start_time(scheduling) -> datetime:
     return start_datetime_obj
 
 
-def trigger_scheduled_pipeline_steps(pipeline_run: PipelineRun, time: datetime):
-
-    steps = get_pipeline_steps(pipeline_run)
+def trigger_scheduled_pipeline_steps(pipeline_run: PipelineRun, time: datetime,steps:typing.List):
 
     for step in steps:
 
@@ -119,17 +117,18 @@ def trigger_scheduled_pipeline_steps(pipeline_run: PipelineRun, time: datetime):
             if is_next_step_in_order(step, pipeline_run):
                 if time_match(step.scheduling, time):
 
-                    # both time and order match
-                    create_step_run(step)
-                    return step
+                    command =  CreatePipelineStepRun(pipeline_step=step)
+                    return command
                 else:
                     # only time match, execution out of order
-                    update_pipeline_run_status(pipeline_run, StatusExecution.PENDING)
+                    
+                    command = UpdatePipelineRunStatus(pipeline_run=pipeline_run,
+                                                      status=StatusExecution.PENDING)
+                    return command
 
         # steps that occur imediatelly after the last one
         if get_step_is_immediate(step.scheduling):
-
             if is_next_step_in_order(step, pipeline_run):
 
-                create_step_run(step)
-                return step
+                command =  CreatePipelineStepRun(pipeline_step=step)
+                return command

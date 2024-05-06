@@ -119,43 +119,13 @@ def test_get_start_time():
     assert get_step_start_time(scheduling) == datetime_start_time
 
 
-@pytest.fixture
-def mocked_functions():
-    with patch(
-        "stand.scheduler.trigger_scheduled_jobs.get_pipeline_steps"
-    ) as mocked_get_pipeline_steps, patch(
-        "stand.scheduler.trigger_scheduled_jobs.create_step_run"
-    ) as mocked_create_step_run, patch(
-        "stand.scheduler.trigger_scheduled_jobs.update_pipeline_step_run_status"
-    ) as mocked_update_pipeline_step_run_status, patch(
-        "stand.scheduler.trigger_scheduled_jobs.update_pipeline_run_status"
-    ) as mocked_update_pipeline_run_status, patch(
-        "stand.scheduler.trigger_scheduled_jobs.step_has_associated_active_job"
-    ) as mocked_step_has_associated_active_job:
-
-        yield (
-            mocked_get_pipeline_steps,
-            mocked_create_step_run,
-            mocked_update_pipeline_step_run_status,
-            mocked_update_pipeline_run_status,
-            mocked_step_has_associated_active_job,
-        )
 
 
-def test_time_scheduled_job_is_triggered(mocked_functions):
+def test_time_scheduled_job_is_triggered():
     """
     tests if  a time scheduled job is triggered correctly when its
     order is correct and theres a time match
     """
-
-    (
-        mocked_get_pipeline_steps,
-        mocked_create_step_run,
-        mocked_update_pipeline_step_run_status,
-        mocked_update_pipeline_run_status,
-        mocked_step_has_associated_active_job,
-    ) = mocked_functions
-
     steps = [
         PipelineStep(
             id="1",
@@ -170,29 +140,20 @@ def test_time_scheduled_job_is_triggered(mocked_functions):
         id="1", status=StatusExecution.WAITING, last_completed_step=0
     )
 
-    mocked_get_pipeline_steps.return_value = steps
-
     time = datetime(hour=11, day=24, month=4, year=2024)
-    trigger_scheduled_pipeline_steps(pipeline_run, time)
+    command = trigger_scheduled_pipeline_steps(pipeline_run, time,steps=steps)
     # order and time matched , so step run should be created
-    mocked_create_step_run.assert_called_once()
+    
+    expected_command =CreatePipelineStepRun(pipeline_step=steps[0])
+    assert command== expected_command
 
 
-def test_time_scheduled_job_isnt_triggered_out_of_order(mocked_functions):
+def test_time_scheduled_job_isnt_triggered_out_of_order():
     """
     tests if a run has its status changed to pending
     when a pipeline step has a time match but its out of order
     in the execution sequence
     """
-
-    (
-        mocked_get_pipeline_steps,
-        mocked_create_step_run,
-        mocked_update_pipeline_step_run_status,
-        mocked_update_pipeline_run_status,
-        mocked_step_has_associated_active_job,
-    ) = mocked_functions
-
     steps = [
         PipelineStep(
             id="1",
@@ -218,30 +179,25 @@ def test_time_scheduled_job_isnt_triggered_out_of_order(mocked_functions):
         id="1", status=StatusExecution.WAITING, last_completed_step=0
     )
 
-    mocked_get_pipeline_steps.return_value = steps
+   
     # time to match step 2
     time = datetime(hour=11, day=24, month=4, year=2024)
 
-    trigger_scheduled_pipeline_steps(pipeline_run, time)
+    command = trigger_scheduled_pipeline_steps(pipeline_run, time,steps=steps)
     # time matched , but order didnt, pipeline_run goes to pending
-    mocked_update_pipeline_run_status.assert_called_once_with(
-        pipeline_run, StatusExecution.PENDING
-    )
+    expected_command = UpdatePipelineRunStatus(pipeline_run=pipeline_run,
+                                                      status=StatusExecution.PENDING)
+    assert command== expected_command
+    
+    
 
 
-def test_imediate_job_is_triggered_correctly(mocked_functions):
+def test_imediate_job_is_triggered_correctly():
     """
     tests if a job with the "exeucte imediately after the step before"
     option is triggered correctly
     """
 
-    (
-        mocked_get_pipeline_steps,
-        mocked_create_step_run,
-        mocked_update_pipeline_step_run_status,
-        mocked_update_pipeline_run_status,
-        mocked_step_has_associated_active_job,
-    ) = mocked_functions
 
     steps = [
         PipelineStep(
@@ -267,13 +223,12 @@ def test_imediate_job_is_triggered_correctly(mocked_functions):
         id="1", status=StatusExecution.WAITING, last_completed_step=2
     )
 
-    mocked_get_pipeline_steps.return_value = steps
-    # no associated active job with the immediate step
-    mocked_step_has_associated_active_job.return_value = False
 
     time = datetime(hour=18, day=15, month=5, year=2024)
 
-    trigger_scheduled_pipeline_steps(pipeline_run, time)
+    command =trigger_scheduled_pipeline_steps(pipeline_run, time,steps=steps)
+     # order match , immediate type job dont care abut time, so step_run should be created
+    expected_command =CreatePipelineStepRun(pipeline_step=steps[2])
+    assert command== expected_command
+   
 
-    # order match , immediate type job dont care abut time, so step_run should be created
-    mocked_create_step_run.assert_called_once_with(steps[2])

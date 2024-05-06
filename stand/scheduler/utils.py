@@ -22,18 +22,6 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import and_
 
 
-def get_latest_pipeline_step_run(run: PipelineRun) -> PipelineStepRun:
-    pass
-
-
-def get_latest_job_from_pipeline_step_run(step_run: PipelineStepRun) -> Job:
-    pass
-
-
-def update_pipeline_step_run_status(step_run: PipelineStepRun, status: StatusExecution):
-    pass
-
-
 async def get_canceled_runs(session):
     return await session.execute(
         select(PipelineRun).filter(PipelineRun.status == StatusExecution.CANCELED)
@@ -129,17 +117,3 @@ def load_config():
     return config
 
 
-def get_job_status(job: Job) -> StatusExecution:
-    pass
-
-
-def get_pipeline_steps(pipeline: Pipeline):
-    pass
-
-
-def create_step_run(pipeline_step: PipelineStep):
-    pass
-
-
-def increase_last_completed_step(pipeline_run: PipelineRun):
-    pass

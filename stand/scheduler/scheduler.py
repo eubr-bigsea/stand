@@ -39,10 +39,16 @@ async def check_and_execute():
         pipeline_runs=active_pipeline_runs,
         engine= engine,
         current_time=current_time)
-        # TODO: pass session as arguments 
+        
         for run in active_pipeline_runs :
-            trigger_scheduled_pipeline_steps(pipeline_run=run,time=current_time)
-            propagate_job_status(run=run)
+            trigger_commands  = trigger_scheduled_pipeline_steps(pipeline_run=run,time=current_time)
+            for command in trigger_commands:
+                command.execute(session)
+                
+            propagate_commands = propagate_job_status(run=run)
+            for command in propagate_commands:
+                command.execute(session)
+
 
 async def main(engine):
     # await check_and_execute()
