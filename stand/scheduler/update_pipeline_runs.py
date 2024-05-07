@@ -37,6 +37,7 @@ def update_pipelines_runs(
     for pipeline in updated_pipelines.values():
 
         run: PipelineRun = runs.get(pipeline["id"])
+       
         if run:
             if run.status == StatusExecution.RUNNING:
 
@@ -61,6 +62,7 @@ def update_pipelines_runs(
                     commands.append(CreatePipelineRun(pipeline=pipeline))
 
         else:
+           
             commands.append(CreatePipelineRun(pipeline=pipeline))
 
     return commands

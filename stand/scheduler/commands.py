@@ -29,15 +29,28 @@ class CreatePipelineRun(Command):
     def __init__(self, pipeline):
         self.pipeline =pipeline
 
-    def execute(self,session):
-        print("pipeline created")
+    async def execute(self, session: AsyncSession, user: typing.Dic, commit: bool = False):
+        
+        run: PipelineRun = PipelineRun(
+            pipeline_id=self.pipeline["id"],
+            updated=self.pipeline["updated"],
+            user=user,
+            status=StatusExecution.WAITING,
+            final_status=StatusExecution.WAITING,
+            start=datetime.now(),  # FIXME
+            finish=datetime.now(),  # FIXME
+            steps=[]  # FIXME
+        )
+        session.add(run)
+        if commit:
+            await session.commit()
         
 class CreatePipelineStepRun(Command):
     def __init__(self, pipeline_step):
         
         self.pipeline_step =pipeline_step
 
-    def execute(self,session):
+    async def execute(self,session:AsyncSession):
         print("pipeline step created")
     
 class UpdatePipelineRunStatus(Command):

@@ -8,6 +8,7 @@ from mock.mock import AsyncMock
 from stand.models import PipelineRun, StatusExecution, PipelineStep
 from stand.scheduler.utils import *
 from stand.scheduler.update_pipeline_runs import *
+from stand.scheduler.commands import *
 
 config = {
     "stand": {
@@ -73,11 +74,7 @@ def test_get_pipelines(mocked_get, pipelines):
     )
 
 
-@pytest.mark.asyncio
-@patch("stand.scheduler.update_pipeline_runs.create_pipeline_run")
-async def test_update_pipeline_runs_new_run(
-    mocked_create_pipeline_run,
-):
+def test_update_pipeline_runs_new_run():
     """
     Test that the scheduler creates a run for a pipeline when it is enabled and
     run doesn't exist.
@@ -94,22 +91,20 @@ async def test_update_pipeline_runs_new_run(
     runs = []
 
     current_time = datetime.now()
-    engine = create_sql_alchemy_async_engine(config)
-    await update_pipelines_runs(
+ 
+    returned_commands = update_pipelines_runs(
         updated_pipelines=updated_pipelines,
         pipeline_runs=runs,
-        engine=engine,
         current_time=current_time,
     )
+   
+    expected_commands = [CreatePipelineRun(pipeline=updated_pipelines[0])]
+    for command in expected_commands:
+        assert command in returned_commands
+    
 
-    mocked_create_pipeline_run.assert_called_with(ANY, updated_pipelines[0], user={})
 
-
-@pytest.mark.asyncio
-@patch("stand.scheduler.update_pipeline_runs.create_pipeline_run")
-async def test_update_pipeline_runs_create_because_interrupted_run_expired(
-    mocked_create_pipeline_run,
-):
+def test_update_pipeline_runs_create_because_interrupted_run_expired():
     """
     Test that the scheduler creates a new run when an INTERRUPTED run is
     already associated with the pipeline and has expired.
@@ -119,7 +114,7 @@ async def test_update_pipeline_runs_create_because_interrupted_run_expired(
         "name": "Pipeline with expired interrupted run",
         "enabled": True,
     }
-    
+
     updated_pipelines = {1002: pipeline}
     runs = [
         PipelineRun(
@@ -127,26 +122,20 @@ async def test_update_pipeline_runs_create_because_interrupted_run_expired(
             status=StatusExecution.INTERRUPTED,
             finish=datetime.now() - timedelta(days=8),
         ),
-
     ]
 
-    engine = create_sql_alchemy_async_engine(config)
-    await update_pipelines_runs(
+    returned_commands = update_pipelines_runs(
         updated_pipelines=updated_pipelines,
         pipeline_runs=runs,
-        engine=engine,
         current_time=datetime.now(),
     )
-    mocked_create_pipeline_run.assert_called_with(ANY, pipeline, user={})
+    expected_commands = [CreatePipelineRun(pipeline=updated_pipelines[1002])]
+    for command in expected_commands:
+        assert command in returned_commands
 
 
-@pytest.mark.asyncio
-@patch("stand.scheduler.update_pipeline_runs.create_pipeline_run")
-@patch("stand.scheduler.update_pipeline_runs.update_pipeline_run_status")
-async def test_update_pipeline_runs_after_valid_period(
-    mocked_update_pipeline_run_status: AsyncMock,
-    mocked_create_pipeline_run: AsyncMock,
-):
+
+def test_update_pipeline_runs_after_valid_period():
     """
     Test if the run state is changed to PENDING if it is not FINISHED and it
     is expired.
@@ -163,14 +152,15 @@ async def test_update_pipeline_runs_after_valid_period(
         )
     ]
 
-    engine = create_sql_alchemy_async_engine(config)
-    await update_pipelines_runs(
+    retuned_commands = update_pipelines_runs(
         updated_pipelines=updated_pipelines,
         pipeline_runs=runs,
-        engine=engine,
         current_time=datetime.now(),
     )
-    mocked_create_pipeline_run.assert_called_once_with(ANY, pipeline, user={})
-    mocked_update_pipeline_run_status.assert_called_once_with(
-        ANY, runs[0], StatusExecution.PENDING
+    expected_commands = []
+    expected_commands.append(CreatePipelineRun(pipeline=updated_pipelines[6]))
+    expected_commands.append(
+        UpdatePipelineRunStatus(pipeline_run=runs[0], status=StatusExecution.PENDING)
     )
+    for command in expected_commands:
+        assert command in retuned_commands
