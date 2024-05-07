@@ -3,22 +3,22 @@ import asyncio
 import os
 import typing
 from datetime import date, datetime, timedelta
-from typing import List 
+from typing import List
 import requests
 import yaml
 from croniter import croniter
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import (
-    AsyncEngine, AsyncSession, create_async_engine)
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import and_
 
-from stand.models import (Job, PipelineRun, StatusExecution,Pipeline,PipelineStep)
+from stand.models import Job, PipelineRun, StatusExecution, Pipeline, PipelineStep
 
 from stand.scheduler.utils import *
 from stand.scheduler.status_control import *
 from stand.scheduler.trigger_scheduled_jobs import *
 from stand.scheduler.update_pipeline_runs import *
+
 
 async def check_and_execute():
     engine = create_sql_alchemy_async_engine(config)
@@ -29,22 +29,31 @@ async def check_and_execute():
             60 - current_time.second - (current_time.microsecond / 1_000_000)
         )
         await asyncio.sleep(remaining_seconds)  # Sleep until next minute
-        
-        updated_pipelines = get_pipelines(tahiti_config=config,days=7)
-        active_pipeline_runs = get_runs(session=session, pipeline_ids= updated_pipelines.keys())
-        
-        
-        await update_pipelines_runs(
-        updated_pipelines=updated_pipelines,
-        pipeline_runs=active_pipeline_runs,
-        engine= engine,
-        current_time=current_time)
-        
-        for run in active_pipeline_runs :
-            trigger_commands  = trigger_scheduled_pipeline_steps(pipeline_run=run,time=current_time)
+
+        updated_pipelines = get_pipelines(tahiti_config=config, days=7)
+        active_pipeline_runs = get_runs(
+            session=session, pipeline_ids=updated_pipelines.keys()
+        )
+
+        pipeline_runs_commands = update_pipelines_runs(
+            updated_pipelines=updated_pipelines,
+            pipeline_runs=active_pipeline_runs,
+            engine=engine,
+            current_time=current_time,
+        )
+        for command in pipeline_runs_commands:
+            command.execute(session)
+        # must be called again bc update_pipeline_uns ccan create new runs
+        active_pipeline_runs = get_runs(
+            session=session, pipeline_ids=updated_pipelines.keys()
+        )
+        for run in active_pipeline_runs:
+            trigger_commands = trigger_scheduled_pipeline_steps(
+                pipeline_run=run, time=current_time
+            )
             for command in trigger_commands:
                 command.execute(session)
-                
+
             propagate_commands = propagate_job_status(run=run)
             for command in propagate_commands:
                 command.execute(session)
