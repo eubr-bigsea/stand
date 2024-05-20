@@ -631,10 +631,10 @@ class Pipeline():
     created = None 
     updated = None 
     version = None 
- 
     execution_window = None
     variables = None
     preferred_cluster_id = None
+    steps = None
     
     def __str__(self):
         return self.name
@@ -649,7 +649,7 @@ class PipelineStep():
     
     def __init__(self, id=None, name=None, order=None, 
                  scheduling=None, trigger_type=None,description=None, enabled=None,
-                 workflow_type=None):
+                 workflow_type=None, workflow_id=None):
         self.id = id
         self.name = name
         self.order = order
@@ -658,6 +658,7 @@ class PipelineStep():
         self.description = description
         self.enabled = enabled
         self.workflow_type = workflow_type
+        self.workflow_id = workflow_id
 
   
     def __str__(self):

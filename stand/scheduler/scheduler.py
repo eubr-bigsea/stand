@@ -38,23 +38,29 @@ async def check_and_execute():
         pipeline_runs_commands = update_pipelines_runs(
             updated_pipelines=updated_pipelines,
             pipeline_runs=active_pipeline_runs,
-            engine=engine,
             current_time=current_time,
         )
         for command in pipeline_runs_commands:
             command.execute(session)
-        # must be called again bc update_pipeline_uns ccan create new runs
+        # must be called again bc pipeline_runs_commands can create new runs
         active_pipeline_runs = get_runs(
             session=session, pipeline_ids=updated_pipelines.keys()
         )
         for run in active_pipeline_runs:
+
+            steps = [step for step in updated_pipelines[run["pipeline_id"]]]
+
             trigger_commands = trigger_scheduled_pipeline_steps(
-                pipeline_run=run, time=current_time
+                pipeline_run=run, time=current_time, steps=steps
             )
             for command in trigger_commands:
                 command.execute(session)
 
-            propagate_commands = propagate_job_status(run=run)
+            latest_job = get_latest_job(run=run)
+            active_step_run = get_active_step_run(run=run)
+            propagate_commands = propagate_job_status(
+                run=run, latest_job=latest_job, active_step_run=active_step_run
+            )
             for command in propagate_commands:
                 command.execute(session)
 

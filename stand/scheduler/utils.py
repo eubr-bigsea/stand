@@ -28,6 +28,7 @@ async def get_canceled_runs(session):
     ).fetchall()
 
 
+
 async def get_runs(session, pipeline_ids):
     # Subquery to get the most recent run for each pipeline_id
     subquery = (
@@ -90,7 +91,8 @@ async def create_pipeline_run(
 ) -> None:
     pass
 
-
+def get_pipeline_steps(pipeline:Pipeline):
+    pass
 def create_sql_alchemy_async_engine(config: typing.Dict):
     url = config["stand"]["servers"]["database_url"]
     if "sqlite" in url:
@@ -117,3 +119,10 @@ def load_config():
     return config
 
 
+def get_latest_job(run:PipelineRun)->Job:
+    "name"
+    pass
+
+def get_active_step_run(run:PipelineRun)->Job:
+    "name"
+    pass

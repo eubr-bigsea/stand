@@ -1,15 +1,7 @@
-import asyncio
-import os
+
 import typing
 from datetime import date, datetime, timedelta
 from typing import List
-import requests
-import yaml
-from croniter import croniter
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.sql import and_
 import json
 from stand.models import (
     Job,
@@ -117,7 +109,7 @@ def trigger_scheduled_pipeline_steps(pipeline_run: PipelineRun, time: datetime,s
             if is_next_step_in_order(step, pipeline_run):
                 if time_match(step.scheduling, time):
 
-                    command =  CreatePipelineStepRun(pipeline_step=step)
+                    command =  TriggerWorkflow(pipeline_step=step)
                     return command
                 else:
                     # only time match, execution out of order
@@ -130,5 +122,5 @@ def trigger_scheduled_pipeline_steps(pipeline_run: PipelineRun, time: datetime,s
         if get_step_is_immediate(step.scheduling):
             if is_next_step_in_order(step, pipeline_run):
 
-                command =  CreatePipelineStepRun(pipeline_step=step)
+                command =  TriggerWorkflow(pipeline_step=step)
                 return command

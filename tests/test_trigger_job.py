@@ -144,7 +144,7 @@ def test_time_scheduled_job_is_triggered():
     command = trigger_scheduled_pipeline_steps(pipeline_run, time,steps=steps)
     # order and time matched , so step run should be created
     
-    expected_command =CreatePipelineStepRun(pipeline_step=steps[0])
+    expected_command =TriggerWorkflow(pipeline_step=steps[0])
     assert command== expected_command
 
 
@@ -228,7 +228,7 @@ def test_imediate_job_is_triggered_correctly():
 
     command =trigger_scheduled_pipeline_steps(pipeline_run, time,steps=steps)
      # order match , immediate type job dont care abut time, so step_run should be created
-    expected_command =CreatePipelineStepRun(pipeline_step=steps[2])
+    expected_command =TriggerWorkflow(pipeline_step=steps[2])
     assert command== expected_command
    
 
