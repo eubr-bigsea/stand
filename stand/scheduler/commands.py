@@ -30,32 +30,31 @@ class CreatePipelineRun(Command):
         self.pipeline = pipeline
 
     def get_pipeline_run_start(
-        self, current_datetime: datetime, next_window_option=False
-    ) -> bool:
+        self, current_time: datetime, next_window_option=False
+    ) -> datetime:
         frequency = self.pipeline["execution_window"]
         if frequency == "daily":
-            next_datetime = current_datetime + timedelta(days=1)
+            next_datetime = current_time 
             return next_datetime.replace(hour=0, minute=0, second=0, microsecond=0)
 
         elif frequency == "weekly":
-            days_until_sunday = (6 - current_datetime.weekday()) % 7
-            if days_until_sunday == 0:
-                days_until_sunday = 7
-            next_datetime = current_datetime + timedelta(days=days_until_sunday)
-            return next_datetime.replace(hour=0, minute=0, second=0, microsecond=0)
+            days_since_sunday = (current_time.weekday() + 1) % 7
+            if days_since_sunday == 0:
+                days_since_sunday = 7
+            previous_sunday_datetime = current_time - timedelta(days=days_since_sunday)
+            return previous_sunday_datetime.replace(hour=0, minute=0, second=0, microsecond=0)
+
 
         elif frequency == "monthly":
-            year = current_datetime.year
-            month = current_datetime.month
-            if month == 12:
-                next_month = 1
-                year += 1
-            else:
-                next_month = month + 1
-            next_datetime = datetime(year, next_month, 1)
+            year = current_time.year
+            month = current_time.month
+           
+            next_datetime = datetime(year, month, 1)
             return next_datetime.replace(hour=0, minute=0, second=0, microsecond=0)
 
-    def get_pipeline_run_end(self, current_time, next_window_option=False):
+    def get_pipeline_run_end(
+        self, current_time: datetime, next_window_option=False
+    ) -> datetime:
         frequency = self.pipeline["execution_window"]
         if frequency == "daily":
 
@@ -83,29 +82,39 @@ class CreatePipelineRun(Command):
             return next_month_start.replace(
                 hour=0, minute=0, second=0, microsecond=0
             ) - timedelta(seconds=1)
-
+    
+    def create_step_run_from_json_step(self,step):
+        pipeline_step_run =PipelineStepRun(
+        status = StatusExecution.WAITING,
+        created =self.get_pipeline_run_start(current_time=datetime.now()),
+        pipeline_run_id =self.pipeline["id"]
+        )
+        
     async def execute(
         self, session: AsyncSession, user: typing.Dict, commit: bool = False
     ) -> PipelineRun:
 
         steps = []
         for step in self.pipeline["steps"]:
-            steps.append(PipelineStepRun(step))
+            
+            
 
-        run: PipelineRun = PipelineRun(
+        pipeline_run = PipelineRun(
             pipeline_id=self.pipeline["id"],
             updated=self.pipeline["updated"],
             user=user,
             status=StatusExecution.WAITING,
             final_status=StatusExecution.WAITING,
-            start=self.get_pipeline_run_start(),
-            finish=self.get_pipeline_run_end(),
+            start=self.get_pipeline_run_start(current_time=datetime.now()),
+            finish=self.get_pipeline_run_end(current_time=datetime.now()),
             steps=steps,
         )
-        session.add(run)
+        run: PipelineRun = pipeline_run
+      
         if commit:
+            session.add(run)
             await session.commit()
-        return run
+        return pipeline_run
 
 
 class TriggerWorkflow(Command):
@@ -114,7 +123,7 @@ class TriggerWorkflow(Command):
         self.pipeline_step = pipeline_step
 
     async def execute(self, session: AsyncSession):
-        
+
         print("workflow was triggered, job created")
 
 
