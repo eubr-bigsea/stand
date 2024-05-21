@@ -124,4 +124,4 @@ async def test_CreatePipelineRun_returns_correct_object():
     
     command = CreatePipelineRun(pipeline=pipelline)
     pipeline_run =  await command.execute(session=None,user=None)
-    print(pipeline_run.pipeline_id)
+    

@@ -10,9 +10,6 @@ from sqlalchemy.sql import and_
 from stand.models import Job, PipelineRun, StatusExecution, Pipeline, PipelineStep
 
 from stand.scheduler.utils import *
-from stand.scheduler.status_control import *
-from stand.scheduler.trigger_scheduled_jobs import *
-from stand.scheduler.update_pipeline_runs import *
 
 
 class Command:
@@ -30,7 +27,7 @@ class CreatePipelineRun(Command):
         self.pipeline = pipeline
 
     def get_pipeline_run_start(
-        self, current_time: datetime, next_window_option=False
+        self, current_time=datetime.now(), next_window_option=False
     ) -> datetime:
         frequency = self.pipeline["execution_window"]
         if frequency == "daily":
@@ -53,7 +50,7 @@ class CreatePipelineRun(Command):
             return next_datetime.replace(hour=0, minute=0, second=0, microsecond=0)
 
     def get_pipeline_run_end(
-        self, current_time: datetime, next_window_option=False
+        self, current_time=datetime.now(), next_window_option=False
     ) -> datetime:
         frequency = self.pipeline["execution_window"]
         if frequency == "daily":
@@ -86,8 +83,9 @@ class CreatePipelineRun(Command):
     def create_step_run_from_json_step(self,step):
         pipeline_step_run =PipelineStepRun(
         status = StatusExecution.WAITING,
-        created =self.get_pipeline_run_start(current_time=datetime.now()),
-        pipeline_run_id =self.pipeline["id"]
+        created =self.get_pipeline_run_start(),
+        pipeline_run_id =self.pipeline["id"],
+        workflow_id = step["workflow"]["id"]
         )
         
     async def execute(
@@ -96,17 +94,16 @@ class CreatePipelineRun(Command):
 
         steps = []
         for step in self.pipeline["steps"]:
-            
+            steps.append(self.create_step_run_from_json_step(step))
             
 
         pipeline_run = PipelineRun(
             pipeline_id=self.pipeline["id"],
-            updated=self.pipeline["updated"],
-            user=user,
+            last_completed_step =0,
             status=StatusExecution.WAITING,
             final_status=StatusExecution.WAITING,
-            start=self.get_pipeline_run_start(current_time=datetime.now()),
-            finish=self.get_pipeline_run_end(current_time=datetime.now()),
+            start=self.get_pipeline_run_start(),
+            finish=self.get_pipeline_run_end(),
             steps=steps,
         )
         run: PipelineRun = pipeline_run

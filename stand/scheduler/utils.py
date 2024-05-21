@@ -56,16 +56,6 @@ async def get_runs(session, pipeline_ids):
 
     return result.fetchall()
 
-async def update_run(session: AsyncSession, updated: datetime,
-                     run: PipelineRun) -> None:
-    """
-    Update run with latest pipeline data
-    """
-    run.updated = updated
-    run.status = StatusExecution.PENDING
-    await session.commit()
-    # Create expected steps run for pipeline
-
 
 def get_pipelines(
     tahiti_config: typing.Dict, days: int
@@ -86,26 +76,14 @@ def get_pipelines(
     return updated_pipelines
 
 
-async def create_pipeline_run(
-    session: AsyncSession, pipeline: typing.Dict, user: typing.Dict
-) -> None:
-    pass
 
-def get_pipeline_steps(pipeline:Pipeline):
-    pass
+
 def create_sql_alchemy_async_engine(config: typing.Dict):
     url = config["stand"]["servers"]["database_url"]
     if "sqlite" in url:
         url = url.replace("sqlite", "sqlite+aiosqlite")
     return create_async_engine(url, echo=True, future=True)
 
-
-async def update_pipeline_run_status(
-    session: AsyncSession, run: PipelineRun, state: StatusExecution
-) -> None:
-    run: PipelineRun = session.merge(run)
-    run.status = state
-    await session.commit()
 
 
 def build_session_maker(engine: AsyncEngine):

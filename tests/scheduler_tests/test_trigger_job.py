@@ -2,13 +2,10 @@ from collections import KeysView
 from datetime import date, datetime, timedelta
 
 import pytest
-from mock import ANY, patch, MagicMock
-from mock.mock import AsyncMock
-
 from stand.models import PipelineRun, StatusExecution, PipelineStep
 from stand.scheduler.utils import *
 from stand.scheduler.trigger_scheduled_jobs import *
-
+from stand.scheduler.commands import TriggerWorkflow, UpdatePipelineRunStatus
 
 @pytest.mark.parametrize(
     "current_time, expected_result",

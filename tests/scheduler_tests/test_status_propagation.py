@@ -7,7 +7,7 @@ import pytest
 from stand.models import PipelineRun, StatusExecution, PipelineStep
 from stand.scheduler.utils import *
 from stand.scheduler.status_control import *
-
+from stand.scheduler.commands import *
 
 def test_completed_job_status_propagation():
     """
