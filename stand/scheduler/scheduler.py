@@ -86,20 +86,10 @@ async def check_and_execute():
        
 
 async def main(engine):
-    # await check_and_execute()
-    async_session = build_session_maker(engine)
+    await check_and_execute()
+    
 
-    async with async_session() as session:
-        result = await session.execute(select(Job).filter(Job.id == 1).limit(1))
-    # async with engine.begin() as conn:
-    #    result = await conn.execute(select(Job).filter(Job.id == 1))
-    # job: Job = result.one()
-    job: Job = result.scalars().one()
-    print(">>>>>>>>", job, type(job))
-    await session.close()
-    await engine.dispose()
-
-
+ 
 if __name__ == "__main__":
     config = load_config()
     print(config["stand"]["servers"]["database_url"])
