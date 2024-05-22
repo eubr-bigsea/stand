@@ -318,6 +318,7 @@ class Job(db.Model):
                     default=StatusExecution.WAITING, nullable=False)
     status_text = Column(Text(4294000000))
     exception_stack = Column(Text(4294000000))
+    pipeline_step_run_id = Column(Integer, nullable=False)
     workflow_id = Column(Integer, nullable=False)
     workflow_name = Column(String(200), nullable=False)
     workflow_definition = Column(Text(4294000000))
@@ -345,6 +346,7 @@ class Job(db.Model):
                          cascade="all, delete-orphan")
     results = relationship("JobResult",
                            cascade="all, delete-orphan")
+    pipeline_step_run = relationship("PipelineStepRun",back_populates="jobs")
 
     def __str__(self):
         return self.name
@@ -509,7 +511,8 @@ class PipelineStepRun(db.Model):
     jobs = relationship(
         "Job",
         overlaps="pipeline_step_runs",
-        secondary=job_pipeline_step_run)
+        secondary=job_pipeline_step_run,
+        back_populates="pipeline_step_run")
     pipeline_run_id = Column(
         Integer,
         ForeignKey("pipeline_run.id",
@@ -628,6 +631,7 @@ class Pipeline():
     user_id = None 
     user_login = None 
     user_name = None
+    steps = None
     created = None 
     updated = None 
     version = None 
