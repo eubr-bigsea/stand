@@ -15,6 +15,7 @@ from sqlalchemy.sql import and_
 
 from stand.models import (Job, PipelineRun, StatusExecution,Pipeline,PipelineStep)
 
+from configuration import load
 from stand.scheduler.utils import *
 from stand.scheduler.status_control import *
 from stand.scheduler.trigger_scheduled_jobs import *
@@ -60,7 +61,7 @@ async def main(engine):
 
 
 if __name__ == "__main__":
-    config = load_config()
+    config = load()
     print(config["stand"]["servers"]["database_url"])
     engine = create_sql_alchemy_async_engine(config)
     asyncio.run(main(engine))
