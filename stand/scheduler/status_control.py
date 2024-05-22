@@ -4,6 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import and_
+from sqlalchemy.orm.exc import NoResultFound
 
 from stand.models import (
     Job,
@@ -21,12 +22,13 @@ async def propagate_job_status(run: PipelineRun):
     Checks status of latest job and propagate it to
     its associated step run and pipeline run
     """
+    
+    try:
 
-    active_step_run = get_latest_pipeline_step_run(run)
+        session = build_session_maker()
 
-    if active_step_run is not None:
-
-        latest_job = get_latest_job_from_pipeline_step_run(active_step_run)
+        active_step_run = await get_latest_pipeline_step_run(session, run)
+        latest_job = await get_latest_job_from_pipeline_step_run(session, active_step_run)
 
         latest_job_status = latest_job.status
 
@@ -59,3 +61,11 @@ async def propagate_job_status(run: PipelineRun):
         else:
             await update_pipeline_run_status(run, latest_job_status)
             update_pipeline_step_run_status(active_step_run, latest_job_status)
+   
+    #except NoResultFound:
+        session.commit()
+    except:
+        session.rollback()
+
+    finally:
+        session.close()

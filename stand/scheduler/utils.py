@@ -21,17 +21,29 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engin
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import and_
 
-
-def get_latest_pipeline_step_run(run: PipelineRun) -> PipelineStepRun:
-    pass
+from stand.services.tahiti_service import query_tahiti
 
 
-def get_latest_job_from_pipeline_step_run(step_run: PipelineStepRun) -> Job:
-    pass
+async def get_latest_pipeline_step_run(session: AsyncSession, run: PipelineRun) -> PipelineStepRun:
+    # Return the latest pipeline step run given a pipeline run
+    query = select(PipelineStepRun).filter(PipelineStepRun.id == run.last_completed_step)
+    return await session.execute(query).one()
 
 
-def update_pipeline_step_run_status(step_run: PipelineStepRun, status: StatusExecution):
-    pass
+async def get_latest_job_from_pipeline_step_run(session: AsyncSession, step_run: PipelineStepRun) -> Job:
+    query = (select(Job, func.max(Job.finished).label("latest_job_finished_time"))
+             .filter(Job.pipeline_step_run_id == step_run.id)
+             .group_by(Job.pipeline_step_run_id))
+    
+    return await session.execute(query).one()
+
+
+async def update_pipeline_step_run_status(session: AsyncSession, step_run: PipelineStepRun, status: StatusExecution):
+    """
+    Update StepRun with latest execution status
+    """
+    step_run.status = status
+    session.flush()
 
 
 async def get_canceled_runs(session):
@@ -85,14 +97,9 @@ def get_pipelines(
     Don't need to read all pipelines, only those updated in the last window.
     """
 
-    tahiti_api_url = tahiti_config["url"]
     reference = date.today() - timedelta(days=days)
     params = {"after": reference}
-    headers = {"X-Auth-Token": tahiti_config["auth_token"]}
-    resp = requests.get(f"{tahiti_api_url}/pipelines", params, headers=headers)
-    if resp.status_code != 200:
-        raise Exception(f"Error {resp.status_code} while getting pipelines")
-
+    resp = query_tahiti(item_path='/pipelines', params=params) # return data in json
     updated_pipelines = dict([[p["id"], p] for p in resp.json()["list"]])
     return updated_pipelines
 
@@ -100,7 +107,8 @@ def get_pipelines(
 async def create_pipeline_run(
     session: AsyncSession, pipeline: typing.Dict, user: typing.Dict
 ) -> None:
-    pass
+    pipeline_run = PipelineRun(pipeline)
+    await session.add(pipeline_run)
 
 
 def create_sql_alchemy_async_engine(config: typing.Dict):
@@ -121,25 +129,27 @@ async def update_pipeline_run_status(
 def build_session_maker(engine: AsyncEngine):
     return sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
-
-def load_config():
-    config_file = os.environ.get("STAND_CONFIG")
-    with open(config_file, "r") as f:
-        config = yaml.load(f, Loader=yaml.FullLoader)
-    return config
-
-
-def get_job_status(job: Job) -> StatusExecution:
-    pass
-
+async def get_job_status(session, job: Job) -> StatusExecution:
+    # caso o objeto Job é passado (ele ja tem todas as infos dentro dele)
+    return job.status
+    # caso seja passado job_id ao inves do objeto Job
+    query = select(Job).filter(Job.id == job_id)
+    result = await session.execute(query).fisrt()
+    return result.status
 
 def get_pipeline_steps(pipeline: Pipeline):
-    pass
+    # objeto Pipeline já é passado com todas as infos
+    return pipeline.steps
+    # id da pipeline é passado
+    resp = query_tahiti(item_path='/pipelines', item_id=pipeline_id) # return data in json
+    return resp[0]
 
 
-def create_step_run(pipeline_step: PipelineStep):
-    pass
+def create_step_run(session, pipeline_step: PipelineStep):
+    pipeline_step_run = PipelineStepRun(pipeline_step)
+    session.add(pipeline_step_run)
 
 
-def increase_last_completed_step(pipeline_run: PipelineRun):
-    pass
+def increase_last_completed_step(session, pipeline_run: PipelineRun):
+    pipeline_run.last_completed_step += 1
+    session.flush()

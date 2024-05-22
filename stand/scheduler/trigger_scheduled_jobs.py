@@ -25,10 +25,7 @@ from stand.scheduler.utils import *
 
 def is_next_step_in_order(step: PipelineStep, pipeline_run: PipelineRun) -> bool:
     "returns if step is the next step in a pipeline run execution"
-    if(step.order == pipeline_run.last_completed_step +1):
-        return True
-    else:
-        return False
+    return step.order == pipeline_run.last_completed_step + 1
 
 
 def step_has_associated_active_job():
@@ -113,23 +110,32 @@ def trigger_scheduled_pipeline_steps(pipeline_run: PipelineRun, time: datetime):
 
     for step in steps:
 
-        # time scheduled job
-        if not get_step_is_immediate(step.scheduling):
-            
-            if is_next_step_in_order(step, pipeline_run):
-                if time_match(step.scheduling, time):
+        try:
+            session = build_session_maker()
+            # time scheduled job
+            if not get_step_is_immediate(step.scheduling):
+                
+                if is_next_step_in_order(step, pipeline_run):
+                    if time_match(step.scheduling, time):
 
-                    # both time and order match
-                    create_step_run(step)
+                        # both time and order match
+                        create_step_run(session, step)
+                        return step
+                    else:
+                        # only time match, execution out of order
+                        update_pipeline_run_status(pipeline_run, StatusExecution.PENDING)
+
+            # steps that occur imediatelly after the last one
+            if get_step_is_immediate(step.scheduling):
+
+                if is_next_step_in_order(step, pipeline_run):
+
+                    create_step_run(session, step)
                     return step
-                else:
-                    # only time match, execution out of order
-                    update_pipeline_run_status(pipeline_run, StatusExecution.PENDING)
+                
+            session.commit()
+        except:
+            session.rollback()
 
-        # steps that occur imediatelly after the last one
-        if get_step_is_immediate(step.scheduling):
-
-            if is_next_step_in_order(step, pipeline_run):
-
-                create_step_run(step)
-                return step
+        finally:
+            session.close()
