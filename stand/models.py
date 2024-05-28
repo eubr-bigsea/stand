@@ -341,6 +341,15 @@ class Job(db.Model):
         "Cluster",
         overlaps='cluster',
         foreign_keys=[cluster_id])
+    pipeline_step_run_id = Column(
+        Integer,
+        ForeignKey("pipeline_step_run.id",
+                   name="fk_job_pipeline_step_run_id"),
+        index=True)
+    pipeline_step_run = relationship(
+        "PipelineStepRun",
+        overlaps='jobs',
+        foreign_keys=[pipeline_step_run_id])
     steps = relationship("JobStep",
                          cascade="all, delete-orphan")
     results = relationship("JobResult",
@@ -468,6 +477,7 @@ class PipelineRun(db.Model):
     start = Column(DateTime, nullable=False, index=True)
     finish = Column(DateTime, nullable=False, index=True)
     pipeline_id = Column(Integer, nullable=False, index=True)
+    last_executed_step = Column(Integer, nullable=False)
     comment = Column(String(200))
     status = Column(Enum(*list(StatusExecution.values()),
                          name='StatusExecutionEnumType'), nullable=False)
