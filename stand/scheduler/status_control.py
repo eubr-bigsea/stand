@@ -48,7 +48,7 @@ def propagate_job_status(
             commands.append(
                 ChangeLastCompletedStep(
                     pipeline_run=run,
-                    new_last_completed_step=PipelineRun.last_completed_step + 1,
+                    new_last_completed_step=PipelineRun.last_executed_step + 1,
                 )
             )
             return commands

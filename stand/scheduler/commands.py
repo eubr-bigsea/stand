@@ -87,7 +87,8 @@ class CreatePipelineRun(Command):
         pipeline_run_id =self.pipeline["id"],
         workflow_id = step["workflow"]["id"]
         )
-        
+        return pipeline_step_run
+    
     async def execute(
         self, session: AsyncSession, user: typing.Dict, commit: bool = False
     ) -> PipelineRun:
@@ -153,7 +154,7 @@ class ChangeLastCompletedStep(Command):
         self.new_last_completed_step = new_last_completed_step
 
     def execute(self, session):
-        self.pipeline_run.last_completed_step = self.new_last_completed_step
+        self.pipeline_run.last_executed_step = self.new_last_completed_step
         session.commit()
 
 
