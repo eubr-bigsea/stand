@@ -27,7 +27,18 @@ async def get_canceled_runs(session):
         select(PipelineRun).filter(PipelineRun.status == StatusExecution.CANCELED)
     ).fetchall()
 
+async def get_latest_pipeline_step_run(session: AsyncSession, run: PipelineRun) -> PipelineStepRun:
+    # Return the latest pipeline step run given a pipeline run
+    query = select(PipelineStepRun).filter(PipelineStepRun.id == run.last_completed_step)
+    return await session.execute(query).one()
 
+
+async def get_latest_job_from_pipeline_step_run(session: AsyncSession, step_run: PipelineStepRun) -> Job:
+    query = (select(Job, func.max(Job.finished).label("latest_job_finished_time"))
+             .filter(Job.pipeline_step_run_id == step_run.id)
+             .group_by(Job.pipeline_step_run_id))
+    
+    return await session.execute(query).one()
 
 async def get_runs(session, pipeline_ids):
     # Subquery to get the most recent run for each pipeline_id
