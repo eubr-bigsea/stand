@@ -31,17 +31,30 @@ def update_pipelines_runs(
     for pipeline in updated_pipelines.values():
 
         run: PipelineRun = runs.get(pipeline["id"])
-       
-        if run:
-            if run.status == StatusExecution.RUNNING:
 
+        if run:
+            if (
+                run.status == StatusExecution.RUNNING
+                or run.status == StatusExecution.WAITING
+            ):
+                # run expired
                 if run.finish < current_time:
-                    commands.append(
-                        UpdatePipelineRunStatus(
-                            pipeline_run=run, status=StatusExecution.PENDING
+                    # all steps completed
+                    if run.last_executed_step == len(run.steps):
+                        commands.append(
+                            UpdatePipelineRunStatus(
+                                pipeline_run=run, status=StatusExecution.COMPLETED
+                            )
                         )
-                    )
-                    commands.append(CreatePipelineRun(pipeline=pipeline))
+                        commands.append(CreatePipelineRun(pipeline=pipeline))
+                    # not all steps completed
+                    else:
+                        commands.append(
+                            UpdatePipelineRunStatus(
+                                pipeline_run=run, status=StatusExecution.PENDING
+                            )
+                        )
+                        commands.append(CreatePipelineRun(pipeline=pipeline))
 
                 # Test if run is using latest pipeline data
                 elif run.updated < pipeline["updated"]:
@@ -51,12 +64,16 @@ def update_pipelines_runs(
                         )
                     )
 
+            if run.status == StatusExecution.COMPLETED:
+                if run.finish < current_time:
+                    commands.append(CreatePipelineRun(pipeline=pipeline))
+
             elif run.status == StatusExecution.INTERRUPTED:
                 if run.finish < current_time:
                     commands.append(CreatePipelineRun(pipeline=pipeline))
 
         else:
-           
+
             commands.append(CreatePipelineRun(pipeline=pipeline))
 
     return commands
