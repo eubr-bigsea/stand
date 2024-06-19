@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import datetime
 import json
 import logging
@@ -9,7 +8,7 @@ import rq
 import stand.util
 from rq.exceptions import NoSuchJobError
 from stand.models import (
-    db, StatusExecution, JobException, Job, JobType, Cluster)
+    db, StatusExecution, JobException, JobType, Cluster)
 from stand.services.redis_service import connect_redis_store
 from stand.schema import ClusterItemResponseSchema
 
@@ -36,9 +35,8 @@ class JobService:
         result = (True, '')
         tahiti_config = self.config.get('services', {}).get('tahiti', {})
         if all(['url' in tahiti_config, 'token' in tahiti_config]):
-            service_url = '{}/{}'.format(tahiti_config['url'],
-                                         job['workflow_id'])
-            r = requests.get('url',
+            service_url = f"{tahiti_config['url']}/{job['workflow_id']}"
+            r = requests.get(service_url,
                              headers={'X-Auth-Token': tahiti_config['token']})
             if r.status_code == 200:
                 pass  # OK
@@ -97,12 +95,21 @@ class JobService:
             db.session.add(job)
             db.session.flush()  # Flush is needed to get the value of job.id
         else:
-            job.id = 800000 + job.workflow_id # Offset when job is not persistent
+            # Offset when job is not persistent. E.g. Data Explorer
+            job.id = 800000 + job.workflow_id
 
-        redis_store = connect_redis_store(None, testing=testing)
+        # Test if workflow has a variable indicating the Redis db to be used.
+        # Useful when debugging a shared environment
+        redis_db = next((v for v in workflow.get('variables', [])
+                         if v.get('name') == 'redis_db'), None)
+        if redis_db is not None:
+            redis_store = JobService._get_redis_store(
+                None, testing, db=int(redis_db.get('default_value')))
+        else:
+            redis_store = JobService._get_redis_store(None, testing)
+
         # This queue is used to keep the order of execution and to know
         # what is pending
-
         if job.cluster is None:
             preferred = workflow.get('preferred_cluster_id')
             if preferred:
@@ -167,7 +174,7 @@ class JobService:
             db.session.add(job)
             db.session.flush()
 
-            redis_store = connect_redis_store(None, testing=False)
+            redis_store = JobService._get_redis_store(None)
 
             # @FIXME Each workflow has only one app. In future, we may support N
             cluster = job.cluster
@@ -197,7 +204,7 @@ class JobService:
     def lock(job, user, computer, force=False):
         job_id = "job_{}".format(job.id)
 
-        redis_store = connect_redis_store(None, testing=False)
+        redis_store = JobService._get_redis_store(None)
         already_locked = redis_store.hget(job_id, 'lock')
         # unlocked
         if already_locked == '' or force:
@@ -218,7 +225,7 @@ class JobService:
     @staticmethod
     def get_lock_status(job):
         job_id = "job_{}".format(job.id)
-        redis_store = connect_redis_store(None, testing=False)
+        redis_store = JobService._get_redis_store(None)
         already_locked = redis_store.hget(job_id, 'lock')
         if already_locked != '':
             return json.loads(already_locked)
@@ -228,7 +235,7 @@ class JobService:
     @staticmethod
     def retrieve_sample(user, job, task_id, port_name, wait):
         # DELIVER messages request the delivery of a result (task_id)
-        redis_store = connect_redis_store(None, testing=False)
+        redis_store = JobService._get_redis_store(None)
         output = 'queue_delivery_app_{app_id}_{port_name}'.format(
             app_id=job.workflow_id, port_name=port_name)
         msg = json.dumps({
@@ -246,8 +253,7 @@ class JobService:
     @staticmethod
     def trigger_job(name: str, payload: dict, user):
         print('--------', name, payload)
-        redis_store = connect_redis_store(
-            None, testing=False, decode_responses=False)
+        redis_store = JobService._get_redis_store(None)
         q = rq.Queue('juicer', connection=redis_store)
         payload['user'] = dict(user._asdict())
         result = q.enqueue(f'juicer.jobs.{name}', payload)
@@ -255,8 +261,7 @@ class JobService:
 
     @staticmethod
     def generate_code(workflow_id, template):
-        redis_store = connect_redis_store(
-            None, testing=False, decode_responses=False)
+        redis_store = JobService._get_redis_store(None)
         q = rq.Queue('juicer', connection=redis_store)
         payload = {'workflow_id': workflow_id, 'template': template}
 
@@ -267,14 +272,20 @@ class JobService:
 
     @staticmethod
     def get_generate_code_result(job_id):
-        return JobService.get_result(job_id, null).result.get('code')
+        return JobService.get_result(job_id, None).result.get('code')
 
     @staticmethod
-    def get_result(key:str, user):
-        redis_store = connect_redis_store(
-            None, testing=False, decode_responses=False)
+    def get_result(key: str, user):
+        redis_store = JobService._get_redis_store(None)
         try:
             rq_job = rq.job.Job(key, connection=redis_store)
             return rq_job
         except NoSuchJobError:
             return {'status': 'ERROR', 'message': 'Not found'}
+
+    @staticmethod
+    def _get_redis_store(url: str, testing: bool = False, db: int = 0) -> None:
+        redis_store = connect_redis_store(url, testing=testing,
+                                          decode_responses=False,
+                                          db=db)
+        return redis_store

@@ -3,10 +3,11 @@ from stand.factory import create_babel_i18n
 import pytest
 import datetime
 import flask_migrate
-from stand.app import create_app
+
 from stand.models import (Job, ClusterType, Cluster,
                           JobType, StatusExecution, db)
 from stand.services.redis_service import connect_redis_store
+from mock import patch
 
 @pytest.fixture(scope='session')
 def redis_store(app):
@@ -70,6 +71,7 @@ def get_jobs():
 
 @pytest.fixture(scope='session')
 def app():
+    from stand.app import create_app
     return create_app()
 
 @pytest.fixture(scope='session')
@@ -94,3 +96,74 @@ def client(app):
             client.secret = app.config['STAND_CONFIG']['secret']
             db.session.commit()
         yield client
+
+@pytest.fixture(scope='session')
+def pipelines():
+    return [
+        {
+            'id': 1,
+            'name': 'Pipeline 1',
+            'enabled': True,
+            'updated': datetime.datetime.now() - datetime.timedelta(days=2),
+            'steps': [
+                {
+                    'id': 1,
+                    'name': 'Step 1',
+                    'workflow_id': 1,
+                    'workflow_name': 'WF1',
+                    'scheduling': {}
+                },
+                {
+                    'id': 2,
+                    'name': 'Step 2',
+                    'workflow_id': 2,
+                    'workflow_name': 'WF2',
+                    'scheduling': {}
+                }
+            ]
+        },
+        {
+            'id': 2,
+            'name': 'Pipeline out of window',
+            'enabled': True,
+            'updated': datetime.datetime.now() - datetime.timedelta(days=8),
+            'steps': [
+                {
+                    'id': 1,
+                    'name': 'Step 1',
+                    'workflow_id': 1,
+                    'workflow_name': 'WF1',
+                    'scheduling': {}
+                },
+                {
+                    'id': 2,
+                    'name': 'Step 2',
+                    'workflow_id': 2,
+                    'workflow_name': 'WF2',
+                    'scheduling': {}
+                }
+            ]
+        },
+        {
+            'id': 3,
+            'name': 'Disabled Pipeline',
+            'enabled': False,
+            'updated': datetime.datetime.now() - datetime.timedelta(days=3),
+            'steps': [
+                {
+                    'id': 1,
+                    'name': 'Step 1',
+                    'workflow_id': 1,
+                    'workflow_name': 'WF1',
+                    'scheduling': {}
+                },
+                {
+                    'id': 2,
+                    'name': 'Step 2',
+                    'workflow_id': 2,
+                    'workflow_name': 'WF2',
+                    'scheduling': {}
+                }
+            ]
+        }
+    ]

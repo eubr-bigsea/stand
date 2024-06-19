@@ -1,18 +1,9 @@
 import datetime
-import json
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, \
-    Enum, DateTime, Numeric, Text, Unicode, UnicodeText
-from sqlalchemy import event
-from sqlalchemy.dialects.mysql import LONGTEXT
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Enum, \
+    DateTime, Text
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship, backref
-from sqlalchemy.schema import UniqueConstraint
-from sqlalchemy_i18n import make_translatable, translation_base, Translatable
-
-make_translatable(options={'locales': ['pt', 'en'],
-                           'auto_create_locales': True,
-                           'fallback_locale': 'en'})
 
 db = SQLAlchemy()
 
@@ -96,6 +87,21 @@ class PermissionType:
         return [n for n in list(PermissionType.__dict__.keys())
                 if n[0] != '_' and n != 'values']
 
+
+# noinspection PyClassHasNoInit
+class TriggerType:
+    MANUAL = 'MANUAL'
+    TIME_SCHEDULE = 'TIME_SCHEDULE'
+    MESSAGE = 'MESSAGE'
+    API = 'API'
+    WATCH = 'WATCH'
+    OTHER = 'OTHER'
+
+    @staticmethod
+    def values():
+        return [n for n in list(TriggerType.__dict__.keys())
+                if n[0] != '_' and n != 'values']
+
 # noinspection PyClassHasNoInit
 
 
@@ -107,7 +113,17 @@ class JobException(BaseException):
     def __str__(self):
         return self.message
 
+
 # Association tables definition
+    # noinspection PyUnresolvedReferences
+job_pipeline_step_run = db.Table(
+    'job_pipeline_step_run',
+    Column('pipeline_step_run_id', Integer,
+           ForeignKey('pipeline_step_run.id'),
+           nullable=False, index=True),
+    Column('job_id', Integer,
+           ForeignKey('job.id'),
+           nullable=False, index=True))
 
 
 class Cluster(db.Model):
@@ -159,11 +175,12 @@ class ClusterAccess(db.Model):
     user_name = Column(String(200), nullable=False)
 
     # Associations
-    cluster_id = Column(Integer,
-                        ForeignKey("cluster.id",
-                                   name="fk_cluster_access_cluster_id"),
-                        nullable=False,
-                        index=True)
+    cluster_id = Column(
+        Integer,
+        ForeignKey("cluster.id",
+                   name="fk_cluster_access_cluster_id"),
+        nullable=False,
+        index=True)
     cluster = relationship(
         "Cluster",
         overlaps='cluster',
@@ -186,11 +203,12 @@ class ClusterConfiguration(db.Model):
     value = Column(String(500), nullable=False)
 
     # Associations
-    cluster_id = Column(Integer,
-                        ForeignKey("cluster.id",
-                                   name="fk_cluster_configuration_cluster_id"),
-                        nullable=False,
-                        index=True)
+    cluster_id = Column(
+        Integer,
+        ForeignKey("cluster.id",
+                   name="fk_cluster_configuration_cluster_id"),
+        nullable=False,
+        index=True)
     cluster = relationship(
         "Cluster",
         overlaps='cluster',
@@ -211,18 +229,21 @@ class ClusterFlavor(db.Model):
     id = Column(Integer, primary_key=True)
     name = Column(String(200), nullable=False)
     enabled = Column(String(200), nullable=False)
-    parameters = Column(LONGTEXT, nullable=False)
+    parameters = Column(Text(4294000000), nullable=False)
 
     # Associations
-    cluster_id = Column(Integer,
-                        ForeignKey("cluster.id",
-                                   name="fk_cluster_flavor_cluster_id"),
-                        nullable=False,
-                        index=True)
+    cluster_id = Column(
+        Integer,
+        ForeignKey("cluster.id",
+                   name="fk_cluster_flavor_cluster_id"),
+        nullable=False,
+        index=True)
     cluster = relationship(
         "Cluster",
-        overlaps='cluster',
-        foreign_keys=[cluster_id])
+        overlaps='flavors',
+        foreign_keys=[cluster_id],
+        back_populates="flavors"
+    )
 
     def __str__(self):
         return self.name
@@ -241,15 +262,18 @@ class ClusterPlatform(db.Model):
                          default=1, nullable=False)
 
     # Associations
-    cluster_id = Column(Integer,
-                        ForeignKey("cluster.id",
-                                   name="fk_cluster_platform_cluster_id"),
-                        nullable=False,
-                        index=True)
+    cluster_id = Column(
+        Integer,
+        ForeignKey("cluster.id",
+                   name="fk_cluster_platform_cluster_id"),
+        nullable=False,
+        index=True)
     cluster = relationship(
         "Cluster",
-        overlaps='cluster',
-        foreign_keys=[cluster_id])
+        overlaps='platforms',
+        foreign_keys=[cluster_id],
+        back_populates="platforms"
+    )
 
     def __str__(self):
         return self.platform_id
@@ -281,9 +305,9 @@ class Job(db.Model):
 
     # Fields
     id = Column(Integer, primary_key=True)
+    name = Column(String(50))
     created = Column(DateTime,
                      default=func.now(), nullable=False)
-    name = Column(String(50))
     type = Column(Enum(*list(JobType.values()),
                        name='JobTypeEnumType'),
                   default=JobType.NORMAL, nullable=False)
@@ -292,34 +316,47 @@ class Job(db.Model):
     status = Column(Enum(*list(StatusExecution.values()),
                          name='StatusExecutionEnumType'),
                     default=StatusExecution.WAITING, nullable=False)
-    status_text = Column(LONGTEXT)
-    exception_stack = Column(LONGTEXT)
+    status_text = Column(Text(4294000000))
+    exception_stack = Column(Text(4294000000))
     workflow_id = Column(Integer, nullable=False)
     workflow_name = Column(String(200), nullable=False)
-    workflow_definition = Column(LONGTEXT)
+    workflow_definition = Column(Text(4294000000))
     user_id = Column(Integer, nullable=False)
     user_login = Column(String(50), nullable=False)
     user_name = Column(String(200), nullable=False)
-    source_code = Column(LONGTEXT)
+    source_code = Column(Text(4294000000))
     job_key = Column(String(200), nullable=False)
+    trigger_type = Column(Enum(*list(TriggerType.values()),
+                               name='TriggerTypeEnumType'),
+                          default=TriggerType.MANUAL, nullable=False)
 
     # Associations
-    cluster_id = Column(Integer,
-                        ForeignKey("cluster.id",
-                                   name="fk_job_cluster_id"),
-                        nullable=False,
-                        index=True)
+    cluster_id = Column(
+        Integer,
+        ForeignKey("cluster.id",
+                   name="fk_job_cluster_id"),
+        nullable=False,
+        index=True)
     cluster = relationship(
         "Cluster",
         overlaps='cluster',
         foreign_keys=[cluster_id])
+    pipeline_step_run_id = Column(
+        Integer,
+        ForeignKey("pipeline_step_run.id",
+                   name="fk_job_pipeline_step_run_id"),
+        index=True)
+    pipeline_step_run = relationship(
+        "PipelineStepRun",
+        overlaps='jobs',
+        foreign_keys=[pipeline_step_run_id])
     steps = relationship("JobStep",
                          cascade="all, delete-orphan")
     results = relationship("JobResult",
                            cascade="all, delete-orphan")
 
     def __str__(self):
-        return self.created
+        return self.name
 
     def __repr__(self):
         return '<Instance {}: {}>'.format(self.__class__, self.id)
@@ -336,18 +373,21 @@ class JobResult(db.Model):
     title = Column(String(200))
     type = Column(Enum(*list(ResultType.values()),
                        name='ResultTypeEnumType'), nullable=False)
-    content = Column(LONGTEXT)
+    content = Column(Text(4294000000))
 
     # Associations
-    job_id = Column(Integer,
-                    ForeignKey("job.id",
-                               name="fk_job_result_job_id"),
-                    nullable=False,
-                    index=True)
+    job_id = Column(
+        Integer,
+        ForeignKey("job.id",
+                   name="fk_job_result_job_id"),
+        nullable=False,
+        index=True)
     job = relationship(
         "Job",
-        overlaps='job',
-        foreign_keys=[job_id])
+        overlaps='results',
+        foreign_keys=[job_id],
+        back_populates="results"
+    )
 
     def __str__(self):
         return self.task_id
@@ -371,15 +411,18 @@ class JobStep(db.Model):
     operation_name = Column(String(200), nullable=False)
 
     # Associations
-    job_id = Column(Integer,
-                    ForeignKey("job.id",
-                               name="fk_job_step_job_id"),
-                    nullable=False,
-                    index=True)
+    job_id = Column(
+        Integer,
+        ForeignKey("job.id",
+                   name="fk_job_step_job_id"),
+        nullable=False,
+        index=True)
     job = relationship(
         "Job",
-        overlaps='job',
-        foreign_keys=[job_id])
+        overlaps='steps',
+        foreign_keys=[job_id],
+        back_populates="steps"
+    )
     logs = relationship("JobStepLog",
                         cascade="all, delete-orphan")
 
@@ -400,23 +443,131 @@ class JobStepLog(db.Model):
     status = Column(Enum(*list(StatusExecution.values()),
                          name='StatusExecutionEnumType'), nullable=False)
     date = Column(DateTime, nullable=False)
-    message = Column(LONGTEXT, nullable=False)
+    message = Column(Text(4294000000), nullable=False)
     type = Column(String(50),
                   default='TEXT', nullable=False)
 
     # Associations
-    step_id = Column(Integer,
-                     ForeignKey("job_step.id",
-                                name="fk_job_step_log_step_id"),
-                     nullable=False,
-                     index=True)
+    step_id = Column(
+        Integer,
+        ForeignKey("job_step.id",
+                   name="fk_job_step_log_step_id"),
+        nullable=False,
+        index=True)
     step = relationship(
         "JobStep",
-        overlaps='step',
-        foreign_keys=[step_id])
+        overlaps='logs',
+        foreign_keys=[step_id],
+        back_populates="logs"
+    )
 
     def __str__(self):
         return self.level
+
+    def __repr__(self):
+        return '<Instance {}: {}>'.format(self.__class__, self.id)
+
+
+class PipelineRun(db.Model):
+    """ Pipeline run """
+    __tablename__ = 'pipeline_run'
+
+    # Fields
+    id = Column(Integer, primary_key=True)
+    start = Column(DateTime, nullable=False, index=True)
+    finish = Column(DateTime, nullable=False, index=True)
+    pipeline_id = Column(Integer, nullable=False, index=True)
+    last_executed_step = Column(Integer, nullable=False)
+    comment = Column(String(200))
+    status = Column(Enum(*list(StatusExecution.values()),
+                         name='StatusExecutionEnumType'), nullable=False)
+    final_status = Column(Enum(*list(StatusExecution.values()),
+                               name='StatusExecutionEnumType'))
+
+    # Associations
+    steps = relationship("PipelineStepRun", back_populates="pipeline_run")
+
+    def __str__(self):
+        return self.start
+
+    def __repr__(self):
+        return '<Instance {}: {}>'.format(self.__class__, self.id)
+
+
+class PipelineStepRun(db.Model):
+    """ Pipeline step run """
+    __tablename__ = 'pipeline_step_run'
+
+    # Fields
+    id = Column(Integer, primary_key=True)
+    created = Column(DateTime,
+                     default=datetime.datetime.utcnow, nullable=False)
+    updated = Column(DateTime, nullable=False, index=True)
+    workflow_id = Column(Integer, nullable=False, index=True)
+    retries = Column(Integer,
+                     default=0, nullable=False)
+    comment = Column(String(200))
+    status = Column(Enum(*list(StatusExecution.values()),
+                         name='StatusExecutionEnumType'), nullable=False)
+    final_status = Column(Enum(*list(StatusExecution.values()),
+                               name='StatusExecutionEnumType'))
+
+    # Associations
+    jobs = relationship(
+        "Job",
+        overlaps="pipeline_step_runs",
+        secondary=job_pipeline_step_run)
+    pipeline_run_id = Column(
+        Integer,
+        ForeignKey("pipeline_run.id",
+                   name="fk_pipeline_step_run_pipeline_run_id"),
+        nullable=False,
+        index=True)
+    pipeline_run = relationship(
+        "PipelineRun",
+        overlaps='steps',
+        foreign_keys=[pipeline_run_id],
+        back_populates="steps"
+    )
+    logs = relationship("PipelineStepRunLog")
+
+    def __str__(self):
+        return self.created
+
+    def __repr__(self):
+        return '<Instance {}: {}>'.format(self.__class__, self.id)
+
+
+class PipelineStepRunLog(db.Model):
+    """ Pipeline step run log """
+    __tablename__ = 'pipeline_step_run_log'
+
+    # Fields
+    id = Column(Integer, primary_key=True)
+    created = Column(DateTime,
+                     default=datetime.datetime.utcnow, nullable=False)
+    action = Column(String(200), nullable=False)
+    user_id = Column(Integer, nullable=False)
+    user_login = Column(String(200), nullable=False)
+    user_name = Column(String(200), nullable=False)
+    comment = Column(String(200))
+
+    # Associations
+    pipeline_step_run_id = Column(
+        Integer,
+        ForeignKey("pipeline_step_run.id",
+                   name="fk_pipeline_step_run_log_pipeline_step_run_id"),
+        nullable=False,
+        index=True)
+    pipeline_step_run = relationship(
+        "PipelineStepRun",
+        overlaps='logs',
+        foreign_keys=[pipeline_step_run_id],
+        back_populates="logs"
+    )
+
+    def __str__(self):
+        return self.created
 
     def __repr__(self):
         return '<Instance {}: {}>'.format(self.__class__, self.id)
@@ -453,11 +604,12 @@ class RoomParticipant(db.Model):
     leave_date = Column(DateTime)
 
     # Associations
-    room_id = Column(Integer,
-                     ForeignKey("room.id",
-                                name="fk_room_participant_room_id"),
-                     nullable=False,
-                     index=True)
+    room_id = Column(
+        Integer,
+        ForeignKey("room.id",
+                   name="fk_room_participant_room_id"),
+        nullable=False,
+        index=True)
     room = relationship(
         "Room",
         overlaps='participants',
