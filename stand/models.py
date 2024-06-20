@@ -113,17 +113,7 @@ class JobException(BaseException):
     def __str__(self):
         return self.message
 
-
 # Association tables definition
-    # noinspection PyUnresolvedReferences
-job_pipeline_step_run = db.Table(
-    'job_pipeline_step_run',
-    Column('pipeline_step_run_id', Integer,
-           ForeignKey('pipeline_step_run.id'),
-           nullable=False, index=True),
-    Column('job_id', Integer,
-           ForeignKey('job.id'),
-           nullable=False, index=True))
 
 
 class Cluster(db.Model):
@@ -325,10 +315,10 @@ class Job(db.Model):
     user_login = Column(String(50), nullable=False)
     user_name = Column(String(200), nullable=False)
     source_code = Column(Text(4294000000))
-    job_key = Column(String(200), nullable=False)
+    job_key = Column(String(200))
     trigger_type = Column(Enum(*list(TriggerType.values()),
                                name='TriggerTypeEnumType'),
-                          default=TriggerType.MANUAL, nullable=False)
+                          default=TriggerType.MANUAL)
 
     # Associations
     cluster_id = Column(
@@ -348,7 +338,7 @@ class Job(db.Model):
         index=True)
     pipeline_step_run = relationship(
         "PipelineStepRun",
-        overlaps='jobs',
+        overlaps='job',
         foreign_keys=[pipeline_step_run_id])
     steps = relationship("JobStep",
                          cascade="all, delete-orphan")
@@ -513,10 +503,7 @@ class PipelineStepRun(db.Model):
                                name='StatusExecutionEnumType'))
 
     # Associations
-    jobs = relationship(
-        "Job",
-        overlaps="pipeline_step_runs",
-        secondary=job_pipeline_step_run)
+    jobs = relationship("Job")
     pipeline_run_id = Column(
         Integer,
         ForeignKey("pipeline_run.id",

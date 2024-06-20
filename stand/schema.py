@@ -447,7 +447,7 @@ class JobItemResponseSchema(BaseSchema):
                            validate=[OneOf(StatusExecution.values())])
     status_text = fields.String(required=False, allow_none=True)
     exception_stack = fields.String(required=False, allow_none=True)
-    job_key = fields.String(required=True)
+    job_key = fields.String(required=False, allow_none=True)
     trigger_type = fields.String(required=False, allow_none=True, load_default=TriggerType.MANUAL, dump_default=TriggerType.MANUAL,
                                  validate=[OneOf(TriggerType.values())])
     cluster = fields.Nested(
@@ -495,7 +495,7 @@ class JobListResponseSchema(BaseSchema):
                            validate=[OneOf(StatusExecution.values())])
     status_text = fields.String(required=False, allow_none=True)
     exception_stack = fields.String(required=False, allow_none=True)
-    job_key = fields.String(required=True)
+    job_key = fields.String(required=False, allow_none=True)
     trigger_type = fields.String(required=False, allow_none=True, load_default=TriggerType.MANUAL, dump_default=TriggerType.MANUAL,
                                  validate=[OneOf(TriggerType.values())])
     cluster = fields.Nested(
@@ -532,7 +532,7 @@ class JobCreateRequestSchema(BaseSchema):
     type = fields.String(required=False, allow_none=True, load_default=JobType.NORMAL, dump_default=JobType.NORMAL,
                          validate=[OneOf(JobType.values())])
     exception_stack = fields.String(required=False, allow_none=True)
-    job_key = fields.String(required=True)
+    job_key = fields.String(required=False, allow_none=True)
     trigger_type = fields.String(required=False, allow_none=True, load_default=TriggerType.MANUAL, dump_default=TriggerType.MANUAL,
                                  validate=[OneOf(TriggerType.values())])
     pipeline_step_run_id = fields.Integer(required=False, allow_none=True)
@@ -591,7 +591,7 @@ class JobExecuteResponseSchema(BaseSchema):
     status_text = fields.String(required=False, allow_none=True)
     exception_stack = fields.String(required=False, allow_none=True)
     workflow_id = fields.Integer(required=True)
-    job_key = fields.String(required=True)
+    job_key = fields.String(required=False, allow_none=True)
     trigger_type = fields.String(required=False, allow_none=True, load_default=TriggerType.MANUAL, dump_default=TriggerType.MANUAL,
                                  validate=[OneOf(TriggerType.values())])
     message = fields.String(allow_none=True)
