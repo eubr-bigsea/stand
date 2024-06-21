@@ -251,6 +251,14 @@ class JobStopActionApi(Resource):
                 if current_app.debug:
                     result['debug_detail'] = str(e)
                 db.session.rollback()
+        else:
+            # It may be a transient job (for instance, used in Experiments)
+            # In this case, just send a message to stop the minion (if it's
+            # running).
+            JobService.stop(None, job_id=job_id)
+            result, result_code = dict(
+                status="OK",
+                message=gettext("An attempt of stopping the job was made")), 200
         return result, result_code
 
 
