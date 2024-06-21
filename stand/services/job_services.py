@@ -158,6 +158,7 @@ class JobService:
 
     @staticmethod
     def stop(job, ignore_if_stopped=False, job_id=None):
+        redis_store = JobService._get_redis_store(None)
         if job_id:
             workflow_id = job_id - 800000
             msg = json.dumps(
@@ -165,6 +166,7 @@ class JobService:
                     app_id=workflow_id,
                     job_id=job_id,
                     type='terminate'))
+            redis_store.rpush("queue_start", msg)
         else:
             valid_status_in_stop = [StatusExecution.WAITING,
                                     StatusExecution.PENDING,
@@ -183,7 +185,7 @@ class JobService:
                 db.session.add(job)
                 db.session.flush()
 
-                redis_store = JobService._get_redis_store(None)
+
 
                 # @FIXME Each workflow has only one app. In future,
                 # we may support N
