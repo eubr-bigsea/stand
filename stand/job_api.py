@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-} import logging
 import math
 import requests
+import json
+import datetime
+import rq
+import logging
 
 from flask import g as flask_global
 from flask import request, current_app
@@ -9,12 +13,13 @@ from flask_restful import Resource
 from marshmallow import ValidationError
 from sqlalchemy import and_
 from stand.app_auth import requires_auth
-from stand.schema import *
+from stand.schema import (Job, JobCreateRequestSchema, JobItemResponseSchema,
+                          JobListResponseSchema, JobStep, ExecutionPermission,
+                          PermissionType, Cluster, translate_validation,
+                          JobException, db)
 from stand.models import JobType, StatusExecution
 from stand.services.job_services import JobService
 from stand.services.redis_service import connect_redis_store
-import rq
-import logging
 from rq.exceptions import NoSuchJobError
 
 log = logging.getLogger(__name__)
@@ -430,7 +435,7 @@ class JobSourceCodeApi(Resource):
 
 
 class PerformanceModelEstimationResultApi(Resource):
-    """ 
+    """
     Triggers the execution of an execution model in the backend.
     """
 
@@ -441,7 +446,7 @@ class PerformanceModelEstimationResultApi(Resource):
 
 
 class PerformanceModelEstimationApi(Resource):
-    """ 
+    """
     Triggers the execution of an execution model in the backend.
     """
 
@@ -597,7 +602,7 @@ class WorkflowSourceCodeApi(Resource):
 
         return JobService.generate_code(workflow_id,
                                         request.json.get('template', 'python'))
-    
+
 class TriggerJobApi(Resource):
     SUPPORTED = {
         'convert_data_source': gettext('Convert data source'),
