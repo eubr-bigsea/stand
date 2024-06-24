@@ -68,7 +68,6 @@ class JobListApi(Resource):
     @staticmethod
     @requires_auth
     def get():
-        breakpoint()
         only = None if request.args.get('simple') != 'true' else ('id',)
         if request.args.get('fields'):
             only = tuple(
