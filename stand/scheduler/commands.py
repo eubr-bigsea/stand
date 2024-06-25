@@ -1,4 +1,6 @@
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta, time
+from calendar import monthrange
+
 from typing import List
 
 from croniter import croniter
@@ -26,59 +28,44 @@ class CreatePipelineRun(Command):
     def __init__(self, pipeline):
         self.pipeline = pipeline
 
+    @staticmethod
+    def _get_limit_dates_daily(current_time):
+        return datetime.combine(current_time, time.min),\
+                datetime.combine(current_time, time.max)
+    
+    @staticmethod
+    def _get_limit_dates_weekly(current_time):
+        days_since_sunday = (current_time.weekday()+1) % 7
+        last_sunday = current_time + timedelta(days=-days_since_sunday)
+
+        days_until_saturday = (5 - current_time.weekday()) if days_since_sunday != 0 else 6
+        next_saturday = current_time + timedelta(days=days_until_saturday)
+
+        return datetime.combine(last_sunday, time.min),\
+                datetime.combine(next_saturday, time.max)
+    
+    @staticmethod
+    def _get_limit_dates_monthly(current_time):
+        first_day_month = current_time.replace(day=1)
+
+        _, last_day_month = monthrange(current_time.year, current_time.month)
+        last_day_month = current_time.replace(day=last_day_month)
+
+        return datetime.combine(first_day_month, time.min),\
+                datetime.combine(last_day_month, time.max)
+
     def get_pipeline_run_start(
         self, current_time=datetime.now(), next_window_option=False
     ) -> datetime:
         frequency = self.pipeline["execution_window"]
-        if frequency == "daily":
-            next_datetime = current_time 
-            return next_datetime.replace(hour=0, minute=0, second=0, microsecond=0)
-
-        elif frequency == "weekly":
-            days_since_sunday = (current_time.weekday() + 1) % 7
-            if days_since_sunday == 0:
-                days_since_sunday = 7
-            previous_sunday_datetime = current_time - timedelta(days=days_since_sunday)
-            return previous_sunday_datetime.replace(hour=0, minute=0, second=0, microsecond=0)
-
-
-        elif frequency == "monthly":
-            year = current_time.year
-            month = current_time.month
-           
-            next_datetime = datetime(year, month, 1)
-            return next_datetime.replace(hour=0, minute=0, second=0, microsecond=0)
+        return getattr(self, '_get_limit_dates_'+frequency)(current_time)[0]
 
     def get_pipeline_run_end(
         self, current_time=datetime.now(), next_window_option=False
     ) -> datetime:
         frequency = self.pipeline["execution_window"]
-        if frequency == "daily":
+        return getattr(self, '_get_limit_dates_'+frequency)(current_time)[1]
 
-            next_day = current_time + timedelta(days=1)
-            return next_day.replace(
-                hour=0, minute=0, second=0, microsecond=0
-            ) - timedelta(seconds=1)
-        elif frequency == "weekly":
-
-            days_until_sunday = 6 - current_time.weekday()
-            next_sunday = current_time + timedelta(days=days_until_sunday)
-            return next_sunday.replace(
-                hour=0, minute=0, second=0, microsecond=0
-            ) - timedelta(seconds=1)
-        elif frequency == "monthly":
-
-            if current_time.month == 12:
-                next_month_start = current_time.replace(
-                    year=current_time.year + 1, month=1, day=1
-                )
-            else:
-                next_month_start = current_time.replace(
-                    month=current_time.month + 1, day=1
-                )
-            return next_month_start.replace(
-                hour=0, minute=0, second=0, microsecond=0
-            ) - timedelta(seconds=1)
     
     def create_step_run_from_json_step(self,step):
         pipeline_step_run =PipelineStepRun(
