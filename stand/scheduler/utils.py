@@ -84,6 +84,7 @@ def get_pipelines(
         raise Exception(f"Error {resp.status_code} while getting pipelines")
 
     updated_pipelines = dict([[p["id"], p] for p in resp.json()["list"]])
+    print(updated_pipelines)
     return updated_pipelines
 
 

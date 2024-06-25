@@ -8,7 +8,6 @@ import yaml
 from croniter import croniter
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import and_
 
@@ -21,7 +20,8 @@ from stand.scheduler.update_pipeline_runs import *
 
 
 async def execute(session, current_time):
-
+    
+    
     # returned as pipeline_id:pipeline_in_json dict
     updated_pipelines = await get_pipelines(tahiti_config=config, days=7)
     # returned as list of active pipeline runs in json
@@ -29,12 +29,12 @@ async def execute(session, current_time):
         session=session, pipeline_ids=updated_pipelines.keys()
     )
 
-    pipeline_runs_commands = update_pipelines_runs(
+    update_pipeline_runs_commands = update_pipelines_runs(
         updated_pipelines=updated_pipelines,
         pipeline_runs=active_pipeline_runs,
         current_time=current_time,
     )
-    for command in pipeline_runs_commands:
+    for command in update_pipeline_runs_commands:
         await command.execute(session)
 
     # must be called again bc pipeline_runs_commands can create new runs
@@ -66,7 +66,7 @@ async def execute(session, current_time):
             command.execute(session)
 
     # not used
-    return [pipeline_runs_commands, trigger_commands, propagate_commands]
+    return [update_pipeline_runs_commands, trigger_commands, propagate_commands]
 
 
 async def check_and_execute():
@@ -89,7 +89,7 @@ async def main(engine):
 
 
 if __name__ == "__main__":
-    config = load_config()
+    config = {"stand":{"servers":{"database_url":"localhost:33602"}}}
     print(config["stand"]["servers"]["database_url"])
     engine = create_sql_alchemy_async_engine(config)
-    asyncio.run(main(engine))
+    print(engine)

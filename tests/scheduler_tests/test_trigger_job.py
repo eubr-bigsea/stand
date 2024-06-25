@@ -134,7 +134,7 @@ def test_time_scheduled_job_is_triggered():
     ]
 
     pipeline_run = PipelineRun(
-        id="1", status=StatusExecution.WAITING, last_completed_step=0
+        id="1", status=StatusExecution.WAITING, last_executed_step=0
     )
 
     time = datetime(hour=11, day=24, month=4, year=2024)
@@ -173,7 +173,7 @@ def test_time_scheduled_job_isnt_triggered_out_of_order():
     ]
 
     pipeline_run = PipelineRun(
-        id="1", status=StatusExecution.WAITING, last_completed_step=0
+        id="1", status=StatusExecution.WAITING, last_executed_step=0
     )
 
    
@@ -217,7 +217,7 @@ def test_imediate_job_is_triggered_correctly():
     ]
 
     pipeline_run = PipelineRun(
-        id="1", status=StatusExecution.WAITING, last_completed_step=2
+        id="1", status=StatusExecution.WAITING, last_executed_step=2
     )
 
 
