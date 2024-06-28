@@ -1,27 +1,22 @@
 import asyncio
-import os
-import typing
-from datetime import date, datetime, timedelta
-from typing import List
-import requests
-import yaml
-from croniter import croniter
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.sql import and_
+from datetime import datetime
 
-from stand.models import Job, PipelineRun, StatusExecution, Pipeline, PipelineStep
-
-from stand.scheduler.utils import *
-from stand.scheduler.status_control import *
-from stand.scheduler.trigger_scheduled_jobs import *
-from stand.scheduler.update_pipeline_runs import *
+from stand.scheduler.status_control import propagate_job_status
+from stand.scheduler.trigger_scheduled_jobs import (
+    trigger_scheduled_pipeline_steps,
+)
+from stand.scheduler.update_pipeline_runs import update_pipelines_runs
+from stand.scheduler.utils import (
+    build_session_maker,
+    create_sql_alchemy_async_engine,
+    get_latest_job_from_pipeline_step_run,
+    get_latest_pipeline_step_run,
+    get_pipelines,
+    get_runs,
+)
 
 
 async def execute(session, current_time):
-    
-    
     # returned as pipeline_id:pipeline_in_json dict
     updated_pipelines = await get_pipelines(tahiti_config=config, days=7)
     # returned as list of active pipeline runs in json
@@ -42,7 +37,6 @@ async def execute(session, current_time):
         session=session, pipeline_ids=updated_pipelines.keys()
     )
     for run in active_pipeline_runs:
-
         steps = [step for step in updated_pipelines[run["pipeline_id"]]["steps"]]
 
         trigger_commands = trigger_scheduled_pipeline_steps(
@@ -89,7 +83,7 @@ async def main(engine):
 
 
 if __name__ == "__main__":
-    config = {"stand":{"servers":{"database_url":"localhost:33602"}}}
+    config = {"stand": {"servers": {"database_url": "localhost:33602"}}}
     print(config["stand"]["servers"]["database_url"])
     engine = create_sql_alchemy_async_engine(config)
     print(engine)
