@@ -35,7 +35,7 @@ class PipelineRunListApi(Resource):
         else:
             only = ('id', ) if request.args.get(
                 'simple', 'false') == 'true' else None
-        pipeline_runs = PipelineRun.query.all()
+        pipeline_runs = PipelineRun.query
 
         page = request.args.get('page') or '1'
         if page is not None and page.isdigit():

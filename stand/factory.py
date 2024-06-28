@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import datetime
-from http.client import HTTPException
+from werkzeug.exceptions import HTTPException
 import json
 import logging
 import logging.config
@@ -18,6 +18,7 @@ from mockredis import MockRedis
 from sqlalchemy import and_
 from stand.cluster_api import ClusterDetailApi, PerformanceModelEstimationApi
 from stand.cluster_api import ClusterListApi
+from stand.pipeline_run_api import PipelineRunDetailApi, PipelineRunListApi
 from stand.room_api import RoomApi
 from stand.job_api import (JobListApi, JobDetailApi,
     JobStopActionApi, JobLockActionApi, JobUnlockActionApi,
@@ -120,6 +121,8 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
         '/jobs/<int:job_id>/sample/<task_id>': JobSampleActionApi,
         '/clusters': ClusterListApi,
         '/clusters/<int:cluster_id>': ClusterDetailApi,
+        '/pipeline-runs': PipelineRunListApi,
+        '/pipeline-runs/<int:pipeline_run_id>': PipelineRunDetailApi,
         '/performance/<int:model_id>': PerformanceModelEstimationApi,
         '/performance/result/<key>': PerformanceModelEstimationResultApi,
         '/datasource/init': DataSourceInitializationApi,
@@ -137,6 +140,7 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
         # pass through HTTP errors
         if isinstance(e, HTTPException):
             return e
+
         logger = logging.getLogger(__name__)
         logger.exception(e)
         return {"error": "Internal error"}, 500
