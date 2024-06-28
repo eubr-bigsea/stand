@@ -1,14 +1,10 @@
-from collections import KeysView
 from datetime import date, datetime, timedelta
 
 import pytest
-from mock import ANY, patch
-from mock.mock import AsyncMock
+from mock import patch
 
-from stand.models import PipelineRun, StatusExecution, PipelineStep
-from stand.scheduler.utils import *
-from stand.scheduler.update_pipeline_runs import *
-from stand.scheduler.commands import *
+from stand.models import PipelineRun, StatusExecution
+from stand.scheduler.utils import get_pipelines
 
 config = {
     "stand": {
@@ -91,17 +87,17 @@ def test_update_pipeline_runs_new_run():
     runs = []
 
     current_time = datetime.now()
- 
+
     returned_commands = update_pipelines_runs(
         updated_pipelines=updated_pipelines,
         pipeline_runs=runs,
         current_time=current_time,
     )
-   
+
     expected_commands = [CreatePipelineRun(pipeline=updated_pipelines[0])]
     for command in expected_commands:
         assert command in returned_commands
-    
+
 
 
 def test_update_pipeline_runs_create_because_interrupted_run_expired():

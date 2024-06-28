@@ -1,22 +1,17 @@
 from stand.models import (
-    Job,
     PipelineRun,
-    PipelineStepRun,
     StatusExecution,
-    Pipeline,
-    PipelineStep,
 )
 
 # Basic code to start a scheduler using aiocron package
-import asyncio
-import os
 import typing
-from datetime import date, datetime, timedelta
-from typing import List
+from datetime import datetime
 
-
-from stand.scheduler.utils import *
-from stand.scheduler.commands import *
+from stand.scheduler.commands import (
+    CreatePipelineRun,
+    UpdatePipelineInfo,
+    UpdatePipelineRunStatus,
+)
 
 
 def update_pipelines_runs(
@@ -29,7 +24,6 @@ def update_pipelines_runs(
 
     commands = []
     for pipeline in updated_pipelines.values():
-
         run: PipelineRun = runs.get(pipeline["id"])
 
         if run:
@@ -43,7 +37,8 @@ def update_pipelines_runs(
                     if run.last_executed_step == len(run.steps):
                         commands.append(
                             UpdatePipelineRunStatus(
-                                pipeline_run=run, status=StatusExecution.COMPLETED
+                                pipeline_run=run,
+                                status=StatusExecution.COMPLETED,
                             )
                         )
                         commands.append(CreatePipelineRun(pipeline=pipeline))
@@ -73,7 +68,6 @@ def update_pipelines_runs(
                     commands.append(CreatePipelineRun(pipeline=pipeline))
 
         else:
-
             commands.append(CreatePipelineRun(pipeline=pipeline))
 
     return commands

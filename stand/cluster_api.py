@@ -179,7 +179,7 @@ class ClusterDetailApi(Resource):
                 cluster = db.session.merge(cluster)
                 if platforms:
                     for p in platforms:
-                        db.session.add(ClusterPlatform(platform_id=p['id'], 
+                        db.session.add(ClusterPlatform(platform_id=p['id'],
                             cluster=cluster))
                 db.session.commit()
                 if cluster is not None:

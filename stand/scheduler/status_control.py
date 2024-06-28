@@ -1,20 +1,15 @@
-from typing import List
-from croniter import croniter
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.sql import and_
-
 from stand.models import (
     Job,
     PipelineRun,
     PipelineStepRun,
     StatusExecution,
-    Pipeline,
-    PipelineStep,
 )
-from stand.scheduler.utils import *
-from stand.scheduler.commands import *
+from stand.scheduler.commands import (
+    ChangeLastCompletedStep,
+    UpdatePipelineRunStatus,
+    UpdatePipelineStepRunStatus,
+)
+
 
 def propagate_job_status(
     run: PipelineRun, active_step_run: PipelineStepRun, latest_job: Job
@@ -25,7 +20,6 @@ def propagate_job_status(
     """
 
     if active_step_run is not None:
-
         latest_job_status = latest_job.status
 
         # run was running and a step was completed
@@ -41,7 +35,8 @@ def propagate_job_status(
             )
             commands.append(
                 UpdatePipelineStepRunStatus(
-                    pipeline_step_run=active_step_run, status=StatusExecution.COMPLETED
+                    pipeline_step_run=active_step_run,
+                    status=StatusExecution.COMPLETED,
                 )
             )
             # job completed so last conmpleted step must be increased
@@ -70,7 +65,9 @@ def propagate_job_status(
         ):
             commands = []
             commands.append(
-                UpdatePipelineRunStatus(pipeline_run=run, status=StatusExecution.ERROR)
+                UpdatePipelineRunStatus(
+                    pipeline_run=run, status=StatusExecution.ERROR
+                )
             )
             commands.append(
                 UpdatePipelineStepRunStatus(
@@ -83,7 +80,9 @@ def propagate_job_status(
         else:
             commands = []
             commands.append(
-                UpdatePipelineRunStatus(pipeline_run=run, status=latest_job_status)
+                UpdatePipelineRunStatus(
+                    pipeline_run=run, status=latest_job_status
+                )
             )
             commands.append(
                 UpdatePipelineStepRunStatus(

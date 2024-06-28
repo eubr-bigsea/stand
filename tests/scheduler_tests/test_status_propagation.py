@@ -1,13 +1,10 @@
-from collections import KeysView
-from datetime import date, datetime, timedelta
+from stand.models import Job, PipelineRun, PipelineStepRun, StatusExecution
+from stand.scheduler.commands import (
+    UpdatePipelineRunStatus,
+    UpdatePipelineStepRunStatus,
+)
+from stand.scheduler.status_control import propagate_job_status
 
-import pytest
-
-
-from stand.models import PipelineRun, StatusExecution, PipelineStep
-from stand.scheduler.utils import *
-from stand.scheduler.status_control import *
-from stand.scheduler.commands import *
 
 def test_completed_job_status_propagation():
     """
@@ -26,7 +23,9 @@ def test_completed_job_status_propagation():
     )
     expected_commands = []
     expected_commands.append(
-        UpdatePipelineRunStatus(pipeline_run=pipeline_run, status=StatusExecution.WAITING)
+        UpdatePipelineRunStatus(
+            pipeline_run=pipeline_run, status=StatusExecution.WAITING
+        )
     )
     expected_commands.append(
         UpdatePipelineStepRunStatus(
@@ -35,7 +34,6 @@ def test_completed_job_status_propagation():
     )
     for command in expected_commands:
         assert command in result_commands
-    
 
 
 def test_error_job_status_propagation():
@@ -56,7 +54,9 @@ def test_error_job_status_propagation():
 
     expected_commands = []
     expected_commands.append(
-        UpdatePipelineRunStatus(pipeline_run=pipeline_run, status=StatusExecution.ERROR)
+        UpdatePipelineRunStatus(
+            pipeline_run=pipeline_run, status=StatusExecution.ERROR
+        )
     )
     expected_commands.append(
         UpdatePipelineStepRunStatus(
