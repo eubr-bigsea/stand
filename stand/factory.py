@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import datetime
+from werkzeug.exceptions import HTTPException
 import json
 import logging
 import logging.config
@@ -17,12 +18,13 @@ from mockredis import MockRedis
 from sqlalchemy import and_
 from stand.cluster_api import ClusterDetailApi, PerformanceModelEstimationApi
 from stand.cluster_api import ClusterListApi
+from stand.pipeline_run_api import PipelineRunDetailApi, PipelineRunListApi
 from stand.room_api import RoomApi
-from stand.job_api import (JobListApi, JobDetailApi, 
-    JobStopActionApi, JobLockActionApi, JobUnlockActionApi, 
+from stand.job_api import (JobListApi, JobDetailApi,
+    JobStopActionApi, JobLockActionApi, JobUnlockActionApi,
     UpdateJobStatusActionApi, UpdateJobStepStatusActionApi,
     JobSampleActionApi, JobSourceCodeApi, LatestJobDetailApi,
-    PerformanceModelEstimationApi, PerformanceModelEstimationResultApi, 
+    PerformanceModelEstimationApi, PerformanceModelEstimationResultApi,
     DataSourceInitializationApi, WorkflowStartActionApi, WorkflowSourceCodeApi,
     WorkflowSourceCodeResultApi)
 
@@ -74,15 +76,16 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
     if engine_config:
         final_config = {'pool_pre_ping': True}
         if 'mysql://' in app.config['SQLALCHEMY_DATABASE_URI']:
-            if 'SQLALCHEMY_POOL_SIZE' in engine_config: 
-                final_config['pool_size'] = engine_config['SQLALCHEMY_POOL_SIZE'] 
-            if 'SQLALCHEMY_POOL_RECYCLE' in engine_config: 
+            if 'SQLALCHEMY_POOL_SIZE' in engine_config:
+                final_config['pool_size'] = engine_config['SQLALCHEMY_POOL_SIZE']
+            if 'SQLALCHEMY_POOL_RECYCLE' in engine_config:
                 final_config['pool_recycle'] = engine_config['SQLALCHEMY_POOL_RECYCLE']
         app.config['SQLALCHEMY_ENGINE_OPTIONS'] = final_config
     app.debug = config['stand'].get('debug', False)
 
     if settings_override:
         app.config.update(settings_override)
+    create_babel_i18n(app)
 
     db.init_app(app)
     if app.testing:
@@ -118,6 +121,8 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
         '/jobs/<int:job_id>/sample/<task_id>': JobSampleActionApi,
         '/clusters': ClusterListApi,
         '/clusters/<int:cluster_id>': ClusterDetailApi,
+        '/pipeline-runs': PipelineRunListApi,
+        '/pipeline-runs/<int:pipeline_run_id>': PipelineRunDetailApi,
         '/performance/<int:model_id>': PerformanceModelEstimationApi,
         '/performance/result/<key>': PerformanceModelEstimationResultApi,
         '/datasource/init': DataSourceInitializationApi,
@@ -128,6 +133,17 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
     }
     for path, view in mappings.items():
         api.add_resource(view, path)
+
+    # Global error handling
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        # pass through HTTP errors
+        if isinstance(e, HTTPException):
+            return e
+
+        logger = logging.getLogger(__name__)
+        logger.exception(e)
+        return {"error": "Internal error"}, 500
 
     # Cache configuration for API
     app.config['CACHE_TYPE'] = 'simple'
@@ -188,7 +204,7 @@ def mocked_emit(original_emit, app_):
                                         StatusExecution.CANCELED,
                                         StatusExecution.ERROR]
                         job.status = data.get('status')
-                        logger.info(_gettext('Updating job id=%s to status %s'), 
+                        logger.info(_gettext('Updating job id=%s to status %s'),
                             job_id, job.status)
                         job.status_text = data.get('msg',
                                                    data.get('message', ''))

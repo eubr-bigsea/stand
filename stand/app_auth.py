@@ -48,11 +48,10 @@ def requires_auth(f):
     @wraps(f)
     def decorated(*_args, **kwargs):
         config = current_app.config[CONFIG_KEY]
-
         if str(config.get('secret', '')) == request.headers.get(
                 'X-Auth-Token'):
             # Inter services authentication
-            setattr(flask_g, 'user', User(0, 'internal', 
+            setattr(flask_g, 'user', User(0, 'internal',
                 'lemonade@lemonade.org.br', 'internal', '', '', 'en', ['ADMINISTRATOR'] ))
             return f(*_args, **kwargs)
         else:
@@ -63,9 +62,9 @@ def requires_auth(f):
             if all([user_data, user_id]):
                 login, email, name, locale = user_data.split(';')
                 parts = name.split(' ', 1)
-                setattr(flask_g, 'user', 
-                        User(user_id, login, email, name, parts[0], 
-                            parts[1].strip() if len(parts)> 1 else '', 
+                setattr(flask_g, 'user',
+                        User(user_id, login, email, name, parts[0],
+                            parts[1].strip() if len(parts)> 1 else '',
                             locale, (permissions or '').split(',')))
                 return f(*_args, **kwargs)
             else:

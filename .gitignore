@@ -96,3 +96,6 @@ ENV/
 
 # Tests
 tests/test_project.db
+
+# Vscode
+.vscode/
