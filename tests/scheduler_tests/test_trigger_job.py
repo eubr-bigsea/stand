@@ -2,7 +2,8 @@ from datetime import datetime
 import json
 
 import pytest
-from stand.models import PipelineRun, StatusExecution, PipelineStep
+from stand.models_extra import PipelineStep
+from stand.models import PipelineRun, StatusExecution
 from stand.scheduler.commands import TriggerWorkflow, UpdatePipelineRunStatus
 from stand.scheduler.trigger_scheduled_jobs import (
     get_step_is_immediate,
@@ -237,7 +238,7 @@ def test_time_scheduled_job_isnt_triggered_out_of_order():
 
 def test_imediate_job_is_triggered_correctly():
     """
-    tests if a job with the "exeucte imediately after the step before"
+    tests if a job with the "execute imediately after the step before"
     option is triggered correctly
     """
 

@@ -2,15 +2,13 @@ from datetime import datetime, timedelta, time
 from calendar import monthrange
 import typing
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from stand.models import PipelineRun, StatusExecution
 
-from stand.scheduler.utils import PipelineStepRun
+from stand.scheduler.utils import PipelineStepRun, update_data
 
 
 class Command:
-    def execute(self):
+    def execute(self, config):
         pass
 
     def __eq__(self, other):
@@ -75,9 +73,7 @@ class CreatePipelineRun(Command):
         )
         return pipeline_step_run
 
-    async def execute(
-        self, session: AsyncSession, user: typing.Dict, commit: bool = False
-    ) -> PipelineRun:
+    async def execute(self, config) -> PipelineRun:
         steps = []
         for step in self.pipeline["steps"]:
             steps.append(self.create_step_run_from_json_step(step))
@@ -91,11 +87,11 @@ class CreatePipelineRun(Command):
             finish=self.get_pipeline_run_end(),
             steps=steps,
         )
-        run: PipelineRun = pipeline_run
+        stand_config = config.get('stand').get('services').get('stand')
+        headers = {"X-Auth-Token": stand_config["auth_token"]}
+        url = f"{stand_config['url']}/pipeline-runs"
+        update_data('POST', url, payload=pipeline_run, headers=headers)
 
-        if commit:
-            session.add(run)
-            await session.commit()
         return pipeline_run
 
 
@@ -103,7 +99,7 @@ class TriggerWorkflow(Command):
     def __init__(self, pipeline_step):
         self.pipeline_step = pipeline_step
 
-    async def execute(self, session: AsyncSession):
+    async def execute(self, config):
         print("workflow was triggered, job created")
 
 
@@ -112,9 +108,9 @@ class UpdatePipelineRunStatus(Command):
         self.pipeline_run = pipeline_run
         self.status = status
 
-    def execute(self, session):
+    def execute(self, config):
         self.pipeline_run.status = self.status
-        session.commit()
+        # session.commit()
 
 
 class UpdatePipelineStepRunStatus(Command):
@@ -122,9 +118,9 @@ class UpdatePipelineStepRunStatus(Command):
         self.pipeline_step_run = pipeline_step_run
         self.status = status
 
-    def execute(self, session):
+    def execute(self, config):
         self.pipeline_step_run.status = self.status
-        session.commit()
+        # session.commit()
 
 
 class ChangeLastCompletedStep(Command):
@@ -132,9 +128,9 @@ class ChangeLastCompletedStep(Command):
         self.pipeline_run = pipeline_run
         self.new_last_completed_step = new_last_completed_step
 
-    def execute(self, session):
+    def execute(self, config):
         self.pipeline_run.last_executed_step = self.new_last_completed_step
-        session.commit()
+        # session.commit()
 
 
 class UpdatePipelineInfo(Command):
@@ -142,5 +138,5 @@ class UpdatePipelineInfo(Command):
         self.pipeline_run = pipeline_run
         self.update_time = update_time
 
-    def execute(self, session):
+    def execute(self, config):
         print("pipeline info updated")

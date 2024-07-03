@@ -8,17 +8,18 @@ import typing
 from datetime import datetime
 
 from stand.scheduler.commands import (
+    Command,
     CreatePipelineRun,
     UpdatePipelineInfo,
     UpdatePipelineRunStatus,
 )
 
 
-def update_pipelines_runs(
+def get_pipeline_run_commands(
     updated_pipelines: typing.Dict,
     pipeline_runs: typing.List,
     current_time: datetime,
-):
+) -> typing.List[Command]:
     """Update pipelines' runs"""
     runs = dict([[r.pipeline_id, r] for r in pipeline_runs])
 

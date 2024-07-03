@@ -2,7 +2,7 @@ from datetime import datetime
 import pytest
 
 from stand.scheduler.commands import CreatePipelineRun
-
+from stand.scheduler.utils import load_config
 
 @pytest.mark.parametrize(
     "pipeline,current_time,expected_time",
@@ -288,7 +288,7 @@ async def test_CreatePipelineRun_returns_correct_object():
         "steps": steps,
         "execution_window": "monthly",
     }
-
     command = CreatePipelineRun(pipeline=pipeline)
-    pipeline_run = await command.execute(session=None, user=None)
+    config = load_config()
+    pipeline_run = await command.execute(config)
     # TODO: Create assert logic

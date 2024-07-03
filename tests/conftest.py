@@ -1,6 +1,3 @@
-import pytest_asyncio
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 import asyncio
 import os
 from stand.factory import create_babel_i18n
@@ -9,9 +6,8 @@ import datetime
 import flask_migrate
 
 from stand.models import (Job, ClusterType, Cluster,
-                          JobType, StatusExecution, db)
+                          JobType, PipelineRun, PipelineStepRun, StatusExecution, db)
 from stand.services.redis_service import connect_redis_store
-from mock import patch
 
 @pytest.fixture(scope='session')
 def redis_store(app):
@@ -97,12 +93,90 @@ def client(app):
                 db.session.add(cluster)
             for job in get_jobs():
                 db.session.add(job)
+            for run in get_pipeline_runs():
+                db.session.add(run)
             client.secret = app.config['STAND_CONFIG']['secret']
             db.session.commit()
         yield client
 
 @pytest.fixture(scope='session')
 def pipelines():
+    return get_pipelines()
+
+def get_pipeline_runs():
+    runs = [
+        {
+            'id': 1,
+            'pipeline_id': 1,
+            'last_executed_step': -1,
+            'status': 'PENDING',
+            'start': datetime.datetime(2024, 6, 1),
+            'finish': datetime.datetime(2024, 6, 30),
+            'steps': [
+                {
+                    'id': 1,
+                    'workflow_id': 1,
+                    'updated': datetime.datetime.now(),
+                    'status': 'PENDING'
+                },
+                {
+                    'id': 2,
+                    'workflow_id': 2,
+                    'updated': datetime.datetime.now(),
+                    'status': 'PENDING'
+                }
+            ]
+        },
+        {
+            'id': 2,
+            'pipeline_id': 2,
+            'last_executed_step': -1,
+            'status': 'PENDING',
+            'start': datetime.datetime(2024, 6, 1),
+            'finish': datetime.datetime(2024, 6, 30),
+            'steps': [
+                {
+                    'id': 3,
+                    'workflow_id': 1,
+                    'updated': datetime.datetime.now(),
+                    'status': 'PENDING'
+                },
+                {
+                    'id': 4,
+                    'workflow_id': 2,
+                    'updated': datetime.datetime.now(),
+                    'status': 'PENDING'
+                }
+            ]
+        },
+        {
+            'id': 3,
+            'pipeline_id': 3,
+            'last_executed_step': -1,
+            'status': 'PENDING',
+            'start': datetime.datetime(2024, 6, 1),
+            'finish': datetime.datetime(2024, 6, 30),
+            'steps': [
+                {
+                    'id': 5,
+                    'workflow_id': 1,
+                    'updated': datetime.datetime.now(),
+                    'status': 'PENDING'
+                },
+                {
+                    'id': 6,
+                    'workflow_id': 2,
+                    'updated': datetime.datetime.now(),
+                    'status': 'PENDING'
+                }
+            ]
+        }
+    ]
+    for run in runs:
+        run['steps'] = [PipelineStepRun(**step) for step in run.get('steps')]
+    return [PipelineRun(**run) for run in runs]
+
+def get_pipelines():
     return [
         {
             'id': 1,
@@ -178,28 +252,4 @@ def event_loop():
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
-
-@pytest_asyncio.fixture(scope='function')
-async def async_session():
-
-    url = "sqlite+aiosqlite:///:memory:"
-    engine = create_async_engine(url, echo=True)
-    async_session_local = sessionmaker(
-        bind=engine,
-        class_=AsyncSession,
-        expire_on_commit=False
-    )
-    # Create tables
-    async with engine.begin() as conn:
-        await conn.run_sync(db.create_all)
-
-    a = 0
-    a = a/a
-    async with async_session_local() as session:
-        yield session
-
-    # Drop tables
-    async with engine.begin() as conn:
-        await conn.run_sync(db.drop_all)
-
 

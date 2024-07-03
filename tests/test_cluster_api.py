@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from stand.models import *
+from stand.models import (db, Cluster)
 from flask import current_app
 
 
@@ -38,16 +38,16 @@ def test_cluster_list_success(client):
 
 def test_cluster_list_fail_invalid_field(client):
     headers = {'X-Auth-Token': str(client.secret)}
-    
+
     rv = client.get('/clusters', headers=headers,
         query_string={
             'limit': 10, 'ascending': 1,
             'page': 1, 'byColumn': 0,
             'asc': 'true', 'size': 10,
             'fields': 'id,name,type,address,enabled'})
-    
+
     assert 200 == rv.status_code, 'Incorrect status code'
-    
+
 
 def test_cluster_list_with_parameters_success(client):
     headers = {'X-Auth-Token': str(client.secret)}
@@ -130,7 +130,6 @@ def test_cluster_delete_success(client):
             description='Testing', enabled=True)
         db.session.add(cluster)
         db.session.commit()
-
     rv = client.delete(f'/clusters/{cluster_id}', headers=headers)
     assert 204 == rv.status_code, f'Incorrect status code: {rv.status_code}'
 
