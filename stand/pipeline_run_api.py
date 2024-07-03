@@ -7,8 +7,10 @@ from flask import request
 from flask_restful import Resource
 from http import HTTPStatus
 
-from stand.schema import *
-from stand.models import *
+from stand.schema import (PipelineRunCreateRequestSchema,
+                          PipelineRunItemResponseSchema,
+                          PipelineRunListResponseSchema)
+from stand.models import (PipelineRun, db)
 from flask_babel import gettext
 
 log = logging.getLogger(__name__)
@@ -37,24 +39,28 @@ class PipelineRunListApi(Resource):
                 'simple', 'false') == 'true' else None
         pipeline_runs = PipelineRun.query
 
-        page = request.args.get('page') or '1'
-        if page is not None and page.isdigit():
-            page_size = int(request.args.get('size', 20))
-            page = int(page)
-            pagination = pipeline_runs.paginate(page, page_size, True)
-            result = {
-                'data': PipelineRunListResponseSchema(
-                    many=True, only=only).dump(pagination.items),
-                'pagination': {
-                    'page': page, 'size': page_size,
-                    'total': pagination.total,
-                    'pages': int(math.ceil(1.0 * pagination.total / page_size))}
-            }
-        else:
-            result = {
-                'data': PipelineRunListResponseSchema(
-                    many=True, only=only).dump(
-                    pipeline_runs)}
+        status_filter = request.args.get('status')
+        if status_filter:
+            pipeline_runs = PipelineRun.query.filter(
+                PipelineRun.status == status_filter)
+        pipeline_filter = request.args.get('pipeline')
+        if pipeline_filter:
+            pipeline_runs = PipelineRun.query.filter(
+                PipelineRun.pipeline_id == pipeline_filter)
+
+        page = request.args.get('page', default=1, type=int)
+        page_size = request.args.get('size', default=20, type=int)
+
+        pagination = pipeline_runs.paginate(page, page_size, True)
+        result = {
+            'data': PipelineRunListResponseSchema(
+                many=True, only=only).dump(pagination.items),
+            'pagination': {
+                'page': page, 'size': page_size,
+                'total': pagination.total,
+                'pages': int(math.ceil(1.0 * pagination.total / page_size))}
+        }
+
 
         if log.isEnabledFor(logging.DEBUG):
             log.debug(gettext('Listing %(name)s', name=self.human_name))
