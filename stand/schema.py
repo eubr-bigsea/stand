@@ -945,6 +945,11 @@ class PipelineStepRunCreateRequestSchema(BaseSchema):
         allow_none=True,
         load_default=0,
         dump_default=0)
+    order = fields.Integer(
+        required=False,
+        allow_none=True,
+        load_default=0,
+        dump_default=0)
     comment = fields.String(required=False, allow_none=True)
     status = fields.String(required=True,
                            validate=[OneOf(StatusExecution.values())])
@@ -980,6 +985,11 @@ class PipelineStepRunListResponseSchema(BaseSchema):
     updated = fields.DateTime(required=True)
     workflow_id = fields.Integer(required=True)
     retries = fields.Integer(
+        required=False,
+        allow_none=True,
+        load_default=0,
+        dump_default=0)
+    order = fields.Integer(
         required=False,
         allow_none=True,
         load_default=0,
@@ -1027,6 +1037,11 @@ class PipelineStepRunItemResponseSchema(BaseSchema):
         allow_none=True,
         load_default=0,
         dump_default=0)
+    order = fields.Integer(
+        required=False,
+        allow_none=True,
+        load_default=0,
+        dump_default=0)
     comment = fields.String(required=False, allow_none=True)
     status = fields.String(required=True,
                            validate=[OneOf(StatusExecution.values())])
@@ -1066,6 +1081,11 @@ class PipelineStepRunCreateRequestSchema(BaseSchema):
     updated = fields.DateTime(required=True)
     workflow_id = fields.Integer(required=True)
     retries = fields.Integer(
+        required=False,
+        allow_none=True,
+        load_default=0,
+        dump_default=0)
+    order = fields.Integer(
         required=False,
         allow_none=True,
         load_default=0,
