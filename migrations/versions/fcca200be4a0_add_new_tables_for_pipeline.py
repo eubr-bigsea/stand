@@ -7,7 +7,7 @@ Create Date: 2024-06-20 10:14:27.158188
 """
 from alembic import op
 import sqlalchemy as sa
-
+from stand.migration_utils import is_sqlite
 
 # revision identifiers, used by Alembic.
 revision = 'fcca200be4a0'
@@ -69,7 +69,8 @@ def upgrade():
     op.add_column('job', sa.Column('pipeline_step_run_id', sa.Integer(), nullable=True))
     op.create_index(op.f('ix_job_cluster_id'), 'job', ['cluster_id'], unique=False)
     op.create_index(op.f('ix_job_pipeline_step_run_id'), 'job', ['pipeline_step_run_id'], unique=False)
-    op.create_foreign_key('fk_job_pipeline_step_run_id', 'job', 'pipeline_step_run', ['pipeline_step_run_id'], ['id'])
+    if not is_sqlite():
+        op.create_foreign_key('fk_job_pipeline_step_run_id', 'job', 'pipeline_step_run', ['pipeline_step_run_id'], ['id'])
     op.create_index(op.f('ix_job_result_job_id'), 'job_result', ['job_id'], unique=False)
     op.create_index(op.f('ix_job_step_job_id'), 'job_step', ['job_id'], unique=False)
     op.create_index(op.f('ix_job_step_log_step_id'), 'job_step_log', ['step_id'], unique=False)

@@ -1,18 +1,19 @@
 import math
 import logging
 
-from stand.app_auth import requires_auth, requires_permission
+from stand.app_auth import requires_auth
 
-from flask import request
+from flask import request, g as flask_g
 from flask_restful import Resource
 from http import HTTPStatus
 
 from stand.schema import (PipelineRunCreateRequestSchema,
                           PipelineRunItemResponseSchema,
-                          PipelineRunListResponseSchema)
+                          PipelineRunListResponseSchema, partial_schema_factory)
 from stand.models import (PipelineRun, db)
 from flask_babel import gettext
-
+from sqlalchemy import func
+from sqlalchemy.sql import and_
 log = logging.getLogger(__name__)
 # region Protected\s*
 # endregion\w*
@@ -43,23 +44,51 @@ class PipelineRunListApi(Resource):
         if status_filter:
             pipeline_runs = PipelineRun.query.filter(
                 PipelineRun.status == status_filter)
-        pipeline_filter = request.args.get('pipeline')
-        if pipeline_filter:
+        pipelines_filter = request.args.get('pipelines')
+        if pipelines_filter:
+            pipeline_ids = [int(x) for x in pipelines_filter.split(',')]
             pipeline_runs = PipelineRun.query.filter(
-                PipelineRun.pipeline_id == pipeline_filter)
+                PipelineRun.pipeline_id.in_(pipeline_ids))
 
-        page = request.args.get('page', default=1, type=int)
-        page_size = request.args.get('size', default=20, type=int)
+        latest_filter = request.args.get('latest')
 
-        pagination = pipeline_runs.paginate(page, page_size, True)
-        result = {
-            'data': PipelineRunListResponseSchema(
-                many=True, only=only).dump(pagination.items),
-            'pagination': {
-                'page': page, 'size': page_size,
-                'total': pagination.total,
-                'pages': int(math.ceil(1.0 * pagination.total / page_size))}
-        }
+        if latest_filter in ('true', 1, 'True', '1'):
+            subquery = (
+                db.session.query(
+                    PipelineRun.pipeline_id,
+                    func.max(PipelineRun.start).label("max_start"),
+                )
+            )
+            if pipelines_filter:
+                subquery = subquery.filter(PipelineRun.pipeline_id.in_(
+                    pipeline_ids))
+            subquery = subquery.group_by(PipelineRun.pipeline_id).subquery()
+
+            pipeline_runs = (
+                pipeline_runs.join(
+                    subquery,
+                    and_(
+                        PipelineRun.pipeline_id == subquery.c.pipeline_id,
+                        PipelineRun.start == subquery.c.max_start,
+                    )
+                ).order_by(PipelineRun.pipeline_id)
+            )
+            print(str(pipeline_runs))
+            result = PipelineRunListResponseSchema(
+                    many=True, only=only).dump(pipeline_runs.all())
+        else:
+            page = request.args.get('page', default=1, type=int)
+            page_size = request.args.get('size', default=20, type=int)
+
+            pagination = pipeline_runs.paginate(page, page_size, True)
+            result = {
+                'data': PipelineRunListResponseSchema(
+                    many=True, only=only).dump(pagination.items),
+                'pagination': {
+                    'page': page, 'size': page_size,
+                    'total': pagination.total,
+                    'pages': int(math.ceil(1.0 * pagination.total / page_size))}
+            }
 
 
         if log.isEnabledFor(logging.DEBUG):
@@ -133,4 +162,83 @@ class PipelineRunDetailApi(Resource):
             }
 
         return result, return_code
+    @requires_auth
+    def delete(self, pipeline_run_id):
+        """
+        Delete a single instance of class PipelineRun.
+
+        :param pipeline_run_id: The ID of the PipelineRun instance to delete.
+        :type pipeline_run_id: int
+        :return: A JSON object containing a success message.
+        :rtype: dict
+        """
+
+        return_code = HTTPStatus.NO_CONTENT
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug(gettext('Deleting %s (id=%s)'), self.human_name,
+                      pipeline_run_id)
+        pipeline = PipelineRun.query.get(pipeline_run_id)
+        if pipeline is not None:
+            db.session.delete(pipeline)
+            db.session.commit()
+            result = {
+                'status': 'OK',
+                'message': gettext('%(name)s deleted with success!',
+                                   name=self.human_name)
+            }
+        else:
+            return_code = HTTPStatus.NOT_FOUND
+            result = {
+                'status': 'ERROR',
+                'message': gettext('%(name)s not found (id=%(id)s).',
+                                   name=self.human_name, id=pipeline_run_id)
+            }
+        return result, return_code
+
+    @requires_auth
+    def patch(self, pipeline_run_id):
+        """
+        Update a single instance of class PipelineRun.
+
+        :param pipeline_run_id: The ID of the PipelinRun instance to update.
+        :type pipeline_run_id: int
+        :return: A JSON object containing a success message.
+        :rtype: dict
+        """
+        result = {'status': 'ERROR', 'message': gettext('Insufficient data.')}
+        return_code = HTTPStatus.NOT_FOUND
+
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug(gettext('Updating %s (id=%s)'), self.human_name,
+                      pipeline_run_id)
+        if request.json:
+            request_schema = partial_schema_factory(
+                PipelineRunCreateRequestSchema)
+            response_schema = PipelineRunItemResponseSchema()
+            # Ignore missing fields to allow partial updates
+
+            data = request.json
+            data['user_id'] = flask_g.user.id
+            data['user_login'] = flask_g.user.login
+            data['user_name'] = flask_g.user.name
+
+            pipeline_run = request_schema.load(data, partial=True)
+            pipeline_run.id = pipeline_run_id
+            pipeline_run = db.session.merge(pipeline_run)
+
+            db.session.commit()
+
+            if pipeline_run is not None:
+                return_code = HTTPStatus.OK
+                result = {
+                    'status': 'OK',
+                    'message': gettext(
+                        '%(n)s (id=%(id)s) was updated with success!',
+                        n=self.human_name,
+                        id=pipeline_run_id),
+                    'data': [response_schema.dump(
+                        pipeline_run)]
+                }
+        return result, return_code
+
 

@@ -476,7 +476,8 @@ class PipelineRun(db.Model):
                                name='StatusExecutionEnumType'))
 
     # Associations
-    steps = relationship("PipelineStepRun", back_populates="pipeline_run")
+    steps = relationship("PipelineStepRun", back_populates="pipeline_run",
+                        cascade="all, delete-orphan")
 
     def __str__(self):
         return self.start
@@ -517,7 +518,7 @@ class PipelineStepRun(db.Model):
         "PipelineRun",
         overlaps='steps',
         foreign_keys=[pipeline_run_id],
-        back_populates="steps"
+        back_populates="steps",
     )
     logs = relationship("PipelineStepRunLog")
 

@@ -4,12 +4,12 @@ import json
 from stand.models import (
     PipelineRun,
     StatusExecution,
-    PipelineStep,
+    PipelineStepRun,
 )
 from stand.scheduler.commands import TriggerWorkflow, UpdatePipelineRunStatus
 
 
-def is_next_step_in_order(step: PipelineStep, pipeline_run: PipelineRun) -> bool:
+def is_next_step_in_order(step: PipelineStepRun, pipeline_run: PipelineRun) -> bool:
     "returns if step is the next step in a pipeline run execution"
     if step.order == pipeline_run.last_executed_step + 1:
         return True

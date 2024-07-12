@@ -3,88 +3,47 @@ from stand.models import (
     Job,
     PipelineRun,
     PipelineStepRun,
-    StatusExecution,
 )
+from stand.schema import (PipelineRunItemResponseSchema)
 
 # Basic code to start a scheduler using aiocron package
 import os
 import typing
 from datetime import date, timedelta
-import requests
+import aiohttp
 import yaml
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.sql import and_
+from sqlalchemy import select
 
 
-async def get_canceled_runs(session)-> typing.List[PipelineRun]:
-    return await session.execute(
-        select(PipelineRun).filter(
-            PipelineRun.status == StatusExecution.CANCELED
-        )
-    ).fetchall()
+# async def get_canceled_pipeline_runs(session)-> typing.List[PipelineRun]:
+#     return await session.execute(
+#         select(PipelineRun).filter(
+#             PipelineRun.status == StatusExecution.CANCELED
+#         )
+#     ).fetchall()
 
 
-async def get_latest_pipeline_step_run(
-    session: AsyncSession, run: PipelineRun
-) -> PipelineStepRun:
-    # Return the latest pipeline step run given a pipeline run
-
-    # query = select(PipelineStepRun).filter(
-    #     PipelineStepRun.id == run.last_completed_step
-    # )
-    # return await session.execute(query).one()
+async def get_latest_pipeline_step_run(run: PipelineRun) -> PipelineStepRun:
     return next(
         [step for step in run.steps if step.id == run.last_completed_step])
 
 
-async def get_latest_job_from_pipeline_step_run(
-    session: AsyncSession, step_run: PipelineStepRun
-) -> Job:
-    # query = (
-    #     select(Job, func.max(Job.finished).label("latest_job_finished_time"))
-    #     .filter(Job.pipeline_step_run_id == step_run.id)
-    #     .group_by(Job.pipeline_step_run_id)
-    # )
-    query = (select(Job).filter(Job.pipeline_step_run_id == step_run.id)
-             .order_by(Job.finished.desc()))
-
-    return await session.execute(query).one()
-
-
-async def get_runs(session, pipeline_ids):
-    # Subquery to get the most recent run for each pipeline_id
-    subquery = (
-        select(
-            PipelineRun.pipeline_id,
-            func.max(PipelineRun.start).label("max_start"),
-        )
-        .filter(PipelineRun.pipeline_id.in_(pipeline_ids))
-        .group_by(PipelineRun.pipeline_id)
-        .subquery()
-    )
-    # subquery = await session.execute(q)
-
-    # Join the subquery with the PipelineRun table to get the full
-    # PipelineRun entities
-    q = (
-        select(PipelineRun)
-        .join(
-            subquery,
-            and_(
-                PipelineRun.pipeline_id == subquery.c.pipeline_id,
-                PipelineRun.start == subquery.c.max_start,
-            ),
-        )
-        .order_by(PipelineRun.pipeline_id)
-    )
-    result = await session.execute(q)
-
-    return result.fetchall()
+async def get_latest_pipeline_runs(stand_config: typing.Dict,
+                   pipeline_ids: typing.List[int]) -> typing.List[PipelineRun]:
+    """"""
+    headers = {"X-Auth-Token": stand_config["auth_token"]}
+    url = f"{stand_config['url']}/pipeline-runs"
+    params = {
+        'latest': 'true',
+        'pipelines': ','.join([str(x) for x in pipeline_ids])
+    }
+    data = await retrieve_data(url, params=params, headers=headers)
+    return PipelineRunItemResponseSchema(many=True, partial=True).load(
+                data)
 
 
-def get_pipelines(
+
+async def get_pipelines(
     tahiti_config: typing.Dict, days: int
 ) -> typing.Dict[int, typing.Dict]:
     """Read pipelines from Tahiti API.
@@ -93,27 +52,26 @@ def get_pipelines(
 
     tahiti_api_url = tahiti_config["url"]
     reference = date.today() - timedelta(days=days)
-    params = {"after": reference}
+    params = {
+        "after": reference.isoformat(),
+        "fields": 'id,name,enabled,steps,updated'
+    }
     headers = {"X-Auth-Token": tahiti_config["auth_token"]}
-    resp = requests.get(f"{tahiti_api_url}/pipelines", params, headers=headers)
-    if resp.status_code != 200:
-        raise RuntimeError(gettext(
-            "Error {} while getting pipelines").format(resp.status_code))
+    url = f"{tahiti_api_url}/pipelines"
+    data = await retrieve_data(url, params, headers)
+    return dict([[p["id"], p] for p in data["data"]])
 
-    updated_pipelines = dict([[p["id"], p] for p in resp.json()["list"]])
+async def get_pipeline_run(
+    stand_config: typing.Dict, pipeline_run_id: int
+) -> PipelineRun:
+    """Read a single pipelines by id from API.
+    """
 
-    return updated_pipelines
-
-
-def create_sql_alchemy_async_engine(config: typing.Dict):
-    url = config["stand"]["servers"]["database_url"]
-    if "sqlite" in url:
-        url = url.replace("sqlite", "sqlite+aiosqlite")
-    return create_async_engine(url, echo=True, future=True)
-
-
-def build_session_maker(engine: AsyncEngine):
-    return sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+    headers = {"X-Auth-Token": stand_config["auth_token"]}
+    url = f"{stand_config['url']}/pipeline-runs/{pipeline_run_id}"
+    data = await retrieve_data(url, headers=headers)
+    return PipelineRunItemResponseSchema(partial=True).load(
+                data.get('data')[0])
 
 
 def load_config() -> typing.Dict[int, typing.Dict]:
@@ -127,11 +85,46 @@ def load_config() -> typing.Dict[int, typing.Dict]:
     return config
 
 
-def get_latest_job(run: PipelineRun) -> Job:
-    "name"
-    pass
+# def get_latest_job(run: PipelineRun) -> Job:
+#     "name"
+#     pass
 
 
-def get_active_step_run(run: PipelineRun) -> Job:
-    "name"
-    pass
+# def get_active_step_run(run: PipelineRun) -> Job:
+#     "name"
+#     pass
+
+
+async def get_latest_job_from_pipeline_step_run(
+    config, step_run: PipelineStepRun
+) -> Job:
+    # query = (
+    #     select(Job, func.max(Job.finished).label("latest_job_finished_time"))
+    #     .filter(Job.pipeline_step_run_id == step_run.id)
+    #     .group_by(Job.pipeline_step_run_id)
+    # )
+    # query = (select(Job).filter(Job.pipeline_step_run_id == step_run.id)
+    #          .order_by(Job.finished.desc()))
+
+    # return await session.execute(query).one()
+    return None
+
+
+async def retrieve_data(url: str, params: typing.Dict = None,
+                       headers: typing.Dict = None):
+    async with aiohttp.ClientSession(headers=headers) as session:
+        async with session.get(url, params=params) as resp:
+            if resp.status != 200:
+                raise RuntimeError(gettext(
+                    "Error {} while getting pipeline runs").format(resp.status))
+            return await resp.json()
+
+
+async def update_data(url: str, method: str, payload: typing.Dict = None,
+                       headers: typing.Dict = None):
+    async with aiohttp.ClientSession(headers=headers) as session:
+        async with session.request(method, url, json=payload) as resp:
+            if resp.status != 200:
+                raise RuntimeError(gettext(
+                    "Error {} while getting pipeline runs").format(resp.status))
+            return await resp.json()

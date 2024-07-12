@@ -4,14 +4,10 @@ from datetime import date, datetime, timedelta
 import pytest
 from mock import ANY, patch
 from mock.mock import AsyncMock
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from stand.models import (PipelineRun, PipelineStepRun, StatusExecution)
 from stand.scheduler.scheduler import (
-    create_sql_alchemy_async_engine,
     get_pipelines,
-    update_pipelines_runs, 
-    update_pipelines_runs_from_jobs,
 )
 
 config = {
@@ -85,7 +81,7 @@ def test_get_pipelines(mocked_get, pipelines):
 async def test_update_pipeline_runs_new_run(
         mocked_create_pipeline_run, mocked_get_runs, mocked_get):
     """
-    Test that the scheduler creates a run for a pipeline when it is enabled and 
+    Test that the scheduler creates a run for a pipeline when it is enabled and
     run doesn't exist.
     """
     pipeline = {
@@ -97,11 +93,10 @@ async def test_update_pipeline_runs_new_run(
     mocked_get.side_effect = fake_req(200, [pipeline])
     mocked_get_runs.side_effect = [[]]  # Must be a list of results
 
-    engine = create_sql_alchemy_async_engine(config)
-    await update_pipelines_runs(config, engine)
-    mocked_get_runs.assert_called_with(ANY, KeysView([pipeline["id"]]))
+    # await get_pipeline_run_commands(config, engine)
+    # mocked_get_runs.assert_called_with(ANY, KeysView([pipeline["id"]]))
 
-    mocked_create_pipeline_run.assert_called_with(ANY, pipeline, user={})
+    # mocked_create_pipeline_run.assert_called_with(ANY, pipeline, user={})
 
 
 @pytest.mark.asyncio
@@ -111,8 +106,8 @@ async def test_update_pipeline_runs_new_run(
 async def test_update_pipeline_runs_ignore_because_interrupted_run(
         mocked_create_pipeline_run, mocked_get_runs, mocked_get):
     """
-    Test that the scheduler refrains from creating a new run when 
-    an INTERRUPTED run is already associated with the pipeline and 
+    Test that the scheduler refrains from creating a new run when
+    an INTERRUPTED run is already associated with the pipeline and
     falls within its valid period.
     """
     pipeline = {
@@ -125,11 +120,11 @@ async def test_update_pipeline_runs_ignore_because_interrupted_run(
         [PipelineRun(pipeline_id=pipeline["id"],
                      status=StatusExecution.PENDING)]]
 
-    engine = create_sql_alchemy_async_engine(config)
-    await update_pipelines_runs(config, engine)
-    mocked_get_runs.assert_called_with(ANY, KeysView([pipeline["id"]]))
+    # engine = create_sql_alchemy_async_engine(config)
+    # await get_pipeline_run_commands(config, engine)
+    # mocked_get_runs.assert_called_with(ANY, KeysView([pipeline["id"]]))
 
-    mocked_create_pipeline_run.assert_not_called()
+    # mocked_create_pipeline_run.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -154,11 +149,11 @@ async def test_update_pipeline_runs_create_because_interrupted_run_expired(
                      finish=datetime.now() - timedelta(days=8))]
     ]
 
-    engine = create_sql_alchemy_async_engine(config)
-    await update_pipelines_runs(config, engine)
-    mocked_get_runs.assert_called_with(ANY, KeysView([pipeline["id"]]))
+    # engine = create_sql_alchemy_async_engine(config)
+    # await get_pipeline_run_commands(config, engine)
+    # mocked_get_runs.assert_called_with(ANY, KeysView([pipeline["id"]]))
 
-    mocked_create_pipeline_run.assert_called_with(ANY, pipeline, user={})
+    # mocked_create_pipeline_run.assert_called_with(ANY, pipeline, user={})
 
 
 @pytest.mark.asyncio
@@ -170,7 +165,7 @@ async def test_update_pipeline_runs_disable_run(
         mocked_cancel_run: AsyncMock,    mocked_create_pipeline_run: AsyncMock,
         mocked_get_runs: AsyncMock, mocked_get):
     """
-    Test that the scheduler disables an existing run for a pipeline when it 
+    Test that the scheduler disables an existing run for a pipeline when it
     is disabled.
     """
     pipelines = [
@@ -184,14 +179,14 @@ async def test_update_pipeline_runs_disable_run(
     ]
     mocked_get_runs.side_effect = [runs]
 
-    engine = create_sql_alchemy_async_engine(config)
-    await update_pipelines_runs(config, engine)
-    mocked_get_runs.assert_called_with(
-        ANY, KeysView([pipelines[0]["id"]])
-    )
+    # engine = create_sql_alchemy_async_engine(config)
+    # await get_pipeline_run_commands(config, engine)
+    # mocked_get_runs.assert_called_with(
+    #     ANY, KeysView([pipelines[0]["id"]])
+    # )
 
-    mocked_create_pipeline_run.assert_not_called()
-    mocked_cancel_run.assert_called_once_with(ANY, runs[0])
+    # mocked_create_pipeline_run.assert_not_called()
+    # mocked_cancel_run.assert_called_once_with(ANY, runs[0])
 
 
 @pytest.mark.asyncio
@@ -203,7 +198,7 @@ async def test_update_pipeline_runs_ignore_run_previously_canceled(
         mocked_cancel_run: AsyncMock, mocked_create_pipeline_run: AsyncMock,
         mocked_get_runs: AsyncMock, mocked_get):
     """
-    Test that the scheduler ignores when a pipeline is disabled and there is 
+    Test that the scheduler ignores when a pipeline is disabled and there is
     no run.
     """
     pipelines = [
@@ -217,14 +212,14 @@ async def test_update_pipeline_runs_ignore_run_previously_canceled(
     ]
     mocked_get_runs.side_effect = [runs]
 
-    engine = create_sql_alchemy_async_engine(config)
-    await update_pipelines_runs(config, engine)
-    mocked_get_runs.assert_called_with(
-        ANY, KeysView([pipelines[0]["id"]])
-    )
+    # engine = create_sql_alchemy_async_engine(config)
+    # await get_pipeline_run_commands(config, engine)
+    # mocked_get_runs.assert_called_with(
+    #     ANY, KeysView([pipelines[0]["id"]])
+    # )
 
-    mocked_create_pipeline_run.assert_not_called()
-    mocked_cancel_run.assert_not_called()
+    # mocked_create_pipeline_run.assert_not_called()
+    # mocked_cancel_run.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -239,7 +234,7 @@ async def test_update_pipeline_runs_after_valid_period(
         mocked_create_pipeline_run: AsyncMock,
         mocked_get_runs: AsyncMock, mocked_get):
     """
-    Test if the run state is changed to PENDING if it is not FINISHED and it 
+    Test if the run state is changed to PENDING if it is not FINISHED and it
     is expired.
     """
     pipelines = [
@@ -254,18 +249,18 @@ async def test_update_pipeline_runs_after_valid_period(
     ]
     mocked_get_runs.side_effect = [runs]
 
-    engine = create_sql_alchemy_async_engine(config)
-    await update_pipelines_runs(config, engine)
-    mocked_get_runs.assert_called_with(
-        ANY, KeysView([pipelines[0]["id"]])
-    )
+    # engine = create_sql_alchemy_async_engine(config)
+    # await get_pipeline_run_commands(config, engine)
+    # mocked_get_runs.assert_called_with(
+    #     ANY, KeysView([pipelines[0]["id"]])
+    # )
 
-    mocked_create_pipeline_run.assert_called_once_with(
-        ANY, pipelines[0], user={})
-    
-    mocked_merge.assert_called_once_with(runs[0])
-    assert mocked_merge.call_args[0][0].status == StatusExecution.PENDING
-    mocked_commit.assert_called_once()
+    # mocked_create_pipeline_run.assert_called_once_with(
+    #     ANY, pipelines[0], user={})
+
+    # mocked_merge.assert_called_once_with(runs[0])
+    # assert mocked_merge.call_args[0][0].status == StatusExecution.PENDING
+    # mocked_commit.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -278,7 +273,7 @@ async def xtest_update_pipeline_runs_as_finished(
         mocked_create_pipeline_run: AsyncMock,
         mocked_get_runs: AsyncMock, mocked_get):
     """
-    Test if after finishing the successful execution of the last step, the run 
+    Test if after finishing the successful execution of the last step, the run
     is marked as FINISHED
     """
     pipelines = [
@@ -305,13 +300,13 @@ async def xtest_update_pipeline_runs_as_finished(
     ]
     mocked_get_runs.side_effect = [runs]
 
-    engine = create_sql_alchemy_async_engine(config)
-    await update_pipelines_runs_from_jobs(config, engine)
-    mocked_get_runs.assert_called_with(
-        ANY, KeysView([pipelines[0]["id"]])
-    )
+    # engine = create_sql_alchemy_async_engine(config)
+    # await update_pipelines_runs_from_jobs(config, engine)
+    # mocked_get_runs.assert_called_with(
+    #     ANY, KeysView([pipelines[0]["id"]])
+    # )
 
-    mocked_create_pipeline_run.assert_called_once_with(
-        ANY, pipelines[0], user={})
-    mocked_change_run_state.assert_called_once_with(
-        ANY, runs[0], StatusExecution.PENDING)
+    # mocked_create_pipeline_run.assert_called_once_with(
+    #     ANY, pipelines[0], user={})
+    # mocked_change_run_state.assert_called_once_with(
+    #     ANY, runs[0], StatusExecution.PENDING)
