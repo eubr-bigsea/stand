@@ -837,6 +837,7 @@ class PipelineRunCreateRequestSchema(BaseSchema):
     start = fields.DateTime(required=True)
     finish = fields.DateTime(required=True)
     pipeline_id = fields.Integer(required=True)
+    pipeline_name = fields.String(required=True)
     last_executed_step = fields.Integer(required=True)
     comment = fields.String(required=False, allow_none=True)
     status = fields.String(required=True,
@@ -865,6 +866,7 @@ class PipelineRunListResponseSchema(BaseSchema):
     start = fields.DateTime(required=True)
     finish = fields.DateTime(required=True)
     pipeline_id = fields.Integer(required=True)
+    pipeline_name = fields.String(required=True)
     last_executed_step = fields.Integer(required=True)
     comment = fields.String(required=False, allow_none=True)
     status = fields.String(required=True,
@@ -889,6 +891,7 @@ class PipelineRunItemResponseSchema(BaseSchema):
     start = fields.DateTime(required=True)
     finish = fields.DateTime(required=True)
     pipeline_id = fields.Integer(required=True)
+    pipeline_name = fields.String(required=True)
     last_executed_step = fields.Integer(required=True)
     comment = fields.String(required=False, allow_none=True)
     status = fields.String(required=True,
@@ -913,6 +916,7 @@ class PipelineRunCreateRequestSchema(BaseSchema):
     start = fields.DateTime(required=True)
     finish = fields.DateTime(required=True)
     pipeline_id = fields.Integer(required=True)
+    pipeline_name = fields.String(required=True)
     last_executed_step = fields.Integer(required=True)
     comment = fields.String(required=False, allow_none=True)
     status = fields.String(required=True,
