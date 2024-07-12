@@ -840,6 +840,11 @@ class PipelineRunCreateRequestSchema(BaseSchema):
     pipeline_name = fields.String(required=True)
     last_executed_step = fields.Integer(required=True)
     comment = fields.String(required=False, allow_none=True)
+    updated = fields.DateTime(
+        required=False,
+        allow_none=True,
+        load_default=datetime.datetime.utcnow,
+        dump_default=datetime.datetime.utcnow)
     status = fields.String(required=True,
                            validate=[OneOf(StatusExecution.values())])
     final_status = fields.String(required=False, allow_none=True,
@@ -869,6 +874,11 @@ class PipelineRunListResponseSchema(BaseSchema):
     pipeline_name = fields.String(required=True)
     last_executed_step = fields.Integer(required=True)
     comment = fields.String(required=False, allow_none=True)
+    updated = fields.DateTime(
+        required=False,
+        allow_none=True,
+        load_default=datetime.datetime.utcnow,
+        dump_default=datetime.datetime.utcnow)
     status = fields.String(required=True,
                            validate=[OneOf(StatusExecution.values())])
     final_status = fields.String(required=False, allow_none=True,
@@ -894,6 +904,11 @@ class PipelineRunItemResponseSchema(BaseSchema):
     pipeline_name = fields.String(required=True)
     last_executed_step = fields.Integer(required=True)
     comment = fields.String(required=False, allow_none=True)
+    updated = fields.DateTime(
+        required=False,
+        allow_none=True,
+        load_default=datetime.datetime.utcnow,
+        dump_default=datetime.datetime.utcnow)
     status = fields.String(required=True,
                            validate=[OneOf(StatusExecution.values())])
     final_status = fields.String(required=False, allow_none=True,
@@ -919,6 +934,11 @@ class PipelineRunCreateRequestSchema(BaseSchema):
     pipeline_name = fields.String(required=True)
     last_executed_step = fields.Integer(required=True)
     comment = fields.String(required=False, allow_none=True)
+    updated = fields.DateTime(
+        required=False,
+        allow_none=True,
+        load_default=datetime.datetime.utcnow,
+        dump_default=datetime.datetime.utcnow)
     status = fields.String(required=True,
                            validate=[OneOf(StatusExecution.values())])
     final_status = fields.String(required=False, allow_none=True,

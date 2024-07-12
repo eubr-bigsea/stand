@@ -470,14 +470,15 @@ class PipelineRun(db.Model):
     pipeline_name = Column(String(200), nullable=False)
     last_executed_step = Column(Integer, nullable=False)
     comment = Column(String(200))
+    updated = Column(DateTime,
+                     default=datetime.datetime.utcnow, nullable=False, index=True)
     status = Column(Enum(*list(StatusExecution.values()),
                          name='StatusExecutionEnumType'), nullable=False)
     final_status = Column(Enum(*list(StatusExecution.values()),
                                name='StatusExecutionEnumType'))
 
     # Associations
-    steps = relationship("PipelineStepRun", back_populates="pipeline_run",
-                        cascade="all, delete-orphan")
+    steps = relationship("PipelineStepRun", back_populates="pipeline_run")
 
     def __str__(self):
         return self.start
@@ -518,7 +519,7 @@ class PipelineStepRun(db.Model):
         "PipelineRun",
         overlaps='steps',
         foreign_keys=[pipeline_run_id],
-        back_populates="steps",
+        back_populates="steps"
     )
     logs = relationship("PipelineStepRunLog")
 
