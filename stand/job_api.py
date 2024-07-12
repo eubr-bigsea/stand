@@ -230,6 +230,7 @@ class JobStopActionApi(Resource):
     def post(job_id):
         result, result_code = dict(status="ERROR",
                                    message=gettext("Not found")), 404
+        breakpoint()
         job = Job.query.get(job_id)
         if job is not None:
             response_schema = JobItemResponseSchema()

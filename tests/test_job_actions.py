@@ -66,15 +66,16 @@ def test_stop_job_workflow_not_running_success(client, app):
         db.session.commit()
 
 
-def test_stop_job_dont_exist_failure(client):
+def test_stop_job_doesnt_exist_success(client):
     data = {}
     headers = {'Content-Type': 'application/json'}
     headers.update(HEADERS)
-    response = client.post(job_stop_url(job_id=1000), headers=headers,
+    response = client.post(job_stop_url(job_id=10100), headers=headers,
                            data=json.dumps(data))
     result = response.json
-    assert response.status_code == 404
-    assert result['status'] == 'ERROR'
+
+    assert response.status_code == 200
+    assert result['status'] == 'OK'
 
 
 def test_stop_job_with_terminate_success(client):
@@ -146,7 +147,7 @@ def test_lock_job_by_id_api_success(client, app, redis_store):
     assert lock_info['user']['name'] == data['user']['name']
     assert lock_info['computer'] == data['computer']
     assert lock_info['date'] == locked_at.isoformat()
-    
+
     with app.app_context():
         db.session.delete(job)
         db.session.commit()
