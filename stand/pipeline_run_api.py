@@ -1,3 +1,4 @@
+import datetime
 import math
 import logging
 
@@ -12,7 +13,7 @@ from stand.schema import (PipelineRunCreateRequestSchema,
                           PipelineRunListResponseSchema, partial_schema_factory)
 from stand.models import (PipelineRun, db)
 from flask_babel import gettext
-from sqlalchemy import func
+from sqlalchemy import func, and_, or_
 from sqlalchemy.sql import and_
 log = logging.getLogger(__name__)
 # region Protected\s*
@@ -44,6 +45,42 @@ class PipelineRunListApi(Resource):
         if status_filter:
             pipeline_runs = PipelineRun.query.filter(
                 PipelineRun.status == status_filter)
+        name_filter = request.args.get('name')
+        if name_filter:
+            pipeline_runs = PipelineRun.query.filter(
+                PipelineRun.pipeline_name == name_filter)
+
+        start_filter = request.args.get('start')
+        if start_filter:
+            start_filter = datetime.datetime.strptime(start_filter, '%Y-%m-%d')
+
+        end_filter = request.args.get('end')
+        if end_filter:
+            end_filter = datetime.datetime.strptime(end_filter, '%Y-%m-%d')
+
+        if start_filter and end_filter:
+            pipeline_runs = pipeline_runs.filter(
+                or_(
+                    and_(PipelineRun.start <= start_filter, PipelineRun.finish >= start_filter),
+                    and_(PipelineRun.start <= end_filter, PipelineRun.finish >= end_filter),
+                    and_(PipelineRun.start >= start_filter, PipelineRun.finish <= end_filter)
+                )
+            )
+        elif start_filter:
+            pipeline_runs = pipeline_runs.filter(
+                or_(
+                    and_(PipelineRun.start <= start_filter, PipelineRun.finish >= start_filter),
+                    PipelineRun.start >= start_filter
+                )
+            )
+        elif end_filter:
+            pipeline_runs = pipeline_runs.filter(
+                or_(
+                    and_(PipelineRun.start <= end_filter, PipelineRun.finish >= end_filter),
+                    PipelineRun.finish <= end_filter
+                )
+            )
+
         pipelines_filter = request.args.get('pipelines')
         if pipelines_filter:
             pipeline_ids = [int(x) for x in pipelines_filter.split(',')]
