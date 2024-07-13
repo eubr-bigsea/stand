@@ -453,9 +453,6 @@ class JobItemResponseSchema(BaseSchema):
     cluster = fields.Nested(
         'stand.schema.ClusterItemResponseSchema',
         required=True)
-    pipeline_step_run = fields.Nested(
-        'stand.schema.PipelineStepRunItemResponseSchema',
-        allow_none=True)
     steps = fields.Nested(
         'stand.schema.JobStepItemResponseSchema',
         required=True,
@@ -501,9 +498,6 @@ class JobListResponseSchema(BaseSchema):
     cluster = fields.Nested(
         'stand.schema.ClusterListResponseSchema',
         required=True)
-    pipeline_step_run = fields.Nested(
-        'stand.schema.PipelineStepRunListResponseSchema',
-        allow_none=True)
     results = fields.Nested(
         'stand.schema.JobResultListResponseSchema',
         required=True,
@@ -535,7 +529,6 @@ class JobCreateRequestSchema(BaseSchema):
     job_key = fields.String(required=False, allow_none=True)
     trigger_type = fields.String(required=False, allow_none=True, load_default=TriggerType.MANUAL, dump_default=TriggerType.MANUAL,
                                  validate=[OneOf(TriggerType.values())])
-    pipeline_step_run_id = fields.Integer(required=False, allow_none=True)
     workflow = fields.Nested(
         'stand.schema.WorkflowDefinitionCreateRequestSchema',
         required=True)
@@ -599,9 +592,6 @@ class JobExecuteResponseSchema(BaseSchema):
     cluster = fields.Nested(
         'stand.schema.ClusterExecuteResponseSchema',
         required=True)
-    pipeline_step_run = fields.Nested(
-        'stand.schema.PipelineStepRunExecuteResponseSchema',
-        allow_none=True)
     steps = fields.Nested(
         'stand.schema.JobStepExecuteResponseSchema',
         required=True,
