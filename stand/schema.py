@@ -850,7 +850,7 @@ class PipelineRunCreateRequestSchema(BaseSchema):
     final_status = fields.String(required=False, allow_none=True,
                                  validate=[OneOf(StatusExecution.values())])
     steps = fields.Nested(
-        'stand.schema.CreateRequestSchema',
+        'stand.schema.PipelineStepRunCreateRequestSchema',
         required=True,
         many=True)
 
@@ -914,7 +914,7 @@ class PipelineRunItemResponseSchema(BaseSchema):
     final_status = fields.String(required=False, allow_none=True,
                                  validate=[OneOf(StatusExecution.values())])
     steps = fields.Nested(
-        'stand.schema.ItemResponseSchema',
+        'stand.schema.PipelineStepRunItemResponseSchema',
         required=True,
         many=True)
 
@@ -948,7 +948,7 @@ class PipelineRunCreateRequestSchema(BaseSchema):
     final_status = fields.String(required=False, allow_none=True,
                                  validate=[OneOf(StatusExecution.values())])
     steps = fields.Nested(
-        'stand.schema.CreateRequestSchema',
+        'stand.schema.PipelineStepRunCreateRequestSchema',
         required=True,
         many=True)
 

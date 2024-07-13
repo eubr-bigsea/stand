@@ -478,7 +478,8 @@ class PipelineRun(db.Model):
                                name='StatusExecutionEnumType'))
 
     # Associations
-    steps = relationship("PipelineStepRun", back_populates="pipeline_run")
+    steps = relationship("PipelineStepRun", back_populates="pipeline_run",
+                         cascade="all, delete-orphan")
 
     def __str__(self):
         return self.start
