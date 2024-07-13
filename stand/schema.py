@@ -913,6 +913,10 @@ class PipelineRunItemResponseSchema(BaseSchema):
                            validate=[OneOf(StatusExecution.values())])
     final_status = fields.String(required=False, allow_none=True,
                                  validate=[OneOf(StatusExecution.values())])
+    steps = fields.Nested(
+        'stand.schema.PipelineStepRunItemResponseSchema',
+        required=True,
+        many=True)
 
     # noinspection PyUnresolvedReferences
     @post_load
@@ -943,6 +947,10 @@ class PipelineRunCreateRequestSchema(BaseSchema):
                            validate=[OneOf(StatusExecution.values())])
     final_status = fields.String(required=False, allow_none=True,
                                  validate=[OneOf(StatusExecution.values())])
+    steps = fields.Nested(
+        'stand.schema.PipelineStepRunCreateRequestSchema',
+        required=True,
+        many=True)
 
     # noinspection PyUnresolvedReferences
     @post_load
