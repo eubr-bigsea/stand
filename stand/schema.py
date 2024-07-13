@@ -981,7 +981,8 @@ class PipelineStepRunCreateRequestSchema(BaseSchema):
     jobs = fields.Nested(
         'stand.schema.JobCreateRequestSchema',
         allow_none=True,
-        many=True)
+        many=True,
+        only=['id', 'finished', 'created', 'results', 'steps', 'started', 'status', 'user'])
     pipeline_run = fields.Nested(
         'stand.schema.PipelineRunCreateRequestSchema',
         required=True)
@@ -1030,7 +1031,8 @@ class PipelineStepRunListResponseSchema(BaseSchema):
     jobs = fields.Nested(
         'stand.schema.JobListResponseSchema',
         allow_none=True,
-        many=True)
+        many=True,
+        only=['id', 'finished', 'created', 'results', 'steps', 'started', 'status', 'user'])
     logs = fields.Nested(
         'stand.schema.PipelineStepRunLogListResponseSchema',
         required=True,
@@ -1076,7 +1078,8 @@ class PipelineStepRunItemResponseSchema(BaseSchema):
     jobs = fields.Nested(
         'stand.schema.JobItemResponseSchema',
         allow_none=True,
-        many=True)
+        many=True,
+        only=['id', 'finished', 'created', 'results', 'steps', 'started', 'status', 'user'])
     logs = fields.Nested(
         'stand.schema.PipelineStepRunLogItemResponseSchema',
         required=True,
@@ -1122,7 +1125,8 @@ class PipelineStepRunCreateRequestSchema(BaseSchema):
     jobs = fields.Nested(
         'stand.schema.JobCreateRequestSchema',
         allow_none=True,
-        many=True)
+        many=True,
+        only=['id', 'finished', 'created', 'results', 'steps', 'started', 'status', 'user'])
     logs = fields.Nested(
         'stand.schema.PipelineStepRunLogCreateRequestSchema',
         required=True,
