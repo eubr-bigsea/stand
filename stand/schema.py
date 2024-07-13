@@ -965,6 +965,7 @@ class PipelineRunCreateRequestSchema(BaseSchema):
 
 class PipelineStepRunCreateRequestSchema(BaseSchema):
     """ JSON serialization schema """
+    name = fields.String(required=True)
     created = fields.DateTime(
         required=False,
         allow_none=True,
@@ -1013,6 +1014,7 @@ class PipelineStepRunCreateRequestSchema(BaseSchema):
 class PipelineStepRunListResponseSchema(BaseSchema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
+    name = fields.String(required=True)
     created = fields.DateTime(
         required=False,
         allow_none=True,
@@ -1058,6 +1060,7 @@ class PipelineStepRunListResponseSchema(BaseSchema):
 class PipelineStepRunItemResponseSchema(BaseSchema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
+    name = fields.String(required=True)
     created = fields.DateTime(
         required=False,
         allow_none=True,
@@ -1103,6 +1106,7 @@ class PipelineStepRunItemResponseSchema(BaseSchema):
 class PipelineStepRunCreateRequestSchema(BaseSchema):
     """ JSON serialization schema """
     id = fields.Integer(allow_none=True)
+    name = fields.String(required=True)
     created = fields.DateTime(
         required=False,
         allow_none=True,
