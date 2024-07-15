@@ -478,7 +478,8 @@ class PipelineRun(db.Model):
                                name='StatusExecutionEnumType'))
 
     # Associations
-    steps = relationship("PipelineStepRun", back_populates="pipeline_run")
+    steps = relationship("PipelineStepRun", back_populates="pipeline_run",
+                         cascade="all, delete-orphan")
 
     def __str__(self):
         return self.start
@@ -493,6 +494,7 @@ class PipelineStepRun(db.Model):
 
     # Fields
     id = Column(Integer, primary_key=True)
+    name = Column(String(200), nullable=False)
     created = Column(DateTime,
                      default=datetime.datetime.utcnow, nullable=False)
     updated = Column(DateTime, nullable=False, index=True)
@@ -524,7 +526,7 @@ class PipelineStepRun(db.Model):
     logs = relationship("PipelineStepRunLog")
 
     def __str__(self):
-        return self.created
+        return self.name
 
     def __repr__(self):
         return '<Instance {}: {}>'.format(self.__class__, self.id)

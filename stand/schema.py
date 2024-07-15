@@ -453,9 +453,6 @@ class JobItemResponseSchema(BaseSchema):
     cluster = fields.Nested(
         'stand.schema.ClusterItemResponseSchema',
         required=True)
-    pipeline_step_run = fields.Nested(
-        'stand.schema.PipelineStepRunItemResponseSchema',
-        allow_none=True)
     steps = fields.Nested(
         'stand.schema.JobStepItemResponseSchema',
         required=True,
@@ -501,9 +498,6 @@ class JobListResponseSchema(BaseSchema):
     cluster = fields.Nested(
         'stand.schema.ClusterListResponseSchema',
         required=True)
-    pipeline_step_run = fields.Nested(
-        'stand.schema.PipelineStepRunListResponseSchema',
-        allow_none=True)
     results = fields.Nested(
         'stand.schema.JobResultListResponseSchema',
         required=True,
@@ -535,7 +529,6 @@ class JobCreateRequestSchema(BaseSchema):
     job_key = fields.String(required=False, allow_none=True)
     trigger_type = fields.String(required=False, allow_none=True, load_default=TriggerType.MANUAL, dump_default=TriggerType.MANUAL,
                                  validate=[OneOf(TriggerType.values())])
-    pipeline_step_run_id = fields.Integer(required=False, allow_none=True)
     workflow = fields.Nested(
         'stand.schema.WorkflowDefinitionCreateRequestSchema',
         required=True)
@@ -599,9 +592,6 @@ class JobExecuteResponseSchema(BaseSchema):
     cluster = fields.Nested(
         'stand.schema.ClusterExecuteResponseSchema',
         required=True)
-    pipeline_step_run = fields.Nested(
-        'stand.schema.PipelineStepRunExecuteResponseSchema',
-        allow_none=True)
     steps = fields.Nested(
         'stand.schema.JobStepExecuteResponseSchema',
         required=True,
@@ -913,6 +903,10 @@ class PipelineRunItemResponseSchema(BaseSchema):
                            validate=[OneOf(StatusExecution.values())])
     final_status = fields.String(required=False, allow_none=True,
                                  validate=[OneOf(StatusExecution.values())])
+    steps = fields.Nested(
+        'stand.schema.PipelineStepRunItemResponseSchema',
+        required=True,
+        many=True)
 
     # noinspection PyUnresolvedReferences
     @post_load
@@ -943,6 +937,10 @@ class PipelineRunCreateRequestSchema(BaseSchema):
                            validate=[OneOf(StatusExecution.values())])
     final_status = fields.String(required=False, allow_none=True,
                                  validate=[OneOf(StatusExecution.values())])
+    steps = fields.Nested(
+        'stand.schema.PipelineStepRunCreateRequestSchema',
+        required=True,
+        many=True)
 
     # noinspection PyUnresolvedReferences
     @post_load
@@ -957,146 +955,7 @@ class PipelineRunCreateRequestSchema(BaseSchema):
 
 class PipelineStepRunCreateRequestSchema(BaseSchema):
     """ JSON serialization schema """
-    created = fields.DateTime(
-        required=False,
-        allow_none=True,
-        load_default=datetime.datetime.utcnow,
-        dump_default=datetime.datetime.utcnow)
-    updated = fields.DateTime(required=True)
-    workflow_id = fields.Integer(required=True)
-    retries = fields.Integer(
-        required=False,
-        allow_none=True,
-        load_default=0,
-        dump_default=0)
-    order = fields.Integer(
-        required=False,
-        allow_none=True,
-        load_default=0,
-        dump_default=0)
-    comment = fields.String(required=False, allow_none=True)
-    status = fields.String(required=True,
-                           validate=[OneOf(StatusExecution.values())])
-    final_status = fields.String(required=False, allow_none=True,
-                                 validate=[OneOf(StatusExecution.values())])
-    pipeline_run = fields.Nested(
-        'stand.schema.PipelineRunCreateRequestSchema',
-        required=True)
-    logs = fields.Nested(
-        'stand.schema.PipelineStepRunLogCreateRequestSchema',
-        required=True,
-        many=True)
-
-    # noinspection PyUnresolvedReferences
-    @post_load
-    def make_object(self, data, **kwargs):
-        """ Deserialize data into an instance of PipelineStepRun"""
-        return PipelineStepRun(**data)
-
-    class Meta:
-        ordered = True
-        unknown = EXCLUDE
-
-
-class PipelineStepRunListResponseSchema(BaseSchema):
-    """ JSON serialization schema """
-    id = fields.Integer(required=True)
-    created = fields.DateTime(
-        required=False,
-        allow_none=True,
-        load_default=datetime.datetime.utcnow,
-        dump_default=datetime.datetime.utcnow)
-    updated = fields.DateTime(required=True)
-    workflow_id = fields.Integer(required=True)
-    retries = fields.Integer(
-        required=False,
-        allow_none=True,
-        load_default=0,
-        dump_default=0)
-    order = fields.Integer(
-        required=False,
-        allow_none=True,
-        load_default=0,
-        dump_default=0)
-    comment = fields.String(required=False, allow_none=True)
-    status = fields.String(required=True,
-                           validate=[OneOf(StatusExecution.values())])
-    final_status = fields.String(required=False, allow_none=True,
-                                 validate=[OneOf(StatusExecution.values())])
-    jobs = fields.Nested(
-        'stand.schema.JobListResponseSchema',
-        allow_none=True,
-        many=True)
-    pipeline_run = fields.Nested(
-        'stand.schema.PipelineRunListResponseSchema',
-        required=True)
-    logs = fields.Nested(
-        'stand.schema.PipelineStepRunLogListResponseSchema',
-        required=True,
-        many=True)
-
-    # noinspection PyUnresolvedReferences
-    @post_load
-    def make_object(self, data, **kwargs):
-        """ Deserialize data into an instance of PipelineStepRun"""
-        return PipelineStepRun(**data)
-
-    class Meta:
-        ordered = True
-        unknown = EXCLUDE
-
-
-class PipelineStepRunItemResponseSchema(BaseSchema):
-    """ JSON serialization schema """
-    id = fields.Integer(required=True)
-    created = fields.DateTime(
-        required=False,
-        allow_none=True,
-        load_default=datetime.datetime.utcnow,
-        dump_default=datetime.datetime.utcnow)
-    updated = fields.DateTime(required=True)
-    workflow_id = fields.Integer(required=True)
-    retries = fields.Integer(
-        required=False,
-        allow_none=True,
-        load_default=0,
-        dump_default=0)
-    order = fields.Integer(
-        required=False,
-        allow_none=True,
-        load_default=0,
-        dump_default=0)
-    comment = fields.String(required=False, allow_none=True)
-    status = fields.String(required=True,
-                           validate=[OneOf(StatusExecution.values())])
-    final_status = fields.String(required=False, allow_none=True,
-                                 validate=[OneOf(StatusExecution.values())])
-    jobs = fields.Nested(
-        'stand.schema.JobItemResponseSchema',
-        allow_none=True,
-        many=True)
-    pipeline_run = fields.Nested(
-        'stand.schema.PipelineRunItemResponseSchema',
-        required=True)
-    logs = fields.Nested(
-        'stand.schema.PipelineStepRunLogItemResponseSchema',
-        required=True,
-        many=True)
-
-    # noinspection PyUnresolvedReferences
-    @post_load
-    def make_object(self, data, **kwargs):
-        """ Deserialize data into an instance of PipelineStepRun"""
-        return PipelineStepRun(**data)
-
-    class Meta:
-        ordered = True
-        unknown = EXCLUDE
-
-
-class PipelineStepRunCreateRequestSchema(BaseSchema):
-    """ JSON serialization schema """
-    id = fields.Integer(allow_none=True)
+    name = fields.String(required=True)
     created = fields.DateTime(
         required=False,
         allow_none=True,
@@ -1122,7 +981,8 @@ class PipelineStepRunCreateRequestSchema(BaseSchema):
     jobs = fields.Nested(
         'stand.schema.JobCreateRequestSchema',
         allow_none=True,
-        many=True)
+        many=True,
+        only=['id', 'finished', 'created', 'results', 'steps', 'started', 'status', 'user', 'exception_stack'])
     pipeline_run = fields.Nested(
         'stand.schema.PipelineRunCreateRequestSchema',
         required=True)
@@ -1136,6 +996,222 @@ class PipelineStepRunCreateRequestSchema(BaseSchema):
     def make_object(self, data, **kwargs):
         """ Deserialize data into an instance of PipelineStepRun"""
         return PipelineStepRun(**data)
+
+    class Meta:
+        ordered = True
+        unknown = EXCLUDE
+
+
+class PipelineStepRunListResponseSchema(BaseSchema):
+    """ JSON serialization schema """
+    id = fields.Integer(required=True)
+    name = fields.String(required=True)
+    created = fields.DateTime(
+        required=False,
+        allow_none=True,
+        load_default=datetime.datetime.utcnow,
+        dump_default=datetime.datetime.utcnow)
+    updated = fields.DateTime(required=True)
+    workflow_id = fields.Integer(required=True)
+    retries = fields.Integer(
+        required=False,
+        allow_none=True,
+        load_default=0,
+        dump_default=0)
+    order = fields.Integer(
+        required=False,
+        allow_none=True,
+        load_default=0,
+        dump_default=0)
+    comment = fields.String(required=False, allow_none=True)
+    status = fields.String(required=True,
+                           validate=[OneOf(StatusExecution.values())])
+    final_status = fields.String(required=False, allow_none=True,
+                                 validate=[OneOf(StatusExecution.values())])
+    jobs = fields.Nested(
+        'stand.schema.JobListResponseSchema',
+        allow_none=True,
+        many=True,
+        only=['id', 'finished', 'created', 'results', 'steps', 'started', 'status', 'user', 'exception_stack'])
+    logs = fields.Nested(
+        'stand.schema.PipelineStepRunLogListResponseSchema',
+        required=True,
+        many=True)
+
+    # noinspection PyUnresolvedReferences
+    @post_load
+    def make_object(self, data, **kwargs):
+        """ Deserialize data into an instance of PipelineStepRun"""
+        return PipelineStepRun(**data)
+
+    class Meta:
+        ordered = True
+        unknown = EXCLUDE
+
+
+class PipelineStepRunItemResponseSchema(BaseSchema):
+    """ JSON serialization schema """
+    id = fields.Integer(required=True)
+    name = fields.String(required=True)
+    created = fields.DateTime(
+        required=False,
+        allow_none=True,
+        load_default=datetime.datetime.utcnow,
+        dump_default=datetime.datetime.utcnow)
+    updated = fields.DateTime(required=True)
+    workflow_id = fields.Integer(required=True)
+    retries = fields.Integer(
+        required=False,
+        allow_none=True,
+        load_default=0,
+        dump_default=0)
+    order = fields.Integer(
+        required=False,
+        allow_none=True,
+        load_default=0,
+        dump_default=0)
+    comment = fields.String(required=False, allow_none=True)
+    status = fields.String(required=True,
+                           validate=[OneOf(StatusExecution.values())])
+    final_status = fields.String(required=False, allow_none=True,
+                                 validate=[OneOf(StatusExecution.values())])
+    jobs = fields.Nested(
+        'stand.schema.JobItemResponseSchema',
+        allow_none=True,
+        many=True,
+        only=['id', 'finished', 'created', 'results', 'steps', 'started', 'status', 'user', 'exception_stack'])
+    logs = fields.Nested(
+        'stand.schema.PipelineStepRunLogItemResponseSchema',
+        required=True,
+        many=True)
+
+    # noinspection PyUnresolvedReferences
+    @post_load
+    def make_object(self, data, **kwargs):
+        """ Deserialize data into an instance of PipelineStepRun"""
+        return PipelineStepRun(**data)
+
+    class Meta:
+        ordered = True
+        unknown = EXCLUDE
+
+
+class PipelineStepRunCreateRequestSchema(BaseSchema):
+    """ JSON serialization schema """
+    id = fields.Integer(allow_none=True)
+    name = fields.String(required=True)
+    created = fields.DateTime(
+        required=False,
+        allow_none=True,
+        load_default=datetime.datetime.utcnow,
+        dump_default=datetime.datetime.utcnow)
+    updated = fields.DateTime(required=True)
+    workflow_id = fields.Integer(required=True)
+    retries = fields.Integer(
+        required=False,
+        allow_none=True,
+        load_default=0,
+        dump_default=0)
+    order = fields.Integer(
+        required=False,
+        allow_none=True,
+        load_default=0,
+        dump_default=0)
+    comment = fields.String(required=False, allow_none=True)
+    status = fields.String(required=True,
+                           validate=[OneOf(StatusExecution.values())])
+    final_status = fields.String(required=False, allow_none=True,
+                                 validate=[OneOf(StatusExecution.values())])
+    jobs = fields.Nested(
+        'stand.schema.JobCreateRequestSchema',
+        allow_none=True,
+        many=True,
+        only=['id', 'finished', 'created', 'results', 'steps', 'started', 'status', 'user', 'exception_stack'])
+    logs = fields.Nested(
+        'stand.schema.PipelineStepRunLogCreateRequestSchema',
+        required=True,
+        many=True)
+
+    # noinspection PyUnresolvedReferences
+    @post_load
+    def make_object(self, data, **kwargs):
+        """ Deserialize data into an instance of PipelineStepRun"""
+        return PipelineStepRun(**data)
+
+    class Meta:
+        ordered = True
+        unknown = EXCLUDE
+
+
+class PipelineStepRunLogListResponseSchema(BaseSchema):
+    """ JSON serialization schema """
+    id = fields.Integer(required=True)
+    created = fields.DateTime(
+        required=False,
+        allow_none=True,
+        load_default=datetime.datetime.utcnow,
+        dump_default=datetime.datetime.utcnow)
+    action = fields.String(required=True)
+    user_id = fields.Integer(required=True)
+    user_login = fields.String(required=True)
+    user_name = fields.String(required=True)
+    comment = fields.String(required=False, allow_none=True)
+
+    # noinspection PyUnresolvedReferences
+    @post_load
+    def make_object(self, data, **kwargs):
+        """ Deserialize data into an instance of PipelineStepRunLog"""
+        return PipelineStepRunLog(**data)
+
+    class Meta:
+        ordered = True
+        unknown = EXCLUDE
+
+
+class PipelineStepRunLogItemResponseSchema(BaseSchema):
+    """ JSON serialization schema """
+    id = fields.Integer(required=True)
+    created = fields.DateTime(
+        required=False,
+        allow_none=True,
+        load_default=datetime.datetime.utcnow,
+        dump_default=datetime.datetime.utcnow)
+    action = fields.String(required=True)
+    user_id = fields.Integer(required=True)
+    user_login = fields.String(required=True)
+    user_name = fields.String(required=True)
+    comment = fields.String(required=False, allow_none=True)
+
+    # noinspection PyUnresolvedReferences
+    @post_load
+    def make_object(self, data, **kwargs):
+        """ Deserialize data into an instance of PipelineStepRunLog"""
+        return PipelineStepRunLog(**data)
+
+    class Meta:
+        ordered = True
+        unknown = EXCLUDE
+
+
+class PipelineStepRunLogCreateRequestSchema(BaseSchema):
+    """ JSON serialization schema """
+    id = fields.Integer(allow_none=True)
+    created = fields.DateTime(
+        required=False,
+        allow_none=True,
+        load_default=datetime.datetime.utcnow,
+        dump_default=datetime.datetime.utcnow)
+    action = fields.String(required=True)
+    user_id = fields.Integer(required=True)
+    user_login = fields.String(required=True)
+    user_name = fields.String(required=True)
+    comment = fields.String(required=False, allow_none=True)
+
+    # noinspection PyUnresolvedReferences
+    @post_load
+    def make_object(self, data, **kwargs):
+        """ Deserialize data into an instance of PipelineStepRunLog"""
+        return PipelineStepRunLog(**data)
 
     class Meta:
         ordered = True
