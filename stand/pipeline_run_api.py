@@ -43,11 +43,11 @@ class PipelineRunListApi(Resource):
 
         status_filter = request.args.get('status')
         if status_filter:
-            pipeline_runs = PipelineRun.query.filter(
+            pipeline_runs = pipeline_runs.filter(
                 PipelineRun.status == status_filter)
         name_filter = request.args.get('name')
         if name_filter:
-            pipeline_runs = PipelineRun.query.filter(
+            pipeline_runs = pipeline_runs.filter(
                 PipelineRun.pipeline_name.ilike(f'%{name_filter}%'))
 
         start_filter = request.args.get('start')
@@ -84,7 +84,7 @@ class PipelineRunListApi(Resource):
         pipelines_filter = request.args.get('pipelines')
         if pipelines_filter:
             pipeline_ids = [int(x) for x in pipelines_filter.split(',')]
-            pipeline_runs = PipelineRun.query.filter(
+            pipeline_runs = pipeline_runs.filter(
                 PipelineRun.pipeline_id.in_(pipeline_ids))
 
         latest_filter = request.args.get('latest')
