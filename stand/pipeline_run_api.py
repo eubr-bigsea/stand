@@ -48,7 +48,7 @@ class PipelineRunListApi(Resource):
         name_filter = request.args.get('name')
         if name_filter:
             pipeline_runs = PipelineRun.query.filter(
-                PipelineRun.pipeline_name == name_filter)
+                PipelineRun.pipeline_name.ilike(f'%{name_filter}%'))
 
         start_filter = request.args.get('start')
         if start_filter:
