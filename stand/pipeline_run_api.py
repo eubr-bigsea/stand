@@ -105,6 +105,14 @@ class PipelineRunListApi(Resource):
             result = PipelineRunListResponseSchema(
                     many=True, only=only).dump(pipeline_runs.all())
         else:
+            sort = request.args.get('sort', 'id')
+            if sort not in ['pipeline_id', 'id', 'updated', 'start']:
+                sort = 'id'
+            sort_option = getattr(PipelineRun, sort)
+            if request.args.get('asc', 'true') == 'false':
+                sort_option = sort_option.desc()
+
+            pipeline_runs = pipeline_runs.order_by(sort_option)
             page = request.args.get('page', default=1, type=int)
             page_size = request.args.get('size', default=20, type=int)
 
