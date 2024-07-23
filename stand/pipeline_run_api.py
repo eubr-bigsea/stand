@@ -60,26 +60,17 @@ class PipelineRunListApi(Resource):
 
         if start_filter and end_filter:
             pipeline_runs = pipeline_runs.filter(
-                or_(
-                    and_(PipelineRun.start <= start_filter, PipelineRun.finish >= start_filter),
-                    and_(PipelineRun.start <= end_filter, PipelineRun.finish >= end_filter),
-                    and_(PipelineRun.start >= start_filter, PipelineRun.finish <= end_filter)
+                and_(
+                    PipelineRun.start <= end_filter,
+                    PipelineRun.finish >= start_filter
                 )
             )
         elif start_filter:
             pipeline_runs = pipeline_runs.filter(
-                or_(
-                    and_(PipelineRun.start <= start_filter, PipelineRun.finish >= start_filter),
-                    PipelineRun.start >= start_filter
-                )
-            )
+                PipelineRun.finish >= start_filter)
         elif end_filter:
             pipeline_runs = pipeline_runs.filter(
-                or_(
-                    and_(PipelineRun.start <= end_filter, PipelineRun.finish >= end_filter),
-                    PipelineRun.finish <= end_filter
-                )
-            )
+                PipelineRun.start <= end_filter)
 
         pipelines_filter = request.args.get('pipelines')
         if pipelines_filter:
@@ -278,4 +269,9 @@ class PipelineRunDetailApi(Resource):
                 }
         return result, return_code
 
+
+class PipelineRunFromPipelineApi(Resource):
+    """ REST API for listing class PipelineRun """
+    def post(pipeline_id: int):
+        pass
 
