@@ -110,7 +110,10 @@ class UpdatePipelineRunStatus(Command):
 
     def execute(self, config):
         self.pipeline_run.status = self.status
-        # session.commit()
+        stand_config = config.get('stand').get('services').get('stand')
+        headers = {"X-Auth-Token": stand_config["auth_token"]}
+        url = f"{stand_config['url']}/pipeline-runs"
+        update_data('POST', url, payload=self.pipeline_run, headers=headers)
 
 
 class UpdatePipelineStepRunStatus(Command):

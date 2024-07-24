@@ -87,6 +87,9 @@ def get_step_is_immediate(scheduling) -> bool:
     parsed_scheduling = json.loads(scheduling)
     return parsed_scheduling["stepSchedule"]["executeImmediately"]
 
+def get_step_is_manual(scheduling)->bool:
+    parsed_scheduling = json.loads(scheduling)
+    return parsed_scheduling["stepSchedule"]["manualExecution"]
 
 def get_step_start_time(scheduling) -> datetime:
     parsed_scheduling = json.loads(scheduling)
@@ -120,3 +123,12 @@ def trigger_scheduled_pipeline_steps(
             if is_next_step_in_order(step, pipeline_run):
                 command = TriggerWorkflow(pipeline_step=step)
                 return command
+            
+        # if next step is manual, the pipelien run should go state "waiting manual input"
+        if get_step_is_manual(step.scheduling):
+            if is_next_step_in_order(step, pipeline_run):
+                command = UpdatePipelineRunStatus(
+                        pipeline_run=pipeline_run, status=StatusExecution.WAITING_INPUT
+                    )
+                return command
+

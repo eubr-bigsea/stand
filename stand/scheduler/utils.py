@@ -41,8 +41,6 @@ async def get_latest_pipeline_runs(stand_config: typing.Dict,
     return PipelineRunItemResponseSchema(many=True, partial=True).load(
                 data)
 
-
-
 async def get_pipelines(
     tahiti_config: typing.Dict, days: int
 ) -> typing.Dict[int, typing.Dict]:
