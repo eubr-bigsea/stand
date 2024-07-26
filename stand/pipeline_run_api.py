@@ -4,10 +4,11 @@ import logging
 
 from stand.app_auth import requires_auth
 
-from flask import request, g as flask_g
+from flask import current_app, request, g as flask_g
 from flask_restful import Resource
 from http import HTTPStatus
 
+from stand.models_extra import Period
 from stand.schema import (PipelineRunCreateRequestSchema,
                           PipelineRunItemResponseSchema,
                           PipelineRunListResponseSchema, partial_schema_factory)
@@ -15,6 +16,9 @@ from stand.models import (PipelineRun, db)
 from flask_babel import gettext
 from sqlalchemy import func, and_, or_
 from sqlalchemy.sql import and_
+from marshmallow import Schema, fields
+
+from stand.service.pipeline_run_service import create_pipeline_run_from_pipeline, get_pipeline_from_api
 log = logging.getLogger(__name__)
 # region Protected\s*
 # endregion\w*
@@ -278,8 +282,33 @@ class PipelineRunDetailApi(Resource):
         return result, return_code
 
 
+class CreatePipelineRunSchema(Schema):
+    id = fields.Integer(required=True)
+    start = fields.DateTime(required=True)
+    finish = fields.DateTime(required=True)
+
 class PipelineRunFromPipelineApi(Resource):
-    """ REST API for listing class PipelineRun """
-    def post(pipeline_id: int):
-        pass
+    """ REST API for creating a pipeline run from pipeline """
+
+    @requires_auth
+    def post(self):
+        if (request.content_type == 'application/json' and
+            request.json is not None):
+            params = CreatePipelineRunSchema().load(request.json)
+            config = current_app.config['STAND_CONFIG']
+            pipeline = get_pipeline_from_api(config.get('services').get(
+                'tahiti'), params.get('id'))
+            run = create_pipeline_run_from_pipeline(
+                pipeline, Period(params.get('start'), params.get('finish')))
+            return {'status': 'OK',
+                    'message': gettext(
+                        "%(name)s created with success!",
+                        name=gettext('Pipeline Run')),
+                        "id": run.id,
+                    }, 200
+        else:
+            return {'status': 'ERROR', 'message': 'Unsupported content type'}, 415
+
+
+
 

@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import datetime
+import sys
+from marshmallow import ValidationError
 from werkzeug.exceptions import HTTPException
 import json
 import logging
@@ -18,24 +20,28 @@ from mockredis import MockRedis
 from sqlalchemy import and_
 from stand.cluster_api import ClusterDetailApi, PerformanceModelEstimationApi
 from stand.cluster_api import ClusterListApi
-from stand.pipeline_run_api import PipelineRunDetailApi, PipelineRunListApi
+from stand.pipeline_run_api import (PipelineRunDetailApi, PipelineRunListApi,
+                                    PipelineRunFromPipelineApi)
 from stand.room_api import RoomApi
 from stand.job_api import (JobListApi, JobDetailApi,
     JobStopActionApi, JobLockActionApi, JobUnlockActionApi,
     UpdateJobStatusActionApi, UpdateJobStepStatusActionApi,
     JobSampleActionApi, JobSourceCodeApi, LatestJobDetailApi,
-    PerformanceModelEstimationApi, PerformanceModelEstimationResultApi,
+    PerformanceModelEstimationResultApi,
     DataSourceInitializationApi, WorkflowStartActionApi, WorkflowSourceCodeApi,
     WorkflowSourceCodeResultApi)
 
 from stand.gateway_api import MetricListApi
 from stand.models import db, Job, JobStep, JobStepLog, StatusExecution, \
     JobResult
+from stand.schema import translate_validation
+from stand.service import ServiceException
 from stand.services.redis_service import connect_redis_store
 
 SEED_QUEUE_NAME = 'seed'
 SEED_METRIC_JOB_NAME = 'seed.jobs.metric_probe_updater'
 
+log = logging.getLogger(__name__)
 
 class MockRedisWrapper(MockRedis):
     """
@@ -83,6 +89,37 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
         app.config['SQLALCHEMY_ENGINE_OPTIONS'] = final_config
     app.debug = config['stand'].get('debug', False)
 
+
+    # Error handlers
+    @app.errorhandler(ValidationError)
+    def register_validation_error(e):
+        result = {'status': 'ERROR',
+                  'message': gettext("Validation error"),
+                  'errors': translate_validation(e.messages)}
+        db.session.rollback()
+        return result, 400
+
+    @app.errorhandler(ServiceException)
+    def register_service_exception(e):
+        result = {'status': 'ERROR',
+                  'message': str(e)}
+        db.session.rollback()
+        return result, 400
+
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        # pass through HTTP errors
+        if isinstance(e, HTTPException):
+            return e
+        result = {'status': 'ERROR',
+                  'message': gettext("Internal error")}
+        if app.debug:
+            result['debug_detail'] = str(e)
+        log.exception(e)
+        print(e, file=sys.stderr)
+        db.session.rollback()
+        return result, 500
+
     if settings_override:
         app.config.update(settings_override)
     create_babel_i18n(app)
@@ -123,6 +160,7 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
         '/clusters/<int:cluster_id>': ClusterDetailApi,
         '/pipeline-runs': PipelineRunListApi,
         '/pipeline-runs/<int:pipeline_run_id>': PipelineRunDetailApi,
+        '/pipeline-runs/create': PipelineRunFromPipelineApi,
         '/performance/<int:model_id>': PerformanceModelEstimationApi,
         '/performance/result/<key>': PerformanceModelEstimationResultApi,
         '/datasource/init': DataSourceInitializationApi,
