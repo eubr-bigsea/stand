@@ -51,8 +51,16 @@ class PipelineRunListApi(Resource):
                 PipelineRun.status == status_filter)
         name_filter = request.args.get('name')
         if name_filter:
-            pipeline_runs = pipeline_runs.filter(
-                PipelineRun.pipeline_name.ilike(f'%{name_filter}%'))
+            if name_filter.isdigit():
+                pipeline_runs = pipeline_runs.filter(
+                    or_(
+                        PipelineRun.pipeline_name.ilike(f'%{name_filter}%'),
+                        PipelineRun.pipeline_id==int(name_filter),
+                    )
+                )
+            else:
+                pipeline_runs = pipeline_runs.filter(
+                    PipelineRun.pipeline_name.ilike(f'%{name_filter}%'))
 
         start_filter = request.args.get('start')
         if start_filter:

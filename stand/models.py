@@ -17,6 +17,7 @@ class StatusExecution:
     RUNNING = 'RUNNING'
     WAITING = 'WAITING'
     CANCELED = 'CANCELED'
+    WAITING_INTERVENTION = 'WAITING_INTERVENTION'
 
     @staticmethod
     def values():
