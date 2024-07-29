@@ -1,3 +1,0 @@
-
-class ServiceException(Exception):
-    pass

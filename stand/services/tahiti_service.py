@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-
-import json
+from flask_babel import gettext
 import logging
 
 import requests
@@ -17,7 +15,7 @@ def query_tahiti(item_path,
                  base_url=tahiti_config['services']['tahiti']['url'],
                  token=tahiti_config['services']['tahiti']['auth_token'],
                  params:dict=None):
-    
+
     headers = {'X-Auth-Token': token}
 
     if item_id == '' or item_id is None:
@@ -34,6 +32,6 @@ def query_tahiti(item_path,
     if r.status_code == 200:
         return r.json()["data"]
     else:
-        raise RuntimeError(_(
+        raise RuntimeError(gettext(
             "Error loading data from tahiti: id {}: HTTP {} - {}  ({})").format(
-            item_id, r.status_code, r.text, url))   
+            item_id, r.status_code, r.text, url))

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import datetime
 import sys
 from marshmallow import ValidationError
@@ -8,9 +7,8 @@ import logging
 import logging.config
 
 import os
-import rq
 import socketio
-from flask import Flask, request
+from flask import Flask
 from flask_babel import Babel, gettext
 from flask_caching import Cache
 from flask_cors import CORS
@@ -21,7 +19,8 @@ from sqlalchemy import and_
 from stand.cluster_api import ClusterDetailApi, PerformanceModelEstimationApi
 from stand.cluster_api import ClusterListApi
 from stand.pipeline_run_api import (PipelineRunDetailApi, PipelineRunListApi,
-                                    PipelineRunFromPipelineApi)
+                                    PipelineRunFromPipelineApi,
+                                    ExecutePipelineRunStepApi)
 from stand.room_api import RoomApi
 from stand.job_api import (JobListApi, JobDetailApi,
     JobStopActionApi, JobLockActionApi, JobUnlockActionApi,
@@ -161,6 +160,7 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
         '/pipeline-runs': PipelineRunListApi,
         '/pipeline-runs/<int:pipeline_run_id>': PipelineRunDetailApi,
         '/pipeline-runs/create': PipelineRunFromPipelineApi,
+        '/pipeline-runs/execute': ExecutePipelineRunStepApi,
         '/performance/<int:model_id>': PerformanceModelEstimationApi,
         '/performance/result/<key>': PerformanceModelEstimationResultApi,
         '/datasource/init': DataSourceInitializationApi,
