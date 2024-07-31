@@ -1,13 +1,17 @@
 import datetime
-import math
 import logging
-
-from stand.app_auth import requires_auth
-
-from flask import current_app, request, g as flask_g
-from flask_restful import Resource
+import math
 from http import HTTPStatus
 
+from flask import current_app, request
+from flask import g as flask_g
+from flask_babel import gettext
+from flask_restful import Resource
+from marshmallow import Schema, fields
+from sqlalchemy import and_, func, or_
+
+from stand.app_auth import requires_auth
+from stand.models import PipelineRun, PipelineStepRun, StatusExecution, db
 from stand.models_extra import Period
 from stand.schema import (
     PipelineRunCreateRequestSchema,
@@ -16,13 +20,7 @@ from stand.schema import (
     PipelineStepRunItemResponseSchema,
     partial_schema_factory,
 )
-from stand.models import PipelineRun, PipelineStepRun, StatusExecution, db
-from flask_babel import gettext
-from sqlalchemy import func, and_, or_
-from sqlalchemy.sql import and_
-from marshmallow import Schema, fields
-
-from stand.service.pipeline_run_service import (
+from stand.services.pipeline_run_service import (
     create_pipeline_run_from_pipeline,
     get_pipeline_from_api,
 )
@@ -174,7 +172,6 @@ class PipelineRunListApi(Resource):
         if request.json is not None:
             request_schema = PipelineRunCreateRequestSchema()
             response_schema = PipelineRunItemResponseSchema()
-            data = request.json
             pipeline_run = request_schema.load(request.json)
 
             if log.isEnabledFor(logging.DEBUG):
@@ -365,8 +362,7 @@ class ExecutePipelineRunStepApi(Resource):
     @requires_auth
     def post(self):
         if (
-            request.content_type == "application/json"
-            and request.json is not None
+             request.json is not None
         ):
             params = self.ExecutePipelineRunSchema().load(request.json)
             pipeline_run = PipelineStepRun.query.get(params.get('id'))

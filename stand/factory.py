@@ -34,7 +34,7 @@ from stand.gateway_api import MetricListApi
 from stand.models import db, Job, JobStep, JobStepLog, StatusExecution, \
     JobResult
 from stand.schema import translate_validation
-from stand.service import ServiceException
+from stand.services import ServiceException
 from stand.services.redis_service import connect_redis_store
 
 SEED_QUEUE_NAME = 'seed'

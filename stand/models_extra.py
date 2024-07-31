@@ -46,6 +46,9 @@ class Pipeline:
     variables: str = None
     preferred_cluster_id: int = None
     description: str = ''
+    periodicity: str = 'monthly'
+    periodicity_start: int = 1
+    periodicity_interval: int = None
 
     def __setattr__(self, prop, val):
         new_val = val

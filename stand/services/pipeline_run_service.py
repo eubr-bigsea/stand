@@ -7,7 +7,7 @@ from flask_babel import gettext
 
 from stand.models import PipelineRun, PipelineStepRun, StatusExecution, db
 from stand.models_extra import Period, Pipeline, PipelineStep
-from stand.service import ServiceException
+from stand.services import ServiceException
 
 
 def get_pipeline_from_api(config: typing.Dict, pipeline_id: int) -> Pipeline:
