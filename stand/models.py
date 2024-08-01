@@ -297,6 +297,7 @@ class Job(db.Model):
     # Fields
     id = Column(Integer, primary_key=True)
     name = Column(String(50))
+    description = Column(String(400))
     created = Column(DateTime,
                      default=func.now(), nullable=False)
     type = Column(Enum(*list(JobType.values()),
@@ -341,6 +342,15 @@ class Job(db.Model):
         "PipelineStepRun",
         overlaps='job',
         foreign_keys=[pipeline_step_run_id])
+    pipeline_run_id = Column(
+        Integer,
+        ForeignKey("pipeline_run.id",
+                   name="fk_job_pipeline_run_id"),
+        index=True)
+    pipeline_run = relationship(
+        "PipelineRun",
+        overlaps='job',
+        foreign_keys=[pipeline_run_id])
     steps = relationship("JobStep",
                          cascade="all, delete-orphan")
     results = relationship("JobResult",

@@ -438,6 +438,7 @@ class JobItemResponseSchema(BaseSchema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
     name = fields.String(required=False, allow_none=True)
+    description = fields.String(required=False, allow_none=True)
     created = fields.DateTime(required=False, allow_none=True)
     type = fields.String(required=False, allow_none=True, load_default=JobType.NORMAL, dump_default=JobType.NORMAL,
                          validate=[OneOf(JobType.values())])
@@ -453,6 +454,9 @@ class JobItemResponseSchema(BaseSchema):
     cluster = fields.Nested(
         'stand.schema.ClusterItemResponseSchema',
         required=True)
+    pipeline_run = fields.Nested(
+        'stand.schema.PipelineRunItemResponseSchema',
+        allow_none=True)
     steps = fields.Nested(
         'stand.schema.JobStepItemResponseSchema',
         required=True,
@@ -483,6 +487,7 @@ class JobListResponseSchema(BaseSchema):
     """ JSON serialization schema """
     id = fields.Integer(required=True)
     name = fields.String(required=False, allow_none=True)
+    description = fields.String(required=False, allow_none=True)
     created = fields.DateTime(required=False, allow_none=True)
     type = fields.String(required=False, allow_none=True, load_default=JobType.NORMAL, dump_default=JobType.NORMAL,
                          validate=[OneOf(JobType.values())])
@@ -498,6 +503,9 @@ class JobListResponseSchema(BaseSchema):
     cluster = fields.Nested(
         'stand.schema.ClusterListResponseSchema',
         required=True)
+    pipeline_run = fields.Nested(
+        'stand.schema.PipelineRunListResponseSchema',
+        allow_none=True)
     results = fields.Nested(
         'stand.schema.JobResultListResponseSchema',
         required=True,
@@ -523,12 +531,14 @@ class JobListResponseSchema(BaseSchema):
 class JobCreateRequestSchema(BaseSchema):
     """ JSON serialization schema """
     name = fields.String(required=False, allow_none=True)
+    description = fields.String(required=False, allow_none=True)
     type = fields.String(required=False, allow_none=True, load_default=JobType.NORMAL, dump_default=JobType.NORMAL,
                          validate=[OneOf(JobType.values())])
     exception_stack = fields.String(required=False, allow_none=True)
     job_key = fields.String(required=False, allow_none=True)
     trigger_type = fields.String(required=False, allow_none=True, load_default=TriggerType.MANUAL, dump_default=TriggerType.MANUAL,
                                  validate=[OneOf(TriggerType.values())])
+    pipeline_run_id = fields.Integer(required=False, allow_none=True)
     workflow = fields.Nested(
         'stand.schema.WorkflowDefinitionCreateRequestSchema',
         required=True)
@@ -575,6 +585,7 @@ class JobExecuteResponseSchema(BaseSchema):
     """ JSON schema for response """
     id = fields.Integer(required=True)
     name = fields.String(required=False, allow_none=True)
+    description = fields.String(required=False, allow_none=True)
     created = fields.DateTime(required=False, allow_none=True)
     type = fields.String(required=False, allow_none=True, load_default=JobType.NORMAL, dump_default=JobType.NORMAL,
                          validate=[OneOf(JobType.values())])
@@ -592,6 +603,9 @@ class JobExecuteResponseSchema(BaseSchema):
     cluster = fields.Nested(
         'stand.schema.ClusterExecuteResponseSchema',
         required=True)
+    pipeline_run = fields.Nested(
+        'stand.schema.PipelineRunExecuteResponseSchema',
+        allow_none=True)
     steps = fields.Nested(
         'stand.schema.JobStepExecuteResponseSchema',
         required=True,
