@@ -22,6 +22,7 @@ from stand.schema import (
 )
 from stand.services.pipeline_run_service import (
     create_pipeline_run_from_pipeline,
+    execute_pipeline_step_run,
     get_pipeline_from_api,
 )
 
@@ -332,7 +333,7 @@ class PipelineRunFromPipelineApi(Resource):
         ):
             params = CreatePipelineRunSchema().load(request.json)
             config = current_app.config["STAND_CONFIG"]
-            pipeline = get_pipeline_from_api(
+            pipeline, _ = get_pipeline_from_api(
                 config.get("services").get("tahiti"), params.get("id")
             )
             run = create_pipeline_run_from_pipeline(
@@ -352,6 +353,7 @@ class PipelineRunFromPipelineApi(Resource):
                 "message": "Unsupported content type",
             }, 415
 
+
 class ExecutePipelineRunStepApi(Resource):
     """REST API to execute a pipeline run step"""
 
@@ -362,32 +364,28 @@ class ExecutePipelineRunStepApi(Resource):
     @requires_auth
     def post(self):
         if (
-             request.json is not None
+            request.content_type == "application/json"
+            and request.json is not None
         ):
             params = self.ExecutePipelineRunSchema().load(request.json)
-            pipeline_run = PipelineStepRun.query.get(params.get('id'))
+            pipeline_run, job = execute_pipeline_step_run(params.get("id"),
+                                                          flask_g.user)
             if pipeline_run is not None:
                 response_schema = PipelineStepRunItemResponseSchema()
-
-                pipeline_run.status = StatusExecution.WAITING
-                db.session.add(pipeline_run)
-                db.session.commit()
-
                 return {
                     "status": "OK",
                     "message": gettext(
-                        "%(name)s created with success!",
-                        name=gettext("Pipeline Run"),
-                    ),
+                        "Pipeline step id={} triggered by the job {}.",
+                        pipeline_run.id, job.id),
                     "id": response_schema.dump(pipeline_run),
                 }, 200
             else:
                 return {
-                    'status': 'ERROR',
-                    'message': gettext('Not found'),
+                    "status": "ERROR",
+                    "message": gettext("Not found"),
                 }, 404
         else:
             return {
                 "status": "ERROR",
-                "message": "Unsupported content type",
+                "message": gettext("Unsupported content type"),
             }, 415

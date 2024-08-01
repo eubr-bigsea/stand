@@ -131,7 +131,7 @@ class JobService:
         # Is job persisted in database? If so,
         # its generated source code must be updated by Juicer
         app_configs['persist'] = persist
-        app_configs['locale'] = lang
+        app_configs['locale'] = lang or 'pt'
         msg = json.dumps(dict(workflow_id=job.workflow_id,
                               app_id=job.workflow_id,
                               job_id=job.id,
