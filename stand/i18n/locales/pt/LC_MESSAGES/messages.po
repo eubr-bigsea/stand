@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2017-10-31 14:27-0200\n"
-"PO-Revision-Date: 2017-10-31 14:30-0200\n"
+"POT-Creation-Date: 2024-07-29 11:16-0300\n"
+"PO-Revision-Date: 2024-07-29 11:22-0300\n"
 "Last-Translator: \n"
 "Language-Team: pt <LL@li.org>\n"
 "Language: pt\n"
@@ -17,129 +17,253 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "Generated-By: Babel 2.3.4\n"
-"X-Generator: Poedit 1.8.7.1\n"
+"X-Generator: Poedit 3.4.4\n"
 
-#: stand/app.py:67
+#: stand/app.py:65
 #, python-format
 msgid "Running in %s mode"
 msgstr "Executando no modo %s"
 
-#: stand/app_auth.py:13
-msgid ""
-"Could not verify your access level for that URL. You have to login with "
-"proper credentials provided by Lemonade Thorn."
-msgstr ""
-"Não foi possível verificar seu nível de acesso para esta URL. Você tem que "
-"se autenticar com as credenciais apropriadas fornecidas pelo Lemonade "
-"Thorn."
+#: stand/cluster_api.py:31
+msgid "Cluster"
+msgstr "Cluster"
 
-#: stand/app_auth.py:16
-msgid ""
-"Could not verify your access level for that URL. Invalid authentication "
-"token."
-msgstr ""
-"Não foi possível verificar seu nível de acesso para esta URL. Token de "
-"autenticação inválido."
+#: stand/cluster_api.py:103 stand/pipeline_run_api.py:157
+#, python-format
+msgid "Listing %(name)s"
+msgstr "Listando %(name)s"
 
-#: stand/cluster_api.py:38 stand/job_api.py:86
+#: stand/cluster_api.py:112 stand/cluster_api.py:266 stand/gateway_api.py:24
+#: stand/job_api.py:122 stand/pipeline_run_api.py:170 stand/room_api.py:18
 msgid "Missing json in the request body"
 msgstr "JSON ausente no corpo da requisição"
 
-#: stand/cluster_api.py:45 stand/job_api.py:101
+#: stand/cluster_api.py:127 stand/cluster_api.py:243 stand/cluster_api.py:280
+#: stand/factory.py:96 stand/job_api.py:164
 msgid "Validation error"
 msgstr "Erro de validação"
 
-#: stand/cluster_api.py:57 stand/job_api.py:122 stand/job_api.py:188
-#: stand/job_api.py:231 stand/job_api.py:275 stand/job_api.py:315
-#: stand/job_api.py:342 stand/job_api.py:371
+#: stand/cluster_api.py:133 stand/cluster_api.py:184 stand/cluster_api.py:250
+#: stand/cluster_api.py:315 stand/factory.py:114 stand/job_api.py:179
+#: stand/job_api.py:250 stand/job_api.py:305 stand/job_api.py:347
+#: stand/job_api.py:376 stand/job_api.py:407
 msgid "Internal error"
 msgstr "Erro interno"
 
-#: stand/job_api.py:111
-msgid "Missing information in JSON"
-msgstr "Informação faltante no JSON"
-
-#: stand/job_api.py:115 stand/job_api.py:120 stand/job_api.py:220
-#: stand/job_api.py:229
-msgid "Error in POST"
-msgstr "Erro no processamento da requisição do tipo POST"
-
-#: stand/job_api.py:142 stand/job_api.py:184 stand/job_api.py:209
-#: stand/job_api.py:244 stand/job_api.py:256 stand/job_api.py:293
-#: stand/job_api.py:329 stand/job_api.py:355
+#: stand/cluster_api.py:158 stand/cluster_api.py:308 stand/cluster_api.py:341
+#: stand/job_api.py:62 stand/job_api.py:200 stand/job_api.py:232
+#: stand/job_api.py:273 stand/job_api.py:286 stand/job_api.py:325
+#: stand/job_api.py:363 stand/job_api.py:391 stand/pipeline_run_api.py:391
 msgid "Not found"
 msgstr "Não encontrado"
 
-#: stand/job_api.py:147
-msgid "Insufficient data"
-msgstr "Dados insuficientes"
+#: stand/cluster_api.py:165 stand/pipeline_run_api.py:248
+#, python-format
+msgid "Deleting %s (id=%s)"
+msgstr "Excluindo %s (id=%s)"
 
-#: stand/job_api.py:186 stand/job_api.py:196
-msgid "Error in PATCH"
-msgstr "Erro no processamento da requisição do tipo PATCH"
+#: stand/cluster_api.py:176 stand/pipeline_run_api.py:256
+#, python-format
+msgid "%(name)s deleted with success!"
+msgstr "%(name)s excluído com sucesso!"
 
-#: stand/job_api.py:193
-msgid "Invalid data"
-msgstr "Dados inválidos"
+#: stand/cluster_api.py:194 stand/pipeline_run_api.py:264
+#, python-format
+msgid "%(name)s not found (id=%(id)s)."
+msgstr "%(name)s não encontrado (id=%(id)s)."
 
-#: stand/job_api.py:217
-msgid "Deleted"
-msgstr "Excluído"
+#: stand/cluster_api.py:204 stand/pipeline_run_api.py:282
+msgid "Insufficient data."
+msgstr "Dados insuficientes."
 
-#: stand/job_api.py:264
+#: stand/cluster_api.py:208 stand/pipeline_run_api.py:287
+#, python-format
+msgid "Updating %s (id=%s)"
+msgstr "Atualizando %s (id=%s)"
+
+#: stand/cluster_api.py:233 stand/pipeline_run_api.py:311
+#, python-format
+msgid "%(n)s (id=%(id)s) was updated with success!"
+msgstr "%(n)s (id=%(id)s) foi atualizado com sucesso!"
+
+#: stand/cluster_api.py:338
+msgid "Job is still running"
+msgstr "Ainda executando"
+
+#: stand/job_api.py:144
+msgid "Unnamed job"
+msgstr "Execução sem nome"
+
+#: stand/job_api.py:168
+msgid "Missing information in JSON"
+msgstr "Informação faltante no JSON"
+
+#: stand/job_api.py:172 stand/job_api.py:177 stand/job_api.py:243
+#: stand/job_api.py:248
+msgid "Error in POST"
+msgstr "Erro no processamento da requisição do tipo POST"
+
+#: stand/job_api.py:240
+msgid "Job stopped"
+msgstr "Execução parada"
+
+#: stand/job_api.py:262
+msgid "An attempt of stopping the job was made"
+msgstr "Realizada uma tentativa de parar uma execução"
+
+#: stand/job_api.py:294
 msgid "Locked"
 msgstr "Trancado"
 
-#: stand/socketio_events.py:39
+#: stand/job_api.py:509 stand/job_api.py:529 stand/job_api.py:605
+#: stand/job_api.py:624 stand/job_api.py:632
+msgid "You need to inform the parameters"
+msgstr "Você precisa informar os parâmetros"
+
+#: stand/job_api.py:534 stand/job_api.py:610
+msgid "You must inform workflow_id."
+msgstr "Você deve informar o workflow_id."
+
+#: stand/job_api.py:564
+msgid "You must inform cluster_id or define a preferred one in workflow."
+msgstr "Você deve informar o cluster_id ou definir um cluster preferencial para o fluxo de trabalho."
+
+#: stand/job_api.py:574
+msgid "Error retrieving workflow {}: {}"
+msgstr "Erro recuperando fluxo de trabalho {}: {}"
+
+#: stand/job_api.py:577 stand/job_api.py:582
+msgid "Workflow not found or error retrieving it."
+msgstr "Fluxo de trabalho não foi encontrado ou um erro ocorreu ao recuperá-lo."
+
+#: stand/job_api.py:617
+msgid "Convert data source"
+msgstr "Converter a fonte de dados"
+
+#: stand/job_api.py:635
+msgid "Unsupported job name: {name}"
+msgstr "Nome de execução inválido: {name}"
+
+#: stand/pipeline_run_api.py:39 stand/pipeline_run_api.py:194
+msgid "PipelineRun"
+msgstr "Execução de pipeline"
+
+#: stand/pipeline_run_api.py:181
+#, python-format
+msgid "Adding %s"
+msgstr "Adicionando %s"
+
+#: stand/pipeline_run_api.py:209
+#, python-format
+msgid "Retrieving %s (id=%s)"
+msgstr "Recuperando %s (id=%s)"
+
+#: stand/pipeline_run_api.py:225
+#, python-format
+msgid "%(name)s not found (id=%(id)s)"
+msgstr "%(name)s não encontrado (id=%(id)s)"
+
+#: stand/pipeline_run_api.py:346 stand/pipeline_run_api.py:382
+#, python-format
+msgid "%(name)s created with success!"
+msgstr "%(name)s criado com sucesso!"
+
+#: stand/pipeline_run_api.py:348 stand/pipeline_run_api.py:384
+msgid "Pipeline Run"
+msgstr "Execução de pipeline"
+
+#: stand/socketio_events.py:90
 #, python-format
 msgid "[%s] joined room %s"
 msgstr "[%s] juntou-se à sala %s"
 
-#: stand/socketio_events.py:42
+#: stand/socketio_events.py:94
 msgid "Entered room: *{}*"
 msgstr "Entrou na sala: *{}*"
 
-#: stand/socketio_events.py:54
+#: stand/socketio_events.py:116
 #, python-format
 msgid "[%s] left room %s"
 msgstr "[%s] deixou a sala %s"
 
-#: stand/socketio_events.py:59
+#: stand/socketio_events.py:122
 msgid "Left room: {}"
 msgstr "Deixou a sala: {}"
 
-#: stand/socketio_events.py:67
+#: stand/socketio_events.py:131
 #, python-format
 msgid "%s is closing room %s"
 msgstr "%s está fechando a sala %s"
 
-#: stand/socketio_events.py:69
+#: stand/socketio_events.py:133
 msgid "Room closed: {}"
 msgstr "Sala fechada: {}"
 
-#: stand/socketio_events.py:74
+#: stand/socketio_events.py:139
 #, python-format
 msgid "%s connected"
 msgstr "%s conectou-se"
 
-#: stand/socketio_events.py:76
+#: stand/socketio_events.py:142
 msgid "Connected"
 msgstr "Conectado"
 
-#: stand/socketio_events.py:83
+#: stand/socketio_events.py:149
 #, python-format
 msgid "%s disconnected"
 msgstr "%s desconectou-se"
 
-#: stand/socketio_events.py:86
+#: stand/socketio_events.py:152
 #, python-format
 msgid "%s asked for disconnection"
 msgstr "%s solicitou a sua desconexão"
 
-#~ msgid ""
-#~ "Could not verify your access level for that URL. You have to login with "
-#~ "proper credentials provided by Lemonade Thorn"
-#~ msgstr ""
-#~ "Não foi possível verificar seu nível de acesso para esta URL. Você tem "
-#~ "que realizar o login com as credenciais apropriadas fornecidas pelo "
-#~ "Lemonade Thorn."
+#: stand/scheduler/utils.py:81
+msgid "Required environment variable $STAND_CONFIG not set."
+msgstr "Variável de ambiente obrigatória $STAND_CONFIG não foi definida."
+
+#: stand/scheduler/utils.py:118 stand/scheduler/utils.py:128
+msgid "Error {} while getting pipeline runs"
+msgstr "Erro {} ao recuperar as execuções de pipeline"
+
+#: stand/services/job_services.py:88
+msgid "Job is allocating computer resources. Please wait"
+msgstr "Execução está alocando recursos computacionais. Por favor, aguarde"
+
+#: stand/services/job_services.py:121
+msgid "Cluster {} is not enabled."
+msgstr "Cluster {} não está habilitado."
+
+#: stand/services/pipeline_run_service.py:24
+msgid "Error retrieving pipeline {}"
+msgstr "Erro recuperando pipeline {}"
+
+#: stand/services/pipeline_run_service.py:39
+msgid "At least a pipeline step is not associated to a workflow"
+msgstr "Pelo menus um passo da pipeline não está associado a um fluxo de trabalho"
+
+#: stand/services/pipeline_run_services.py:80
+msgid "Pipeline was canceled or removed."
+msgstr "Pipeline foi cancelada ou removida"
+
+#: stand/services/tahiti_service.py:35
+msgid "Error loading data from tahiti: id {}: HTTP {} - {}  ({})"
+msgstr "Erro recuperando dados do Tahiti: id{} : HTTP {} - {} ({})"
+
+#~ msgid "Could not verify your access level for that URL. You have to login with proper credentials provided by Lemonade Thorn."
+#~ msgstr "Não foi possível verificar seu nível de acesso para esta URL. Você tem que se autenticar com as credenciais apropriadas fornecidas pelo Lemonade Thorn."
+
+#~ msgid "Could not verify your access level for that URL. Invalid authentication token."
+#~ msgstr "Não foi possível verificar seu nível de acesso para esta URL. Token de autenticação inválido."
+
+#~ msgid "Error in PATCH"
+#~ msgstr "Erro no processamento da requisição do tipo PATCH"
+
+#~ msgid "Invalid data"
+#~ msgstr "Dados inválidos"
+
+#~ msgid "Deleted"
+#~ msgstr "Excluído"
+
+#~ msgid "Could not verify your access level for that URL. You have to login with proper credentials provided by Lemonade Thorn"
+#~ msgstr "Não foi possível verificar seu nível de acesso para esta URL. Você tem que realizar o login com as credenciais apropriadas fornecidas pelo Lemonade Thorn."
