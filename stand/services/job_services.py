@@ -62,9 +62,9 @@ class JobService:
               testing=False, lang=None):
         if app_configs is None:
             app_configs = {}
-        invalid_statuses = [StatusExecution.RUNNING, StatusExecution.PENDING,
-                            StatusExecution.INTERRUPTED,
-                            StatusExecution.WAITING]
+        #invalid_statuses = [StatusExecution.RUNNING, StatusExecution.PENDING,
+        #                    StatusExecution.INTERRUPTED,
+        #                    StatusExecution.WAITING]
 
         # @FIXME Validate workflow
 

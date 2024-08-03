@@ -25,7 +25,6 @@ def upgrade():
                    existing_type=sa.VARCHAR(length=11),
                    type_=sa.Enum('COMPLETED', 'ERROR', 'INTERRUPTED', 'PENDING', 'RUNNING', 'WAITING', 'CANCELED', 'WAITING_INTERVENTION', name='StatusExecutionEnumType'),
                    existing_nullable=False)
-        op.create_index(op.f('ix_job_pipeline_run_id'), 'job', ['pipeline_run_id'], unique=False)
         op.create_foreign_key('fk_job_pipeline_run_id', 'job', 'pipeline_run', ['pipeline_run_id'], ['id'])
         op.create_foreign_key('fk_job_pipeline_step_run_id', 'job', 'pipeline_step_run', ['pipeline_step_run_id'], ['id'])
         op.alter_column('job_step', 'status',
@@ -86,7 +85,6 @@ def downgrade():
                    existing_nullable=False)
         op.drop_constraint('fk_job_pipeline_step_run_id', 'job', type_='foreignkey')
         op.drop_constraint('fk_job_pipeline_run_id', 'job', type_='foreignkey')
-        op.drop_index(op.f('ix_job_pipeline_run_id'), table_name='job')
         op.alter_column('job', 'status',
                    existing_type=sa.Enum('COMPLETED', 'ERROR', 'INTERRUPTED', 'PENDING', 'RUNNING', 'WAITING', 'CANCELED', 'WAITING_INTERVENTION', name='StatusExecutionEnumType'),
                    type_=sa.VARCHAR(length=11),

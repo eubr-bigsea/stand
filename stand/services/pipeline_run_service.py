@@ -96,6 +96,7 @@ def execute_pipeline_step_run(config: typing.Dict,
         now = datetime.utcnow()
         workflow, workflow_definition = get_workflow_from_api(config,
                                                        step_run.workflow_id)
+        pipeline_run = step_run.pipeline_run
         job = Job(
                 created=now,
                 status=StatusExecution.WAITING,
@@ -104,14 +105,19 @@ def execute_pipeline_step_run(config: typing.Dict,
                 user_id=user.id,
                 user_login=user.login,
                 user_name=user.name,
-                name=gettext('{}-{} - Step {} {}').format(
-                    step_run.pipeline_run.id,
-                    step_run.pipeline_run.pipeline_name,
-                    step_run.name,
-                    step_run.pipeline_run.comment,
-                ),
+                name=step_run.name,
                 type=JobType.BATCH,
-                pipeline_step_run_id=pipeline_step_run_id
+                pipeline_step_run_id=pipeline_step_run_id,
+                pipeline_run_id=pipeline_run.id,
+                description=gettext('[{} to {}] [{}-{}] Step: {}/{} ({})').format(
+                    pipeline_run.start.strftime('%Y-%m-%d'),
+                    pipeline_run.finish.strftime('%Y-%m-%d'),
+                    pipeline_run.id,
+                    pipeline_run.pipeline_name,
+                    step_run.order,
+                    len(pipeline_run.steps),
+                    step_run.name
+                )
             )
 
         # FIXME
