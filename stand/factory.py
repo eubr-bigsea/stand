@@ -32,7 +32,7 @@ from stand.job_api import (JobListApi, JobDetailApi,
 
 from stand.gateway_api import MetricListApi
 from stand.models import db, Job, JobStep, JobStepLog, StatusExecution, \
-    JobResult
+    JobResult, PipelineStepRun ,PipelineRun
 from stand.schema import translate_validation
 from stand.services import ServiceException
 from stand.services.redis_service import connect_redis_store
@@ -237,6 +237,31 @@ def mocked_emit(original_emit, app_):
                     job_id = int(room)
                     logger.info(_gettext('Updating job id=%s'), job_id)
                     job = Job.query.get(job_id)
+                    step = PipelineStepRun.query.filter(PipelineStepRun.id==job.pipeline_step_run_id)
+                    run = PipelineRun.query.filter(PipelineRun.id == step.pipeline_run_id)
+                    if step is  not None :
+                        #status of a step run is just the status of the job
+                        step.status = job.status
+                        db.session.add(step)
+                      
+                        #propagating status from job to PipelineRun
+                        #completed job on a running pipelineRun
+                        if job.status == StatusExecution.COMPLETED and\
+                            run.status ==  StatusExecution.RUNNING:
+                                
+                            run.last_executed_step = run.last_executed_step +1
+                            run.status = StatusExecution.WAITING
+                        
+                        #run was waiting , job started
+                        elif job.status == StatusExecution.RUNNING and\
+                            run.status == StatusExecution.WAITING:
+                            
+                            run.status = StatusExecution.RUNNING
+                        #this takes care  of canceled and errors during jobs
+                        else: 
+                            run.status = job.status
+                            
+                        db.session.commit()    
                     if job is not None:
                         final_states = [StatusExecution.COMPLETED,
                                         StatusExecution.CANCELED,
