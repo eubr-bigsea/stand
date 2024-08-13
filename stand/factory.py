@@ -31,7 +31,7 @@ from stand.job_api import (JobListApi, JobDetailApi,
     WorkflowSourceCodeResultApi)
 
 from stand.gateway_api import MetricListApi
-from stand.models import db, Job, JobStep, JobStepLog, StatusExecution, \
+from stand.models import db, Job, JobStep, JobStepLog, StatusExecution as EXEC, \
     JobResult
 from stand.schema import translate_validation
 from stand.services import ServiceException
@@ -41,6 +41,7 @@ SEED_QUEUE_NAME = 'seed'
 SEED_METRIC_JOB_NAME = 'seed.jobs.metric_probe_updater'
 
 log = logging.getLogger(__name__)
+
 
 class MockRedisWrapper(MockRedis):
     """
@@ -225,23 +226,25 @@ def mocked_emit(original_emit, app_):
                     redis_store):
         logger = logging.getLogger(__name__)
         # print(('-' * 40))
-        #print((data, event, namespace, room, self, skip_sid, use_callback,
-        #      redis_store_))
-        #print(('-' * 40))
+        # print((data, event, namespace, room, self, skip_sid, use_callback,
+        #       redis_store_))
+        # print(('-' * 40))
         try:
             now = datetime.datetime.now().strftime(
                 '%Y-%m-%dT%H:%m:%S')
             with app_.app_context():
-
                 if event == 'update job':
+                    status = data.get('status')
+                    if status is None:
+                        raise ValueError('Status not provided!')
                     job_id = int(room)
-                    logger.info(_gettext('Updating job id=%s'), job_id)
-                    job = Job.query.get(job_id)
+                    #logger.info(_gettext('Updating job id=%s'), job_id)
+                    job: Job = Job.query.get(job_id)
                     if job is not None:
-                        final_states = [StatusExecution.COMPLETED,
-                                        StatusExecution.CANCELED,
-                                        StatusExecution.ERROR]
-                        job.status = data.get('status')
+                        final_states = [EXEC.COMPLETED,
+                                        EXEC.CANCELED,
+                                        EXEC.ERROR]
+                        job.status = status
                         logger.info(_gettext('Updating job id=%s to status %s'),
                             job_id, job.status)
                         job.status_text = data.get('msg',
@@ -251,13 +254,14 @@ def mocked_emit(original_emit, app_):
                             job.finished = datetime.datetime.utcnow()
                             data['finished'] = job.finished.strftime(
                                 '%Y-%m-%dT%H:%m:%S')
-                        if job.status == StatusExecution.COMPLETED:
+                        # Update Job Step status
+                        if job.status == EXEC.COMPLETED:
                             for job_step in job.steps:
                                 if job_step.status == 'PENDING':
                                     job_step.status = 'COMPLETED'
                                     db.session.add(job_step)
-                            db.session.commit()
-                        elif job.status == StatusExecution.ERROR:
+                        elif job.status == EXEC.ERROR:
+                            # Something went wrong, record the cause
                             for job_step in job.steps:
                                 level = data.get('level', 'ERROR')
 
@@ -278,21 +282,24 @@ def mocked_emit(original_emit, app_):
                                     'id': step_log.id,
                                     'level': level,
                                     'date': now,
+                                    'room': job_id
                                 }
+                                # Indicate if the message should be stored for
+                                # the client
                                 cache = False
-                                if job_step.status == StatusExecution.RUNNING:
-                                    job_step.status = StatusExecution.ERROR
+                                if job_step.status == EXEC.RUNNING:
+                                    job_step.status = EXEC.ERROR
                                     msg['message'] = _gettext(
                                         'Canceled by error')
-                                    msg['status'] = StatusExecution.ERROR
+                                    msg['status'] = EXEC.ERROR
                                     original_emit(self, 'update task', msg,
                                                   namespace, room, skip_sid,
                                                   use_callback)
                                     cache = True
                                 elif job_step.status not in final_states:
-                                    job_step.status = StatusExecution.CANCELED
+                                    job_step.status = EXEC.CANCELED
                                     msg['message'] = _gettext('Skiped by error')
-                                    msg['status'] = StatusExecution.CANCELED
+                                    msg['status'] = EXEC.CANCELED
 
                                     original_emit(self, 'update task', msg,
                                                   namespace, room, skip_sid,
@@ -305,18 +312,53 @@ def mocked_emit(original_emit, app_):
                                                     'data': msg,
                                                     'namespace': namespace,
                                                     'room': room}))
+
                                 if job_id > 0:
                                     db.session.add(job_step)
 
-                        elif job.status == StatusExecution.CANCELED:
+                        elif job.status == EXEC.CANCELED:
                             for job_step in job.steps:
                                 if job_step.status not in final_states:
-                                    job_step.status = StatusExecution.CANCELED
+                                    job_step.status = EXEC.CANCELED
                                 if job_id > 0:
                                     db.session.add(job_step)
-                        if job_id > 0:
-                            db.session.add(job)
-                            db.session.commit()
+
+                        logger.info('Is job associated to pipeline run? %s',
+                                 f'Yes, {job.pipeline_step_run.id}' if
+                                 job.pipeline_step_run is not None else 'No')
+                        if job.pipeline_step_run:
+                            _update_pipeline_run(job)
+                            notification_msg = {
+                                'pipeline_run': {
+                                    'id': job.pipeline_run.id,
+                                    'status': job.pipeline_run.status,
+                                },
+                                'pipeline_step_run': {
+                                    'id': job.pipeline_step_run.id,
+                                    'status': job.pipeline_step_run.status,
+                                },
+                                'message': data.get('message')
+                            }
+                            original_emit(self, 'update pipeline run',
+                                            notification_msg,
+                                            namespace, room, skip_sid,
+                                            use_callback)
+                            # msg = {
+                            #         'type': data.get('type', 'TEXT') or 'TEXT',
+                            #         'task': {'id': 'task_id'},
+                            #         'id': 'step_log.id',
+                            #         'level': 'level',
+                            #         'porque': '?????',
+                            #         'date': now,
+                            #     }
+
+                            # original_emit(self, 'update job', msg,
+                            #                       namespace, room, skip_sid,
+                            #                       use_callback)
+                        db.session.add(job)
+                        db.session.commit()
+                    else:
+                        logger.info(gettext("Job %s is not persistent."), job_id)
                 elif event == 'update task':
                     job_id = int(room)
                     job_step = JobStep.query.filter(and_(
@@ -327,10 +369,10 @@ def mocked_emit(original_emit, app_):
                     # print(job_step)
                     # print('=' * 20)
                     if job_step is not None:
-                        job_step.status = data.get('status')
+                        job_step.status = status
                         level = data.get('level')
                         if level is None:
-                            if job_step.status == StatusExecution.ERROR:
+                            if job_step.status == EXEC.ERROR:
                                 level = 'WARN'
                             else:
                                 level = 'INFO'
@@ -398,7 +440,32 @@ def mocked_emit(original_emit, app_):
             logger.exception(ex)
         return use_callback
 
+
     return new_emit
+
+def _update_pipeline_run(job: Job) -> None:
+    """ Update associated pipeline step run, if any """
+
+    job.pipeline_step_run.status = job.status
+    if job.status in (EXEC.ERROR, EXEC.CANCELED, EXEC.INTERRUPTED):
+        job.pipeline_run.status = job.status
+        job.pipeline_run.final_status = job.status
+    elif job.status in (EXEC.COMPLETED, ):
+        # Test if the step is the last one
+        step_order = job.pipeline_step_run.order
+        if step_order == len(job.pipeline_run.steps):
+            job.pipeline_run.status = EXEC.COMPLETED
+        else:
+            job.pipeline_run.status = EXEC.RUNNING #??
+
+    elif job.status in (EXEC.PENDING, EXEC.WAITING,
+                        EXEC.WAITING_INTERVENTION):
+        pass # Ignore
+    elif job.status in (EXEC.RUNNING, ):
+        pass # FIXME
+
+    db.session.add(job.pipeline_step_run)
+    db.session.add(job.pipeline_run)
 
 
 def create_socket_io_app(_app):
@@ -420,6 +487,7 @@ def create_socket_io_app(_app):
     sio.manager_initialized = True
     import eventlet
     eventlet.spawn(mgr.initialize)
+    log.info('Started socketio')
 
     return sio, socketio.Middleware(sio, _app)
 

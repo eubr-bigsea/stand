@@ -521,7 +521,7 @@ class PipelineStepRun(db.Model):
                                name='StatusExecutionEnumType'))
 
     # Associations
-    jobs = relationship("Job")
+    jobs = relationship("Job", overlaps='pipeline_step_run')
     pipeline_run_id = Column(
         Integer,
         ForeignKey("pipeline_run.id",

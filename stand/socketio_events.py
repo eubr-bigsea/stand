@@ -61,13 +61,13 @@ class StandSocketIO:
         self.redis_store.rpush("queue_start", json.dumps(message))
 
     def on_echo(self, sid, message):
-        print('=' * 20, ' echo ')
-        print(message)
-        print('=' * 20)
+        # print('=' * 20, ' echo ')
+        # print(message)
+        # print('=' * 20)
         if isinstance(message, dict):
             self.socket_io.emit(
-                event=message.get('type','echo'), 
-                data=message, 
+                event=message.get('type','echo'),
+                data=message,
                 room=message.get('room', 'echo'),
                 namespace=self.namespace)
         else:
@@ -75,7 +75,9 @@ class StandSocketIO:
                 namespace=self.namespace)
 
     def on_join_room(self, sid, message):
-        # print('=== > ', message)
+        # print('*'* 20)
+        # print(sid, message)
+        # print('*'* 20)
         room = str(message.get('room'))
         replay_cached = message.get('cached', True)
 
@@ -92,6 +94,9 @@ class StandSocketIO:
 
         self.socket_io.emit(
             'response', {'message': gettext('Entered room: *{}*').format(room)},
+            room=sid, namespace=self.namespace)
+        self.socket_io.emit(
+            'joined', {'message': gettext('Entered room: *{}*').format(room)},
             room=sid, namespace=self.namespace)
 
         # # Resend all statuses
@@ -141,7 +146,9 @@ class StandSocketIO:
         self.socket_io.emit('response',
                             {'message': gettext('Connected'), 'count': 0},
                             room=sid, namespace=self.namespace)
-
+        self.socket_io.emit('invite room',
+                            {'message': gettext('Connected'), 'count': 0},
+                            namespace=self.namespace)
     def on_disconnect(self, sid):
         for room_id in self.socket_io.rooms(sid, self.namespace):
             if room_id.isdigit():
