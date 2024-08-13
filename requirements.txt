@@ -31,3 +31,4 @@ aiohttp==3.9.5
 python-dotenv==1.0.1
 pytest-dotenv==0.5.2
 aioresponses==0.7.6
+websocket-client==1.4.2
