@@ -8,10 +8,10 @@ from flask import g as flask_g
 from flask_babel import gettext
 from flask_restful import Resource
 from marshmallow import Schema, fields
-from sqlalchemy import and_, func, or_
+from sqlalchemy import and_, func, extract, case, or_
 
 from stand.app_auth import requires_auth
-from stand.models import PipelineRun, PipelineStepRun, StatusExecution, db
+from stand.models import Job, PipelineRun, PipelineStepRun, db
 from stand.models_extra import Period
 from stand.schema import (
     PipelineRunCreateRequestSchema,
@@ -29,6 +29,55 @@ from stand.services.pipeline_run_service import (
 log = logging.getLogger(__name__)
 # region Protected\s*
 # endregion\w*
+
+
+def _get_pipeline_runs_basic_query():
+    pipeline_runs = PipelineRun.query
+
+    status_filter = request.args.get("status")
+    if status_filter:
+        pipeline_runs = pipeline_runs.filter(PipelineRun.status == status_filter)
+    name_filter = request.args.get("name")
+    if name_filter:
+        if name_filter.isdigit():
+            pipeline_runs = pipeline_runs.filter(
+                or_(
+                    PipelineRun.pipeline_name.ilike(f"%{name_filter}%"),
+                    PipelineRun.pipeline_id == int(name_filter),
+                )
+            )
+        else:
+            pipeline_runs = pipeline_runs.filter(
+                PipelineRun.pipeline_name.ilike(f"%{name_filter}%")
+            )
+
+    return pipeline_runs
+
+
+def _get_pipeline_runs_query():
+    """Used to prepare filters for querying Pipeline Run"""
+    pipeline_runs = _get_pipeline_runs_basic_query()
+
+    start_filter = request.args.get("start")
+    if start_filter:
+        start_filter = datetime.datetime.strptime(start_filter, "%Y-%m-%d")
+
+    end_filter = request.args.get("end")
+    if end_filter:
+        end_filter = datetime.datetime.strptime(end_filter, "%Y-%m-%d")
+
+    if start_filter and end_filter:
+        pipeline_runs = pipeline_runs.filter(
+            and_(
+                PipelineRun.start <= end_filter,
+                PipelineRun.finish >= start_filter,
+            )
+        )
+    elif start_filter:
+        pipeline_runs = pipeline_runs.filter(PipelineRun.finish >= start_filter)
+    elif end_filter:
+        pipeline_runs = pipeline_runs.filter(PipelineRun.start <= end_filter)
+    return pipeline_runs
 
 
 class PipelineRunListApi(Resource):
@@ -53,48 +102,7 @@ class PipelineRunListApi(Resource):
                 if request.args.get("simple", "false") == "true"
                 else None
             )
-        pipeline_runs = PipelineRun.query
-
-        status_filter = request.args.get("status")
-        if status_filter:
-            pipeline_runs = pipeline_runs.filter(
-                PipelineRun.status == status_filter
-            )
-        name_filter = request.args.get("name")
-        if name_filter:
-            if name_filter.isdigit():
-                pipeline_runs = pipeline_runs.filter(
-                    or_(
-                        PipelineRun.pipeline_name.ilike(f"%{name_filter}%"),
-                        PipelineRun.pipeline_id == int(name_filter),
-                    )
-                )
-            else:
-                pipeline_runs = pipeline_runs.filter(
-                    PipelineRun.pipeline_name.ilike(f"%{name_filter}%")
-                )
-
-        start_filter = request.args.get("start")
-        if start_filter:
-            start_filter = datetime.datetime.strptime(start_filter, "%Y-%m-%d")
-
-        end_filter = request.args.get("end")
-        if end_filter:
-            end_filter = datetime.datetime.strptime(end_filter, "%Y-%m-%d")
-
-        if start_filter and end_filter:
-            pipeline_runs = pipeline_runs.filter(
-                and_(
-                    PipelineRun.start <= end_filter,
-                    PipelineRun.finish >= start_filter,
-                )
-            )
-        elif start_filter:
-            pipeline_runs = pipeline_runs.filter(
-                PipelineRun.finish >= start_filter
-            )
-        elif end_filter:
-            pipeline_runs = pipeline_runs.filter(PipelineRun.start <= end_filter)
+        pipeline_runs = _get_pipeline_runs_query()
 
         pipelines_filter = request.args.get("pipelines")
         if pipelines_filter:
@@ -354,6 +362,85 @@ class PipelineRunFromPipelineApi(Resource):
             }, 415
 
 
+class PipelineRunSummaryApi(Resource):
+    """REST API to generate summary of pipeline run.
+    Used for reporting"""
+
+    @requires_auth
+    def get(self):
+        result = []
+        pipeline_runs = _get_pipeline_runs_query()
+        if request.args.get("type") == "line":
+            pipeline_runs = _get_pipeline_runs_basic_query()
+            start_filter = request.args.get("start")
+            end_filter = request.args.get("end")
+
+            if start_filter:
+                start_date = datetime.datetime.strptime(start_filter, "%Y-%m-%d")
+            else:
+                start_date = datetime.datetime.now() - datetime.timedelta(
+                    days=30
+                )
+            if end_filter:
+                end_date = datetime.datetime.strptime(end_filter, "%Y-%m-%d")
+            else:
+                end_date = datetime.datetime.now()
+
+            # Subquery for filtered PipelineRuns
+            filtered_pipeline_runs = pipeline_runs.subquery()
+
+            # Main query
+            query = (
+                Job.query
+                .join(PipelineStepRun, PipelineStepRun.id == Job.pipeline_run_id)
+                .join(
+                    filtered_pipeline_runs,
+                    filtered_pipeline_runs.c.id
+                    == PipelineStepRun.pipeline_run_id,
+                )
+                .filter(and_(Job.started < end_date, Job.finished > start_date))
+                .order_by(Job.started)
+            )
+            jobs = query.all()
+            result = []
+            if (jobs):
+                min_start_time = jobs[0].started
+                max_end_time = jobs[-1].started
+
+            # Generates a list of intervals
+            time_intervals = []
+            current_time = min_start_time
+            while current_time <= max_end_time:
+                time_intervals.append(current_time)
+                current_time += datetime.timedelta(minutes=60)
+
+            time_series = {time: 0 for time in time_intervals}
+            for job in jobs:
+                start = job.started
+                end = job.finished
+
+                for time_point in time_intervals:
+                    if start <= time_point < end:
+                        time_series[time_point] += 1
+
+            # Preparando os dados para o plotly
+            x_values = list(time_series.keys())
+            y_values = list(time_series.values())
+
+            result = {'x': x_values, 'y': y_values}
+        else:
+            result = [
+                (status, total)
+                for status, total in pipeline_runs.with_entities(
+                    PipelineRun.status, func.count(PipelineRun.id)
+                )
+                .group_by(PipelineRun.status)
+                .all()
+            ]
+
+        return result
+
+
 class ExecutePipelineRunStepApi(Resource):
     """REST API to execute a pipeline run step"""
 
@@ -368,15 +455,18 @@ class ExecutePipelineRunStepApi(Resource):
             and request.json is not None
         ):
             params = self.ExecutePipelineRunSchema().load(request.json)
-            pipeline_run, job = execute_pipeline_step_run(params.get("id"),
-                                                          flask_g.user)
+            pipeline_run, job = execute_pipeline_step_run(
+                params.get("id"), flask_g.user
+            )
             if pipeline_run is not None:
                 response_schema = PipelineStepRunItemResponseSchema()
                 return {
                     "status": "OK",
                     "message": gettext(
                         "Pipeline step id={} triggered by the job {}.",
-                        pipeline_run.id, job.id),
+                        pipeline_run.id,
+                        job.id,
+                    ),
                     "id": response_schema.dump(pipeline_run),
                 }, 200
             else:
