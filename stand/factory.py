@@ -368,6 +368,7 @@ def mocked_emit(original_emit, app_):
                     # print(data)
                     # print(job_step)
                     # print('=' * 20)
+                    status = data.get('status')
                     if job_step is not None:
                         job_step.status = status
                         level = data.get('level')
