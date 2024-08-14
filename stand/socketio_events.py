@@ -87,7 +87,7 @@ class StandSocketIO:
 
         self.redis_store.expire('room_{}'.format(room), 3600)
         if room.isdigit():
-            self.redis_store.expire('cache_room_{}'.format(room), 600)
+            self.redis_store.expire(f'cache_room_{room}', 600)
 
         self.logger.info(gettext('[%s] joined room %s'), sid, room)
         self.socket_io.enter_room(sid, room, namespace=self.namespace)
@@ -103,7 +103,7 @@ class StandSocketIO:
         if not replay_cached:
             return
 
-        cached = self.redis_store.lrange('cache_room_{}'.format(room), 0, -1)
+        cached = self.redis_store.lrange(f'cache_room_{room}', 0, -1)
         for msg in cached:
             msg = json.loads(msg)
             self.socket_io.emit(msg['event'], msg['data'], room=sid,
@@ -141,8 +141,8 @@ class StandSocketIO:
         self.socket_io.close_room(room, namespace=self.namespace)
 
     def on_connect(self, sid, message):
-        self.logger.info(gettext('%s connected'), sid)
-        self.logger.info(message)
+        self.logger.info(
+            f'[{sid}] {gettext("connected")} IP: {message.get("REMOTE_ADDR")}')
         self.socket_io.emit('response',
                             {'message': gettext('Connected'), 'count': 0},
                             room=sid, namespace=self.namespace)
@@ -151,8 +151,8 @@ class StandSocketIO:
                             namespace=self.namespace)
     def on_disconnect(self, sid):
         for room_id in self.socket_io.rooms(sid, self.namespace):
-            if room_id.isdigit():
-                self.on_leave_room(sid, {'room': room_id}, False)
+            #if room_id.isdigit():
+            self.on_leave_room(sid, {'room': room_id}, False)
         self.logger.info(gettext('%s disconnected'), sid)
 
     def on_disconnect_request(self, sid):

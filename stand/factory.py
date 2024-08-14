@@ -209,7 +209,7 @@ def mocked_emit(original_emit, app_):
                 data['message'] = str(data['message'], 'utf-8')
             if data.get('type') == 'OBJECT':
                 data['message'] = json.loads(data['message'])
-            redis_store_.rpush('cache_room_{}'.format(room), json.dumps(
+            redis_store_.rpush(f'cache_room_{room}', json.dumps(
                 {'event': event, 'data': data, 'namespace': namespace,
                  'room': room}, indent=0))
         return original_emit(self, event, data, namespace, room=room,
@@ -307,7 +307,7 @@ def mocked_emit(original_emit, app_):
                                     cache = True
                                 if cache:
                                     redis_store.rpush(
-                                        'cache_room_{}'.format(room),
+                                        f'cache_room_{room}',
                                         json.dumps({'event': 'update task',
                                                     'data': msg,
                                                     'namespace': namespace,
