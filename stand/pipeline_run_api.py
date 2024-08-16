@@ -456,6 +456,7 @@ class ExecutePipelineRunStepApi(Resource):
         ):
             params = self.ExecutePipelineRunSchema().load(request.json)
             pipeline_run, job = execute_pipeline_step_run(
+                current_app.config['STAND_CONFIG'].get('services').get('tahiti'),
                 params.get("id"), flask_g.user
             )
             if pipeline_run is not None:
@@ -463,7 +464,7 @@ class ExecutePipelineRunStepApi(Resource):
                 return {
                     "status": "OK",
                     "message": gettext(
-                        "Pipeline step id={} triggered by the job {}.",
+                        "Pipeline step id={} triggered by the job {}.").format(
                         pipeline_run.id,
                         job.id,
                     ),

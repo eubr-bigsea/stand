@@ -210,9 +210,10 @@ def mocked_emit(original_emit, app_):
                 data['message'] = str(data['message'], 'utf-8')
             if data.get('type') == 'OBJECT':
                 data['message'] = json.loads(data['message'])
-            data['cache'] = True
+            cached_data = data.copy()
+            cached_data['fromcache'] = True
             redis_store_.rpush(f'cache_room_{room}', json.dumps(
-                {'event': event, 'data': data, 'namespace': namespace,
+                {'event': event, 'data': cached_data, 'namespace': namespace,
                  'room': room}, indent=0))
             redis_store_.expire(f'cache_room_{room}', 600)
         return original_emit(self, event, data, namespace, room=room,
