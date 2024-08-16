@@ -99,14 +99,12 @@ class StandSocketIO:
             room=sid, namespace=self.namespace)
 
         # # Resend all statuses
-        print('>>>>>>>', replay_cached)
         if not replay_cached:
             return
 
         cached = self.redis_store.lrange(f'cache_room_{room}', 0, -1)
         for msg in cached:
             msg = json.loads(msg)
-            print(msg)
             self.socket_io.emit(msg['event'], msg['data'], room=sid,
                                     namespace=self.namespace)
 

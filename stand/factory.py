@@ -203,16 +203,18 @@ def mocked_emit(original_emit, app_):
     def new_emit(self, event, data, namespace, room=None, skip_sid=None,
                  callback=None):
         use_callback = callback
-        if room and room.isdigit():
+        if room:
             use_callback = handle_emit(data, event, namespace, room, self,
                                        skip_sid, use_callback, redis_store_)
             if isinstance(data.get('message', ''), bytes):
                 data['message'] = str(data['message'], 'utf-8')
             if data.get('type') == 'OBJECT':
                 data['message'] = json.loads(data['message'])
+            data['cache'] = True
             redis_store_.rpush(f'cache_room_{room}', json.dumps(
                 {'event': event, 'data': data, 'namespace': namespace,
                  'room': room}, indent=0))
+            redis_store_.expire(f'cache_room_{room}', 600)
         return original_emit(self, event, data, namespace, room=room,
                              skip_sid=skip_sid,
                              callback=use_callback)
@@ -293,18 +295,18 @@ def mocked_emit(original_emit, app_):
                                     msg['message'] = _gettext(
                                         'Canceled by error')
                                     msg['status'] = EXEC.ERROR
-                                    original_emit(self, 'update task', msg,
-                                                  namespace, room, skip_sid,
-                                                  use_callback)
+                                    #original_emit(self, 'update task', msg,
+                                    #              namespace, room, skip_sid,
+                                    #              use_callback)
                                     cache = True
                                 elif job_step.status not in final_states:
                                     job_step.status = EXEC.CANCELED
                                     msg['message'] = _gettext('Skiped by error')
                                     msg['status'] = EXEC.CANCELED
 
-                                    original_emit(self, 'update task', msg,
-                                                  namespace, room, skip_sid,
-                                                  use_callback)
+                                    #original_emit(self, 'update task', msg,
+                                    #              namespace, room, skip_sid,
+                                    #              use_callback)
                                     cache = True
                                 if cache:
                                     redis_store.rpush(
@@ -327,9 +329,10 @@ def mocked_emit(original_emit, app_):
                         logger.info('Is job associated to pipeline run? %s',
                                  f'Yes, {job.pipeline_step_run.id}' if
                                  job.pipeline_step_run is not None else 'No')
-                        if job.pipeline_step_run:
+                        if (job.pipeline_step_run):
                             _update_pipeline_run(job)
                             notification_msg = {
+                                'date': datetime.datetime.utcnow().isoformat(),
                                 'pipeline_run': {
                                     'id': job.pipeline_run.id,
                                     'status': job.pipeline_run.status,
@@ -337,25 +340,19 @@ def mocked_emit(original_emit, app_):
                                 'pipeline_step_run': {
                                     'id': job.pipeline_step_run.id,
                                     'status': job.pipeline_step_run.status,
+                                    'order': job.pipeline_step_run.order
+                                },
+                                'job': {
+                                    'id': job.id,
+                                    'status': job.status,
                                 },
                                 'message': data.get('message')
                             }
-                            original_emit(self, 'update pipeline run',
+                            log.info('Notify room pipeline_runs: %s', notification_msg)
+                            self.emit('update pipeline run',
                                             notification_msg,
-                                            namespace, room, skip_sid,
+                                            namespace, 'pipeline_runs', skip_sid,
                                             use_callback)
-                            # msg = {
-                            #         'type': data.get('type', 'TEXT') or 'TEXT',
-                            #         'task': {'id': 'task_id'},
-                            #         'id': 'step_log.id',
-                            #         'level': 'level',
-                            #         'porque': '?????',
-                            #         'date': now,
-                            #     }
-
-                            # original_emit(self, 'update job', msg,
-                            #                       namespace, room, skip_sid,
-                            #                       use_callback)
                         db.session.add(job)
                         db.session.commit()
                     else:

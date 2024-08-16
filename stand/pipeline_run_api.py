@@ -446,7 +446,7 @@ class ExecutePipelineRunStepApi(Resource):
 
     class ExecutePipelineRunSchema(Schema):
         id = fields.Integer(required=True)
-        variables = fields.DateTime(required=False)
+        variables = fields.String(required=False)
 
     @requires_auth
     def post(self):
