@@ -8,7 +8,7 @@ from flask import g as flask_g
 from flask_babel import gettext
 from flask_restful import Resource
 from marshmallow import Schema, fields
-from sqlalchemy import and_, func, extract, case, or_
+from sqlalchemy import and_, func, or_
 
 from stand.app_auth import requires_auth
 from stand.models import Job, PipelineRun, PipelineStepRun, db
@@ -375,59 +375,64 @@ class PipelineRunSummaryApi(Resource):
             start_filter = request.args.get("start")
             end_filter = request.args.get("end")
 
+            today = datetime.datetime.now().replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
             if start_filter:
                 start_date = datetime.datetime.strptime(start_filter, "%Y-%m-%d")
             else:
-                start_date = datetime.datetime.now() - datetime.timedelta(
-                    days=30
-                )
+                start_date = today - datetime.timedelta(days=3)
             if end_filter:
                 end_date = datetime.datetime.strptime(end_filter, "%Y-%m-%d")
             else:
-                end_date = datetime.datetime.now()
+                end_date = today + datetime.timedelta(days=1)
 
             # Subquery for filtered PipelineRuns
             filtered_pipeline_runs = pipeline_runs.subquery()
 
             # Main query
             query = (
-                Job.query
-                .join(PipelineStepRun, PipelineStepRun.id == Job.pipeline_run_id)
+                Job.query.join(
+                    PipelineStepRun, PipelineStepRun.id == Job.pipeline_run_id
+                )
                 .join(
                     filtered_pipeline_runs,
                     filtered_pipeline_runs.c.id
                     == PipelineStepRun.pipeline_run_id,
                 )
-                .filter(and_(Job.started < end_date, Job.finished > start_date))
+                .filter(
+                    and_(Job.started <= end_date, Job.finished >= start_date)
+                )
                 .order_by(Job.started)
             )
             jobs = query.all()
+            print(jobs)
             result = []
-            if (jobs):
-                min_start_time = jobs[0].started
-                max_end_time = jobs[-1].started
+
+            min_start_time = start_date
 
             # Generates a list of intervals
             time_intervals = []
             current_time = min_start_time
-            while current_time <= max_end_time:
+            while current_time <= end_date:
                 time_intervals.append(current_time)
                 current_time += datetime.timedelta(minutes=60)
 
             time_series = {time: 0 for time in time_intervals}
             for job in jobs:
-                start = job.started
-                end = job.finished
+                start = job.started.replace(minute=0, second=0, microsecond=0)
+                time_series[start] += 1
+                end = job.finished.replace(minute=0, second=0, microsecond=0)
+                if start != end:
+                    time_series[end] += 1
 
-                for time_point in time_intervals:
-                    if start <= time_point < end:
-                        time_series[time_point] += 1
-
-            # Preparando os dados para o plotly
-            x_values = list(time_series.keys())
+            x_values = [
+                d.strftime("%Y-%m-%dT%H:%M:%S") for d in time_series.keys()
+            ]
             y_values = list(time_series.values())
 
-            result = {'x': x_values, 'y': y_values}
+            print(y_values)
+            result = {"x": x_values, "y": y_values}
         else:
             result = [
                 (status, total)
@@ -446,7 +451,7 @@ class ExecutePipelineRunStepApi(Resource):
 
     class ExecutePipelineRunSchema(Schema):
         id = fields.Integer(required=True)
-        variables = fields.DateTime(required=False)
+        variables = fields.String(required=False)
 
     @requires_auth
     def post(self):
@@ -456,14 +461,17 @@ class ExecutePipelineRunStepApi(Resource):
         ):
             params = self.ExecutePipelineRunSchema().load(request.json)
             pipeline_run, job = execute_pipeline_step_run(
-                params.get("id"), flask_g.user
+                current_app.config["STAND_CONFIG"].get("services").get("tahiti"),
+                params.get("id"),
+                flask_g.user,
             )
             if pipeline_run is not None:
                 response_schema = PipelineStepRunItemResponseSchema()
                 return {
                     "status": "OK",
                     "message": gettext(
-                        "Pipeline step id={} triggered by the job {}.",
+                        "Pipeline step id={} triggered by the job {}."
+                    ).format(
                         pipeline_run.id,
                         job.id,
                     ),
