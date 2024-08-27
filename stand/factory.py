@@ -358,7 +358,7 @@ def mocked_emit(original_emit, app_):
                         db.session.commit()
                     else:
                         logger.info(gettext("Job %s is not persistent."), job_id)
-                elif event == 'update task':
+                elif event == 'update task' or event == 'user message':
                     job_id = int(room)
                     job_step = JobStep.query.filter(and_(
                         JobStep.job_id == job_id,
@@ -366,6 +366,7 @@ def mocked_emit(original_emit, app_):
                     # print('=' * 20)
                     # print(data)
                     # print(job_step)
+                    # print(event)
                     # print('=' * 20)
                     status = data.get('status')
                     if job_step is not None:

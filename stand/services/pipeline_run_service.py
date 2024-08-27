@@ -10,7 +10,9 @@ from stand.models import Cluster, Job, JobType, PipelineRun, PipelineStepRun, St
 from stand.models_extra import Period, Pipeline, PipelineStep, Workflow
 from stand.services import ServiceException
 from stand.services.job_services import JobService
+import logging
 
+log = logging.getLogger(__name__)
 def get_resource_from_api(config: typing.Dict, resource_type: str,
                           resource_id: int) -> object:
     """Load a resource from Tahiti API"""
@@ -95,7 +97,23 @@ def execute_pipeline_step_run(config: typing.Dict,
         now = datetime.utcnow()
         workflow, workflow_definition = get_workflow_from_api(config,
                                                        step_run.workflow_id)
-        pipeline_run = step_run.pipeline_run
+        pipeline_run: PipelineRun = step_run.pipeline_run
+        # Job will be executed in a pipeline run context, define the
+        # variable "ref" as the pipeline run start date.
+        run_ref = {
+            "name": "ref",
+            "type": "DATE",
+            "default_value": pipeline_run.start.date().isoformat(),
+        }
+        if not workflow.get("variables"):
+            workflow["variables"] = [run_ref]
+        else:
+            workflow["variables"] = [
+                v for v in workflow["variables"] if v.get("name") != "ref"
+            ]
+            workflow["variables"].append(run_ref)
+        log.info(gettext('Set "ref" variable to {}').format(run_ref))
+
         job = Job(
                 created=now,
                 status=StatusExecution.WAITING,

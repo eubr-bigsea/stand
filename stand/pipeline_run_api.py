@@ -381,7 +381,7 @@ class PipelineRunSummaryApi(Resource):
             if start_filter:
                 start_date = datetime.datetime.strptime(start_filter, "%Y-%m-%d")
             else:
-                start_date = today - datetime.timedelta(days=30)
+                start_date = today - datetime.timedelta(days=3)
             if end_filter:
                 end_date = datetime.datetime.strptime(end_filter, "%Y-%m-%d")
             else:

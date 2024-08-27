@@ -8,7 +8,7 @@ import rq
 import stand.util
 from rq.exceptions import NoSuchJobError
 from stand.models import (
-    db, StatusExecution, JobException, JobType, Cluster)
+    JobStep, db, StatusExecution, JobException, JobType, Cluster)
 from stand.services.redis_service import connect_redis_store
 from stand.schema import ClusterItemResponseSchema
 
@@ -97,6 +97,15 @@ class JobService:
         else:
             # Offset when job is not persistent. E.g. Data Explorer
             job.id = 800000 + job.workflow_id
+
+        now = datetime.datetime.utcnow()
+        job.steps = [JobStep(date=now, status=StatusExecution.PENDING,
+                                 task_id=t['id'],
+                                 task_name=t.get('name'),
+                                 operation_id=t['operation']['id'],
+                                 operation_name=t.get('name')) #FIXME
+                         for t in workflow.get('tasks', [])]
+        log.info(gettext('Creating a total of {} step(s)').format(len(job.steps)))
 
         # Test if workflow has a variable indicating the Redis db to be used.
         # Useful when debugging a shared environment
