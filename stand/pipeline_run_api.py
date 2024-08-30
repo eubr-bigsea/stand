@@ -10,6 +10,7 @@ from flask_restful import Resource
 from marshmallow import Schema, fields
 from sqlalchemy import and_, func, or_
 
+from stand.services import ServiceException
 from stand.app_auth import requires_auth
 from stand.models import Job, PipelineRun, PipelineStepRun, db
 from stand.models_extra import Period
@@ -348,10 +349,10 @@ class PipelineRunFromPipelineApi(Resource):
                 run = create_pipeline_run_from_pipeline(
                     pipeline, Period(params.get("start"), params.get("finish"))
                 )
-            except ServiceException se:
+            except ServiceException as se:
                 return {
                     'status': 'ERROR',
-                    'message': se.message
+                    'message': str(se)
                 }, 400
             return {
                 "status": "OK",

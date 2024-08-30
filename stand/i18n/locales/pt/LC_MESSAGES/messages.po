@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-07-29 11:16-0300\n"
-"PO-Revision-Date: 2024-07-29 11:22-0300\n"
+"POT-Creation-Date: 2024-08-30 09:57-0300\n"
+"PO-Revision-Date: 2024-08-30 09:59-0300\n"
 "Last-Translator: \n"
 "Language-Team: pt <LL@li.org>\n"
 "Language: pt\n"
@@ -28,23 +28,23 @@ msgstr "Executando no modo %s"
 msgid "Cluster"
 msgstr "Cluster"
 
-#: stand/cluster_api.py:103 stand/pipeline_run_api.py:157
+#: stand/cluster_api.py:103 stand/pipeline_run_api.py:164
 #, python-format
 msgid "Listing %(name)s"
 msgstr "Listando %(name)s"
 
 #: stand/cluster_api.py:112 stand/cluster_api.py:266 stand/gateway_api.py:24
-#: stand/job_api.py:122 stand/pipeline_run_api.py:170 stand/room_api.py:18
+#: stand/job_api.py:122 stand/pipeline_run_api.py:177 stand/room_api.py:18
 msgid "Missing json in the request body"
 msgstr "JSON ausente no corpo da requisição"
 
 #: stand/cluster_api.py:127 stand/cluster_api.py:243 stand/cluster_api.py:280
-#: stand/factory.py:96 stand/job_api.py:164
+#: stand/factory.py:97 stand/job_api.py:164
 msgid "Validation error"
 msgstr "Erro de validação"
 
 #: stand/cluster_api.py:133 stand/cluster_api.py:184 stand/cluster_api.py:250
-#: stand/cluster_api.py:315 stand/factory.py:114 stand/job_api.py:179
+#: stand/cluster_api.py:315 stand/factory.py:115 stand/job_api.py:179
 #: stand/job_api.py:250 stand/job_api.py:305 stand/job_api.py:347
 #: stand/job_api.py:376 stand/job_api.py:407
 msgid "Internal error"
@@ -53,35 +53,35 @@ msgstr "Erro interno"
 #: stand/cluster_api.py:158 stand/cluster_api.py:308 stand/cluster_api.py:341
 #: stand/job_api.py:62 stand/job_api.py:200 stand/job_api.py:232
 #: stand/job_api.py:273 stand/job_api.py:286 stand/job_api.py:325
-#: stand/job_api.py:363 stand/job_api.py:391 stand/pipeline_run_api.py:391
+#: stand/job_api.py:363 stand/job_api.py:391 stand/pipeline_run_api.py:488
 msgid "Not found"
 msgstr "Não encontrado"
 
-#: stand/cluster_api.py:165 stand/pipeline_run_api.py:248
+#: stand/cluster_api.py:165 stand/pipeline_run_api.py:254
 #, python-format
 msgid "Deleting %s (id=%s)"
 msgstr "Excluindo %s (id=%s)"
 
-#: stand/cluster_api.py:176 stand/pipeline_run_api.py:256
+#: stand/cluster_api.py:176 stand/pipeline_run_api.py:262
 #, python-format
 msgid "%(name)s deleted with success!"
 msgstr "%(name)s excluído com sucesso!"
 
-#: stand/cluster_api.py:194 stand/pipeline_run_api.py:264
+#: stand/cluster_api.py:194 stand/pipeline_run_api.py:270
 #, python-format
 msgid "%(name)s not found (id=%(id)s)."
 msgstr "%(name)s não encontrado (id=%(id)s)."
 
-#: stand/cluster_api.py:204 stand/pipeline_run_api.py:282
+#: stand/cluster_api.py:204 stand/pipeline_run_api.py:288
 msgid "Insufficient data."
 msgstr "Dados insuficientes."
 
-#: stand/cluster_api.py:208 stand/pipeline_run_api.py:287
+#: stand/cluster_api.py:208 stand/pipeline_run_api.py:293
 #, python-format
 msgid "Updating %s (id=%s)"
 msgstr "Atualizando %s (id=%s)"
 
-#: stand/cluster_api.py:233 stand/pipeline_run_api.py:311
+#: stand/cluster_api.py:233 stand/pipeline_run_api.py:317
 #, python-format
 msgid "%(n)s (id=%(id)s) was updated with success!"
 msgstr "%(n)s (id=%(id)s) foi atualizado com sucesso!"
@@ -89,6 +89,11 @@ msgstr "%(n)s (id=%(id)s) foi atualizado com sucesso!"
 #: stand/cluster_api.py:338
 msgid "Job is still running"
 msgstr "Ainda executando"
+
+#: stand/factory.py:360
+#, python-format
+msgid "Job %s is not persistent."
+msgstr "Execução %s não é persistente"
 
 #: stand/job_api.py:144
 msgid "Unnamed job"
@@ -126,7 +131,9 @@ msgstr "Você deve informar o workflow_id."
 
 #: stand/job_api.py:564
 msgid "You must inform cluster_id or define a preferred one in workflow."
-msgstr "Você deve informar o cluster_id ou definir um cluster preferencial para o fluxo de trabalho."
+msgstr ""
+"Você deve informar o cluster_id ou definir um cluster preferencial para o "
+"fluxo de trabalho."
 
 #: stand/job_api.py:574
 msgid "Error retrieving workflow {}: {}"
@@ -134,7 +141,8 @@ msgstr "Erro recuperando fluxo de trabalho {}: {}"
 
 #: stand/job_api.py:577 stand/job_api.py:582
 msgid "Workflow not found or error retrieving it."
-msgstr "Fluxo de trabalho não foi encontrado ou um erro ocorreu ao recuperá-lo."
+msgstr ""
+"Fluxo de trabalho não foi encontrado ou um erro ocorreu ao recuperá-lo."
 
 #: stand/job_api.py:617
 msgid "Convert data source"
@@ -144,76 +152,79 @@ msgstr "Converter a fonte de dados"
 msgid "Unsupported job name: {name}"
 msgstr "Nome de execução inválido: {name}"
 
-#: stand/pipeline_run_api.py:39 stand/pipeline_run_api.py:194
+#: stand/pipeline_run_api.py:87 stand/pipeline_run_api.py:200
 msgid "PipelineRun"
 msgstr "Execução de pipeline"
 
-#: stand/pipeline_run_api.py:181
+#: stand/pipeline_run_api.py:187
 #, python-format
 msgid "Adding %s"
 msgstr "Adicionando %s"
 
-#: stand/pipeline_run_api.py:209
+#: stand/pipeline_run_api.py:215
 #, python-format
 msgid "Retrieving %s (id=%s)"
 msgstr "Recuperando %s (id=%s)"
 
-#: stand/pipeline_run_api.py:225
+#: stand/pipeline_run_api.py:231
 #, python-format
 msgid "%(name)s not found (id=%(id)s)"
 msgstr "%(name)s não encontrado (id=%(id)s)"
 
-#: stand/pipeline_run_api.py:346 stand/pipeline_run_api.py:382
+#: stand/pipeline_run_api.py:358
 #, python-format
 msgid "%(name)s created with success!"
 msgstr "%(name)s criado com sucesso!"
 
-#: stand/pipeline_run_api.py:348 stand/pipeline_run_api.py:384
+#: stand/pipeline_run_api.py:360
 msgid "Pipeline Run"
 msgstr "Execução de pipeline"
 
-#: stand/socketio_events.py:90
+#: stand/pipeline_run_api.py:477
+msgid "Pipeline step id={} triggered by the job {}."
+msgstr "Pipeline step id={} disparado pela execução {}."
+
+#: stand/pipeline_run_api.py:493
+msgid "Unsupported content type"
+msgstr "Tipo de conteúdo não-suportado"
+
+#: stand/socketio_events.py:91
 #, python-format
 msgid "[%s] joined room %s"
 msgstr "[%s] juntou-se à sala %s"
 
-#: stand/socketio_events.py:94
+#: stand/socketio_events.py:95 stand/socketio_events.py:98
 msgid "Entered room: *{}*"
 msgstr "Entrou na sala: *{}*"
 
-#: stand/socketio_events.py:116
+#: stand/socketio_events.py:120
 #, python-format
 msgid "[%s] left room %s"
 msgstr "[%s] deixou a sala %s"
 
-#: stand/socketio_events.py:122
+#: stand/socketio_events.py:126
 msgid "Left room: {}"
 msgstr "Deixou a sala: {}"
 
-#: stand/socketio_events.py:131
+#: stand/socketio_events.py:135
 #, python-format
 msgid "%s is closing room %s"
 msgstr "%s está fechando a sala %s"
 
-#: stand/socketio_events.py:133
+#: stand/socketio_events.py:137
 msgid "Room closed: {}"
 msgstr "Sala fechada: {}"
 
-#: stand/socketio_events.py:139
-#, python-format
-msgid "%s connected"
-msgstr "%s conectou-se"
-
-#: stand/socketio_events.py:142
+#: stand/socketio_events.py:146 stand/socketio_events.py:149
 msgid "Connected"
 msgstr "Conectado"
 
-#: stand/socketio_events.py:149
+#: stand/socketio_events.py:155
 #, python-format
 msgid "%s disconnected"
 msgstr "%s desconectou-se"
 
-#: stand/socketio_events.py:152
+#: stand/socketio_events.py:158
 #, python-format
 msgid "%s asked for disconnection"
 msgstr "%s solicitou a sua desconexão"
@@ -230,31 +241,55 @@ msgstr "Erro {} ao recuperar as execuções de pipeline"
 msgid "Job is allocating computer resources. Please wait"
 msgstr "Execução está alocando recursos computacionais. Por favor, aguarde"
 
-#: stand/services/job_services.py:121
+#: stand/services/job_services.py:108
+msgid "Creating a total of {} step(s)"
+msgstr "Criando um total de {} passo(s)"
+
+#: stand/services/job_services.py:130
 msgid "Cluster {} is not enabled."
 msgstr "Cluster {} não está habilitado."
 
-#: stand/services/pipeline_run_service.py:24
-msgid "Error retrieving pipeline {}"
-msgstr "Erro recuperando pipeline {}"
-
-#: stand/services/pipeline_run_service.py:39
+#: stand/services/pipeline_run_service.py:55
 msgid "At least a pipeline step is not associated to a workflow"
-msgstr "Pelo menus um passo da pipeline não está associado a um fluxo de trabalho"
+msgstr ""
+"Pelo menus um passo da pipeline não está associado a um fluxo de trabalho"
+
+#: stand/services/pipeline_run_service.py:115
+msgid "Set \"ref\" variable to {}"
+msgstr "Definida variável \"ref\" como {}"
+
+#: stand/services/pipeline_run_service.py:129
+msgid "[{} to {}] [{}-{}] Step: {}/{} ({})"
+msgstr "[{} até {}] [{}-{}] Passo: {}/{} ({})"
 
 #: stand/services/pipeline_run_services.py:80
 msgid "Pipeline was canceled or removed."
 msgstr "Pipeline foi cancelada ou removida"
 
-#: stand/services/tahiti_service.py:35
-msgid "Error loading data from tahiti: id {}: HTTP {} - {}  ({})"
-msgstr "Erro recuperando dados do Tahiti: id{} : HTTP {} - {} ({})"
+#, python-format
+#~ msgid "%s connected"
+#~ msgstr "%s conectou-se"
 
-#~ msgid "Could not verify your access level for that URL. You have to login with proper credentials provided by Lemonade Thorn."
-#~ msgstr "Não foi possível verificar seu nível de acesso para esta URL. Você tem que se autenticar com as credenciais apropriadas fornecidas pelo Lemonade Thorn."
+#~ msgid "Error retrieving pipeline {}"
+#~ msgstr "Erro recuperando pipeline {}"
 
-#~ msgid "Could not verify your access level for that URL. Invalid authentication token."
-#~ msgstr "Não foi possível verificar seu nível de acesso para esta URL. Token de autenticação inválido."
+#~ msgid "Error loading data from tahiti: id {}: HTTP {} - {}  ({})"
+#~ msgstr "Erro recuperando dados do Tahiti: id{} : HTTP {} - {} ({})"
+
+#~ msgid ""
+#~ "Could not verify your access level for that URL. You have to login with "
+#~ "proper credentials provided by Lemonade Thorn."
+#~ msgstr ""
+#~ "Não foi possível verificar seu nível de acesso para esta URL. Você tem "
+#~ "que se autenticar com as credenciais apropriadas fornecidas pelo Lemonade "
+#~ "Thorn."
+
+#~ msgid ""
+#~ "Could not verify your access level for that URL. Invalid authentication "
+#~ "token."
+#~ msgstr ""
+#~ "Não foi possível verificar seu nível de acesso para esta URL. Token de "
+#~ "autenticação inválido."
 
 #~ msgid "Error in PATCH"
 #~ msgstr "Erro no processamento da requisição do tipo PATCH"
@@ -265,5 +300,10 @@ msgstr "Erro recuperando dados do Tahiti: id{} : HTTP {} - {} ({})"
 #~ msgid "Deleted"
 #~ msgstr "Excluído"
 
-#~ msgid "Could not verify your access level for that URL. You have to login with proper credentials provided by Lemonade Thorn"
-#~ msgstr "Não foi possível verificar seu nível de acesso para esta URL. Você tem que realizar o login com as credenciais apropriadas fornecidas pelo Lemonade Thorn."
+#~ msgid ""
+#~ "Could not verify your access level for that URL. You have to login with "
+#~ "proper credentials provided by Lemonade Thorn"
+#~ msgstr ""
+#~ "Não foi possível verificar seu nível de acesso para esta URL. Você tem "
+#~ "que realizar o login com as credenciais apropriadas fornecidas pelo "
+#~ "Lemonade Thorn."
