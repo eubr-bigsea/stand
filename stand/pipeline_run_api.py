@@ -344,9 +344,15 @@ class PipelineRunFromPipelineApi(Resource):
             pipeline, _ = get_pipeline_from_api(
                 config.get("services").get("tahiti"), params.get("id")
             )
-            run = create_pipeline_run_from_pipeline(
-                pipeline, Period(params.get("start"), params.get("finish"))
-            )
+            try:
+                run = create_pipeline_run_from_pipeline(
+                    pipeline, Period(params.get("start"), params.get("finish"))
+                )
+            except ServiceException se:
+                return {
+                    'status': 'ERROR',
+                    'message': se.message
+                }, 400
             return {
                 "status": "OK",
                 "message": gettext(
