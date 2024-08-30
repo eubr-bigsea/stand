@@ -252,7 +252,7 @@ msgstr "Cluster {} não está habilitado."
 #: stand/services/pipeline_run_service.py:55
 msgid "At least a pipeline step is not associated to a workflow"
 msgstr ""
-"Pelo menus uma etapa da pipeline não está associada a um fluxo de trabalho"
+"Ao menos uma etapa da pipeline não está associada a um fluxo de trabalho"
 
 #: stand/services/pipeline_run_service.py:115
 msgid "Set \"ref\" variable to {}"
