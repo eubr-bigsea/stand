@@ -8,7 +8,7 @@ import logging.config
 
 import os
 import socketio
-from flask import Flask
+from flask import Flask, g
 from flask_babel import Babel, gettext
 from flask_caching import Cache
 from flask_cors import CORS
@@ -122,7 +122,17 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
 
     if settings_override:
         app.config.update(settings_override)
-    create_babel_i18n(app)
+    babel = create_babel_i18n(app)
+
+    @babel.localeselector
+    def get_locale():
+        user = getattr(g, 'user', None)
+        if user is not None and user.locale:
+            return user.locale
+        preferred = [x.replace('-', '_') for x in
+                     list(request.accept_languages.values())]
+        return negotiate_locale(preferred, ['pt_BR', 'en_US'])
+
 
     db.init_app(app)
     if app.testing:
@@ -383,6 +393,9 @@ def mocked_emit(original_emit, app_):
                             step_log_msg = json.dumps(step_log_msg)
 
                         step_log_type = data.get('type', 'TEXT')
+                        if event == 'user message':
+                            step_log_type = 'USER'
+
 
                         # Messages must be serialized in the client
                         #if step_log_type == 'OBJECT':

@@ -243,7 +243,7 @@ msgstr "Execução está alocando recursos computacionais. Por favor, aguarde"
 
 #: stand/services/job_services.py:108
 msgid "Creating a total of {} step(s)"
-msgstr "Criando um total de {} passo(s)"
+msgstr "Criando um total de {} etapas(s)"
 
 #: stand/services/job_services.py:130
 msgid "Cluster {} is not enabled."
@@ -252,7 +252,7 @@ msgstr "Cluster {} não está habilitado."
 #: stand/services/pipeline_run_service.py:55
 msgid "At least a pipeline step is not associated to a workflow"
 msgstr ""
-"Pelo menus um passo da pipeline não está associado a um fluxo de trabalho"
+"Pelo menus uma etapa da pipeline não está associada a um fluxo de trabalho"
 
 #: stand/services/pipeline_run_service.py:115
 msgid "Set \"ref\" variable to {}"
@@ -260,7 +260,7 @@ msgstr "Definida variável \"ref\" como {}"
 
 #: stand/services/pipeline_run_service.py:129
 msgid "[{} to {}] [{}-{}] Step: {}/{} ({})"
-msgstr "[{} até {}] [{}-{}] Passo: {}/{} ({})"
+msgstr "[{} até {}] [{}-{}] Etapa: {}/{} ({})"
 
 #: stand/services/pipeline_run_services.py:80
 msgid "Pipeline was canceled or removed."

@@ -67,8 +67,8 @@ def main(is_main_module):
     @babel.localeselector
     def get_locale():
         user = getattr(g, 'user', None)
-        if user is not None:
-            return user.locale or 'en'
+        if user is not None and user.locale:
+            return user.locale
         preferred = [x.replace('-', '_') for x in
                      list(request.accept_languages.values())]
         return negotiate_locale(preferred, ['pt_BR', 'en_US'])
@@ -87,6 +87,6 @@ def main(is_main_module):
             eventlet.wsgi.server(eventlet.listen(('', port)),
                                  stand_socket_io.socket_app)
             pass
-    return stand_socket_io.socket_app 
+    return stand_socket_io.socket_app
 
 main(__name__ == '__main__')

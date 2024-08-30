@@ -7,6 +7,8 @@ import gettext
 import eventlet
 import os
 from stand.socketio_events import StandSocketIO
+from flask import g, request
+from babel import negotiate_locale
 
 locales_path = os.path.join(os.path.dirname(__file__), '..', 'i18n', 'locales')
 
@@ -29,6 +31,17 @@ if __name__ == '__main__':
 
     app = create_app(config_file=args.config)
     babel = create_babel_i18n(app)
+
+    @babel.localeselector
+    def get_locale():
+        user = getattr(g, 'user', None)
+        if user is not None and user.locale:
+            return user.locale
+        preferred = [x.replace('-', '_') for x in
+                     list(request.accept_languages.values())]
+        return negotiate_locale(preferred, ['pt_BR', 'en_US'])
+
+
     # socketio, socketio_app = create_socket_io_app(app)
     stand_socket_io = StandSocketIO(app)
     redis_store = create_redis_store(app)
