@@ -7,17 +7,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-08-30 09:57-0300\n"
+"POT-Creation-Date: 2024-09-02 22:16-0300\n"
 "PO-Revision-Date: 2024-08-30 09:59-0300\n"
 "Last-Translator: \n"
-"Language-Team: pt <LL@li.org>\n"
 "Language: pt\n"
+"Language-Team: pt <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"Generated-By: Babel 2.3.4\n"
-"X-Generator: Poedit 3.4.4\n"
+"Generated-By: Babel 2.15.0\n"
 
 #: stand/app.py:65
 #, python-format
@@ -28,23 +27,23 @@ msgstr "Executando no modo %s"
 msgid "Cluster"
 msgstr "Cluster"
 
-#: stand/cluster_api.py:103 stand/pipeline_run_api.py:164
+#: stand/cluster_api.py:103 stand/pipeline_run_api.py:166
 #, python-format
 msgid "Listing %(name)s"
 msgstr "Listando %(name)s"
 
 #: stand/cluster_api.py:112 stand/cluster_api.py:266 stand/gateway_api.py:24
-#: stand/job_api.py:122 stand/pipeline_run_api.py:177 stand/room_api.py:18
+#: stand/job_api.py:122 stand/pipeline_run_api.py:179 stand/room_api.py:18
 msgid "Missing json in the request body"
 msgstr "JSON ausente no corpo da requisição"
 
 #: stand/cluster_api.py:127 stand/cluster_api.py:243 stand/cluster_api.py:280
-#: stand/factory.py:97 stand/job_api.py:164
+#: stand/factory.py:99 stand/job_api.py:164
 msgid "Validation error"
 msgstr "Erro de validação"
 
 #: stand/cluster_api.py:133 stand/cluster_api.py:184 stand/cluster_api.py:250
-#: stand/cluster_api.py:315 stand/factory.py:115 stand/job_api.py:179
+#: stand/cluster_api.py:315 stand/factory.py:117 stand/job_api.py:179
 #: stand/job_api.py:250 stand/job_api.py:305 stand/job_api.py:347
 #: stand/job_api.py:376 stand/job_api.py:407
 msgid "Internal error"
@@ -53,35 +52,35 @@ msgstr "Erro interno"
 #: stand/cluster_api.py:158 stand/cluster_api.py:308 stand/cluster_api.py:341
 #: stand/job_api.py:62 stand/job_api.py:200 stand/job_api.py:232
 #: stand/job_api.py:273 stand/job_api.py:286 stand/job_api.py:325
-#: stand/job_api.py:363 stand/job_api.py:391 stand/pipeline_run_api.py:488
+#: stand/job_api.py:363 stand/job_api.py:391 stand/pipeline_run_api.py:500
 msgid "Not found"
 msgstr "Não encontrado"
 
-#: stand/cluster_api.py:165 stand/pipeline_run_api.py:254
+#: stand/cluster_api.py:165 stand/pipeline_run_api.py:256
 #, python-format
 msgid "Deleting %s (id=%s)"
 msgstr "Excluindo %s (id=%s)"
 
-#: stand/cluster_api.py:176 stand/pipeline_run_api.py:262
+#: stand/cluster_api.py:176 stand/pipeline_run_api.py:264
 #, python-format
 msgid "%(name)s deleted with success!"
 msgstr "%(name)s excluído com sucesso!"
 
-#: stand/cluster_api.py:194 stand/pipeline_run_api.py:270
+#: stand/cluster_api.py:194 stand/pipeline_run_api.py:272
 #, python-format
 msgid "%(name)s not found (id=%(id)s)."
 msgstr "%(name)s não encontrado (id=%(id)s)."
 
-#: stand/cluster_api.py:204 stand/pipeline_run_api.py:288
+#: stand/cluster_api.py:204 stand/pipeline_run_api.py:290
 msgid "Insufficient data."
 msgstr "Dados insuficientes."
 
-#: stand/cluster_api.py:208 stand/pipeline_run_api.py:293
+#: stand/cluster_api.py:208 stand/pipeline_run_api.py:295
 #, python-format
 msgid "Updating %s (id=%s)"
 msgstr "Atualizando %s (id=%s)"
 
-#: stand/cluster_api.py:233 stand/pipeline_run_api.py:317
+#: stand/cluster_api.py:233 stand/pipeline_run_api.py:319
 #, python-format
 msgid "%(n)s (id=%(id)s) was updated with success!"
 msgstr "%(n)s (id=%(id)s) foi atualizado com sucesso!"
@@ -90,7 +89,7 @@ msgstr "%(n)s (id=%(id)s) foi atualizado com sucesso!"
 msgid "Job is still running"
 msgstr "Ainda executando"
 
-#: stand/factory.py:360
+#: stand/factory.py:374
 #, python-format
 msgid "Job %s is not persistent."
 msgstr "Execução %s não é persistente"
@@ -132,8 +131,8 @@ msgstr "Você deve informar o workflow_id."
 #: stand/job_api.py:564
 msgid "You must inform cluster_id or define a preferred one in workflow."
 msgstr ""
-"Você deve informar o cluster_id ou definir um cluster preferencial para o "
-"fluxo de trabalho."
+"Você deve informar o cluster_id ou definir um cluster preferencial para o"
+" fluxo de trabalho."
 
 #: stand/job_api.py:574
 msgid "Error retrieving workflow {}: {}"
@@ -141,8 +140,7 @@ msgstr "Erro recuperando fluxo de trabalho {}: {}"
 
 #: stand/job_api.py:577 stand/job_api.py:582
 msgid "Workflow not found or error retrieving it."
-msgstr ""
-"Fluxo de trabalho não foi encontrado ou um erro ocorreu ao recuperá-lo."
+msgstr "Fluxo de trabalho não foi encontrado ou um erro ocorreu ao recuperá-lo."
 
 #: stand/job_api.py:617
 msgid "Convert data source"
@@ -152,39 +150,43 @@ msgstr "Converter a fonte de dados"
 msgid "Unsupported job name: {name}"
 msgstr "Nome de execução inválido: {name}"
 
-#: stand/pipeline_run_api.py:87 stand/pipeline_run_api.py:200
+#: stand/pipeline_run_api.py:89 stand/pipeline_run_api.py:202
 msgid "PipelineRun"
 msgstr "Execução de pipeline"
 
-#: stand/pipeline_run_api.py:187
+#: stand/pipeline_run_api.py:189
 #, python-format
 msgid "Adding %s"
 msgstr "Adicionando %s"
 
-#: stand/pipeline_run_api.py:215
+#: stand/pipeline_run_api.py:217
 #, python-format
 msgid "Retrieving %s (id=%s)"
 msgstr "Recuperando %s (id=%s)"
 
-#: stand/pipeline_run_api.py:231
+#: stand/pipeline_run_api.py:233
 #, python-format
 msgid "%(name)s not found (id=%(id)s)"
 msgstr "%(name)s não encontrado (id=%(id)s)"
 
-#: stand/pipeline_run_api.py:358
+#: stand/pipeline_run_api.py:360
 #, python-format
 msgid "%(name)s created with success!"
 msgstr "%(name)s criado com sucesso!"
 
-#: stand/pipeline_run_api.py:360
+#: stand/pipeline_run_api.py:362
 msgid "Pipeline Run"
 msgstr "Execução de pipeline"
 
-#: stand/pipeline_run_api.py:477
+#: stand/pipeline_run_api.py:463
+msgid "Status changed to {}"
+msgstr "Status alterado para {}"
+
+#: stand/pipeline_run_api.py:489
 msgid "Pipeline step id={} triggered by the job {}."
 msgstr "Pipeline step id={} disparado pela execução {}."
 
-#: stand/pipeline_run_api.py:493
+#: stand/pipeline_run_api.py:505
 msgid "Unsupported content type"
 msgstr "Tipo de conteúdo não-suportado"
 
@@ -251,8 +253,7 @@ msgstr "Cluster {} não está habilitado."
 
 #: stand/services/pipeline_run_service.py:55
 msgid "At least a pipeline step is not associated to a workflow"
-msgstr ""
-"Ao menos uma etapa da pipeline não está associada a um fluxo de trabalho"
+msgstr "Ao menos uma etapa da pipeline não está associada a um fluxo de trabalho"
 
 #: stand/services/pipeline_run_service.py:115
 msgid "Set \"ref\" variable to {}"
@@ -266,7 +267,6 @@ msgstr "[{} até {}] [{}-{}] Etapa: {}/{} ({})"
 msgid "Pipeline was canceled or removed."
 msgstr "Pipeline foi cancelada ou removida"
 
-#, python-format
 #~ msgid "%s connected"
 #~ msgstr "%s conectou-se"
 
@@ -277,19 +277,25 @@ msgstr "Pipeline foi cancelada ou removida"
 #~ msgstr "Erro recuperando dados do Tahiti: id{} : HTTP {} - {} ({})"
 
 #~ msgid ""
-#~ "Could not verify your access level for that URL. You have to login with "
-#~ "proper credentials provided by Lemonade Thorn."
+#~ "Could not verify your access level "
+#~ "for that URL. You have to login"
+#~ " with proper credentials provided by "
+#~ "Lemonade Thorn."
 #~ msgstr ""
-#~ "Não foi possível verificar seu nível de acesso para esta URL. Você tem "
-#~ "que se autenticar com as credenciais apropriadas fornecidas pelo Lemonade "
+#~ "Não foi possível verificar seu nível "
+#~ "de acesso para esta URL. Você tem"
+#~ " que se autenticar com as credenciais"
+#~ " apropriadas fornecidas pelo Lemonade "
 #~ "Thorn."
 
 #~ msgid ""
-#~ "Could not verify your access level for that URL. Invalid authentication "
+#~ "Could not verify your access level "
+#~ "for that URL. Invalid authentication "
 #~ "token."
 #~ msgstr ""
-#~ "Não foi possível verificar seu nível de acesso para esta URL. Token de "
-#~ "autenticação inválido."
+#~ "Não foi possível verificar seu nível "
+#~ "de acesso para esta URL. Token de"
+#~ " autenticação inválido."
 
 #~ msgid "Error in PATCH"
 #~ msgstr "Erro no processamento da requisição do tipo PATCH"
@@ -301,9 +307,14 @@ msgstr "Pipeline foi cancelada ou removida"
 #~ msgstr "Excluído"
 
 #~ msgid ""
-#~ "Could not verify your access level for that URL. You have to login with "
-#~ "proper credentials provided by Lemonade Thorn"
+#~ "Could not verify your access level "
+#~ "for that URL. You have to login"
+#~ " with proper credentials provided by "
+#~ "Lemonade Thorn"
 #~ msgstr ""
-#~ "Não foi possível verificar seu nível de acesso para esta URL. Você tem "
-#~ "que realizar o login com as credenciais apropriadas fornecidas pelo "
+#~ "Não foi possível verificar seu nível "
+#~ "de acesso para esta URL. Você tem"
+#~ " que realizar o login com as "
+#~ "credenciais apropriadas fornecidas pelo "
 #~ "Lemonade Thorn."
+

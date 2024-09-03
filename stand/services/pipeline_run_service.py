@@ -150,3 +150,8 @@ def execute_pipeline_step_run(config: typing.Dict,
         db.session.commit()
 
     return step_run, job
+
+def change_pipeline_run_status(run: PipelineRun, status: StatusExecution) -> None:
+    run.status = status
+    db.session.add(run)
+    db.session.commit()

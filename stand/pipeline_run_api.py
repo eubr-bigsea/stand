@@ -25,6 +25,7 @@ from stand.services.pipeline_run_service import (
     create_pipeline_run_from_pipeline,
     execute_pipeline_step_run,
     get_pipeline_from_api,
+    change_pipeline_run_status
 )
 
 log = logging.getLogger(__name__)
@@ -450,6 +451,16 @@ class PipelineRunSummaryApi(Resource):
             ]
 
         return result
+
+
+class ChangePipelineRunStepApi(Resource):
+    """REST API to change pipeline run status"""
+    @requires_auth
+    def patch(self, pipeline_run_id, status):
+        run = PipelineRun.query.get_or_404(pipeline_run_id)
+        change_pipeline_run_status(run, status)
+        return {"status": "OK",
+                "message": gettext("Status changed to {}").format(status)}
 
 
 class ExecutePipelineRunStepApi(Resource):

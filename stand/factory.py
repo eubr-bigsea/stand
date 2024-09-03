@@ -20,7 +20,9 @@ from stand.cluster_api import ClusterDetailApi, PerformanceModelEstimationApi
 from stand.cluster_api import ClusterListApi
 from stand.pipeline_run_api import (PipelineRunDetailApi, PipelineRunListApi,
                                     PipelineRunFromPipelineApi,
-                                    ExecutePipelineRunStepApi, PipelineRunSummaryApi)
+                                    ExecutePipelineRunStepApi,
+                                    PipelineRunSummaryApi,
+                                    ChangePipelineRunStepApi)
 from stand.room_api import RoomApi
 from stand.job_api import (JobListApi, JobDetailApi,
     JobStopActionApi, JobLockActionApi, JobUnlockActionApi,
@@ -173,6 +175,8 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
         '/pipeline-runs/create': PipelineRunFromPipelineApi,
         '/pipeline-runs/execute': ExecutePipelineRunStepApi,
         '/pipeline-runs/summary': PipelineRunSummaryApi,
+        '/pipeline-runs/<int:pipeline_run_id>/status/<status>':
+            ChangePipelineRunStepApi,
         '/performance/<int:model_id>': PerformanceModelEstimationApi,
         '/performance/result/<key>': PerformanceModelEstimationResultApi,
         '/datasource/init': DataSourceInitializationApi,
