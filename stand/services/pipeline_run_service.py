@@ -11,6 +11,8 @@ from stand.models_extra import Period, Pipeline, PipelineStep, Workflow
 from stand.services import ServiceException
 from stand.services.job_services import JobService
 import logging
+from stand.models import db, Job, JobStep, JobStepLog, StatusExecution as EXEC, \
+    JobResult
 
 log = logging.getLogger(__name__)
 def get_resource_from_api(config: typing.Dict, resource_type: str,
@@ -151,7 +153,37 @@ def execute_pipeline_step_run(config: typing.Dict,
 
     return step_run, job
 
-def change_pipeline_run_status(run: PipelineRun, status: StatusExecution) -> None:
+def update_pipeline_run(job: Job) -> None:
+    """ Update associated pipeline step run, if any """
+
+    job.pipeline_step_run.status = job.status
+    if job.status in (EXEC.ERROR, EXEC.CANCELED, EXEC.INTERRUPTED):
+        job.pipeline_run.status = job.status
+        job.pipeline_run.final_status = job.status
+    elif job.status in (EXEC.COMPLETED, ):
+        # Test if the step is the last one
+        step_order = job.pipeline_step_run.order
+        if step_order == len(job.pipeline_run.steps):
+            job.pipeline_run.status = EXEC.COMPLETED
+        else:
+            job.pipeline_run.status = EXEC.RUNNING #??
+
+    elif job.status in (EXEC.PENDING, EXEC.WAITING,
+                        EXEC.WAITING_INTERVENTION):
+        pass # Ignore
+    elif job.status in (EXEC.RUNNING, ):
+        pass # FIXME
+
+    db.session.add(job.pipeline_step_run)
+    db.session.add(job.pipeline_run)
+
+def change_pipeline_run_status(run: PipelineRun, status: StatusExecution,
+                               emit: callable) -> None:
     run.status = status
     db.session.add(run)
     db.session.commit()
+    if (emit):
+        emit('update pipeline run',
+             {'message': 'status', 'id': run.id, 'value': status},
+             namespace='/stand',
+             room='pipeline_runs')

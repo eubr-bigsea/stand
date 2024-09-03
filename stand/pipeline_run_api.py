@@ -458,7 +458,7 @@ class ChangePipelineRunStepApi(Resource):
     @requires_auth
     def patch(self, pipeline_run_id, status):
         run = PipelineRun.query.get_or_404(pipeline_run_id)
-        change_pipeline_run_status(run, status)
+        change_pipeline_run_status(run, status, current_app.sio.emit)
         return {"status": "OK",
                 "message": gettext("Status changed to {}").format(status)}
 

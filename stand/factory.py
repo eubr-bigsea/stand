@@ -37,6 +37,7 @@ from stand.models import db, Job, JobStep, JobStepLog, StatusExecution as EXEC, 
     JobResult
 from stand.schema import translate_validation
 from stand.services import ServiceException
+from stand.services.pipeline_run_service import update_pipeline_run
 from stand.services.redis_service import connect_redis_store
 
 SEED_QUEUE_NAME = 'seed'
@@ -345,7 +346,7 @@ def mocked_emit(original_emit, app_):
                                  f'Yes, {job.pipeline_step_run.id}' if
                                  job.pipeline_step_run is not None else 'No')
                         if (job.pipeline_step_run):
-                            _update_pipeline_run(job)
+                            update_pipeline_run(job)
                             notification_msg = {
                                 'date': datetime.datetime.utcnow().isoformat(),
                                 'pipeline_run': {
@@ -461,30 +462,6 @@ def mocked_emit(original_emit, app_):
 
     return new_emit
 
-def _update_pipeline_run(job: Job) -> None:
-    """ Update associated pipeline step run, if any """
-
-    job.pipeline_step_run.status = job.status
-    if job.status in (EXEC.ERROR, EXEC.CANCELED, EXEC.INTERRUPTED):
-        job.pipeline_run.status = job.status
-        job.pipeline_run.final_status = job.status
-    elif job.status in (EXEC.COMPLETED, ):
-        # Test if the step is the last one
-        step_order = job.pipeline_step_run.order
-        if step_order == len(job.pipeline_run.steps):
-            job.pipeline_run.status = EXEC.COMPLETED
-        else:
-            job.pipeline_run.status = EXEC.RUNNING #??
-
-    elif job.status in (EXEC.PENDING, EXEC.WAITING,
-                        EXEC.WAITING_INTERVENTION):
-        pass # Ignore
-    elif job.status in (EXEC.RUNNING, ):
-        pass # FIXME
-
-    db.session.add(job.pipeline_step_run)
-    db.session.add(job.pipeline_run)
-
 
 def create_socket_io_app(_app):
     """
@@ -506,7 +483,7 @@ def create_socket_io_app(_app):
     import eventlet
     eventlet.spawn(mgr.initialize)
     log.info('Started socketio')
-
+    _app.sio = sio
     return sio, socketio.Middleware(sio, _app)
 
 
