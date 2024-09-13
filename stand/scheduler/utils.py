@@ -15,13 +15,6 @@ import yaml
 from sqlalchemy import select
 
 
-# async def get_canceled_pipeline_runs(session)-> typing.List[PipelineRun]:
-#     return await session.execute(
-#         select(PipelineRun).filter(
-#             PipelineRun.status == StatusExecution.CANCELED
-#         )
-#     ).fetchall()
-
 
 async def get_latest_pipeline_step_run(run: PipelineRun) -> PipelineStepRun:
     return next(
@@ -38,6 +31,7 @@ async def get_latest_pipeline_runs(stand_config: typing.Dict,
         'pipelines': ','.join([str(x) for x in pipeline_ids])
     }
     data = await retrieve_data(url, params=params, headers=headers)
+    
     return PipelineRunItemResponseSchema(many=True, partial=True).load(
                 data)
 
@@ -68,7 +62,7 @@ async def get_pipeline_run(
     """Read a single pipelines by id from API.
     """
 
-    headers = {"X-Auth-Token": stand_config["auth_token"]}
+    headers = {"X-Auth-Token": str(stand_config["auth_token"])}
     url = f"{stand_config['url']}/pipeline-runs/{pipeline_run_id}"
     data = await retrieve_data(url, headers=headers)
     return PipelineRunItemResponseSchema(partial=True).load(
@@ -86,29 +80,6 @@ def load_config() -> typing.Dict[int, typing.Dict]:
     return config
 
 
-# def get_latest_job(run: PipelineRun) -> Job:
-#     "name"
-#     pass
-
-
-# def get_active_step_run(run: PipelineRun) -> Job:
-#     "name"
-#     pass
-
-
-async def get_latest_job_from_pipeline_step_run(
-    config, step_run: PipelineStepRun
-) -> Job:
-    # query = (
-    #     select(Job, func.max(Job.finished).label("latest_job_finished_time"))
-    #     .filter(Job.pipeline_step_run_id == step_run.id)
-    #     .group_by(Job.pipeline_step_run_id)
-    # )
-    # query = (select(Job).filter(Job.pipeline_step_run_id == step_run.id)
-    #          .order_by(Job.finished.desc()))
-
-    # return await session.execute(query).one()
-    return None
 
 
 async def retrieve_data(url: str, params: typing.Dict = None,
@@ -129,6 +100,8 @@ async def update_data(url: str, method: str, payload: typing.Dict = None,
                 raise RuntimeError(gettext(
                     "Error {} while updating pipeline").format(resp))
             return await resp.json()
+
+
         
 #
 def pipeline_steps_have_valid_schedulings(steps:typing.List):
@@ -136,7 +109,7 @@ def pipeline_steps_have_valid_schedulings(steps:typing.List):
     if len(steps)==0:
         return False
     for step in steps:
-        # print(step)
+       
         if 'scheduling' in step and 'workflow' in step:
             schedule = json.loads(step['scheduling'])
             schedule = schedule['stepSchedule']            

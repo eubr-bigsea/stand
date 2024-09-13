@@ -11,7 +11,7 @@ from stand.scheduler.commands import (
     Command,
     CreatePipelineRun,
     UpdatePipelineInfo,
-    UpdatePipelineRunStatus,
+    
 )
 
 

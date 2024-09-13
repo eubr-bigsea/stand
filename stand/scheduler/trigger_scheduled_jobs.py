@@ -6,12 +6,12 @@ from stand.models import (
     StatusExecution,
     PipelineStepRun,
 )
-from stand.scheduler.commands import TriggerWorkflow, UpdatePipelineRunStatus
+from stand.scheduler.commands import TriggerWorkflow
 
 
 def is_next_step_in_order(step: PipelineStepRun, pipeline_run: PipelineRun) -> bool:
     "returns if step is the next step in a pipeline run execution"
-    if step.order == pipeline_run.last_executed_step + 1:
+    if step["order"] == pipeline_run.last_executed_step + 1:
         return True
     else:
         return False
@@ -66,6 +66,7 @@ def daily_schedule(scheduling, current_time: datetime) -> bool:
 
 
 def monthly_schedule(scheduling, current_time: datetime) -> bool:
+    
     parsed_scheduling = json.loads(scheduling)
     start_time = get_step_start_time(scheduling)
     current_month = str(current_time.month)
@@ -77,9 +78,12 @@ def monthly_schedule(scheduling, current_time: datetime) -> bool:
     scheduled_hour = start_time.hour
     scheduled_minute = start_time.minute
 
+
     if scheduled_hour == current_hour and scheduled_minute == currrent_minute:
         if current_month in scheduled_months and current_day in scheduled_days:
+        
             return True
+        
     return False
 
 
@@ -89,34 +93,43 @@ def get_step_is_immediate(scheduling) -> bool:
 
 
 def get_step_start_time(scheduling) -> datetime:
+   
     parsed_scheduling = json.loads(scheduling)
     start_datetime_str = parsed_scheduling["stepSchedule"]["startDateTime"]
     start_datetime_obj = datetime.strptime(
         start_datetime_str, "%Y-%m-%dT%H:%M:%S"
     )
+    
     return start_datetime_obj
 
 
 def trigger_scheduled_pipeline_steps(
-    pipeline_run: PipelineRun, time: datetime, steps: typing.List
+    pipeline_run: PipelineRun, time: datetime, steps: typing.List,
+    step_runs:typing.List
 ):
-    for step in steps:
+    for index,step in enumerate(steps):
         # time scheduled job
-        if not get_step_is_immediate(step.scheduling):
+     
+        if not get_step_is_immediate(step["scheduling"]):
+         
             if is_next_step_in_order(step, pipeline_run):
-                if time_match(step.scheduling, time):
-                    command = TriggerWorkflow(pipeline_step=step)
+                
+                if time_match(step["scheduling"], time):
+                    
+                    command = TriggerWorkflow(pipeline_step=step_runs[index])
                     return command
-                else:
+                # else:
                     # only time match, execution out of order
 
-                    command = UpdatePipelineRunStatus(
-                        pipeline_run=pipeline_run, status=StatusExecution.PENDING
-                    )
-                    return command
+                    # command = UpdatePipelineRunStatus(
+                    #     pipeline_run=pipeline_run, status=StatusExecution.PENDING
+                    # )
+                    # return command
 
         # steps that occur imediatelly after the last one
-        if get_step_is_immediate(step.scheduling):
+        if get_step_is_immediate(step["scheduling"]):
             if is_next_step_in_order(step, pipeline_run):
                 command = TriggerWorkflow(pipeline_step=step)
                 return command
+    
+

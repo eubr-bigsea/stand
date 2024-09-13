@@ -88,37 +88,18 @@ class TriggerWorkflow(Command):
         self.pipeline_step = pipeline_step
 
     async def execute(self, config):
-        print("workflow was triggered, job created")
+        stand_config = config.get('stand').get('services').get('stand')
+        headers = {"X-Auth-Token": str(stand_config["auth_token"])}
+        
+        url = f"{stand_config['url']}/pipeline-runs/execute"
+        payload ={"id":self.pipeline_step.id}
+        print(payload)
+        # print(self.pipeline_step)
+        await update_data( url = url,method='POST', payload=payload, headers=headers)
+
+        return self.pipeline_step.id
 
 
-class UpdatePipelineRunStatus(Command):
-    def __init__(self, pipeline_run, status):
-        self.pipeline_run = pipeline_run
-        self.status = status
-
-    def execute(self, config):
-        self.pipeline_run.status = self.status
-        # session.commit()
-
-
-class UpdatePipelineStepRunStatus(Command):
-    def __init__(self, pipeline_step_run, status):
-        self.pipeline_step_run = pipeline_step_run
-        self.status = status
-
-    def execute(self, config):
-        self.pipeline_step_run.status = self.status
-        # session.commit()
-
-
-class ChangeLastCompletedStep(Command):
-    def __init__(self, pipeline_run, new_last_completed_step):
-        self.pipeline_run = pipeline_run
-        self.new_last_completed_step = new_last_completed_step
-
-    def execute(self, config):
-        self.pipeline_run.last_executed_step = self.new_last_completed_step
-        # session.commit()
 
 
 class UpdatePipelineInfo(Command):
