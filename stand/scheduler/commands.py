@@ -6,6 +6,7 @@ from stand.models import PipelineRun, StatusExecution
 
 from stand.scheduler.utils import PipelineStepRun, update_data
 
+import json  
 
 class Command:
     def execute(self, config):
@@ -55,44 +56,31 @@ class CreatePipelineRun(Command):
     def get_pipeline_run_start(
         self, current_time=datetime.now(), next_window_option=False
     ) -> datetime:
-        frequency = self.pipeline["execution_window"]
+        #hard coded for testing
+        # frequency = self.pipeline["execution_window"]
+        frequency = 'monthly'
         return getattr(self, "_get_limit_dates_" + frequency)(current_time)[0]
 
     def get_pipeline_run_end(
         self, current_time=datetime.now(), next_window_option=False
     ) -> datetime:
-        frequency = self.pipeline["execution_window"]
+        #hard coded for testing
+        # frequency = self.pipeline["execution_window"]
+        frequency = 'monthly'
         return getattr(self, "_get_limit_dates_" + frequency)(current_time)[1]
 
-    def create_step_run_from_json_step(self, step):
-        pipeline_step_run = PipelineStepRun(
-            status=StatusExecution.WAITING,
-            created=self.get_pipeline_run_start(),
-            pipeline_run_id=self.pipeline["id"],
-            workflow_id=step["workflow"]["id"],
-        )
-        return pipeline_step_run
+
+    
 
     async def execute(self, config) -> PipelineRun:
-        steps = []
-        for step in self.pipeline["steps"]:
-            steps.append(self.create_step_run_from_json_step(step))
 
-        pipeline_run = PipelineRun(
-            pipeline_id=self.pipeline["id"],
-            last_executed_step=0,
-            status=StatusExecution.WAITING,
-            final_status=StatusExecution.WAITING,
-            start=self.get_pipeline_run_start(),
-            finish=self.get_pipeline_run_end(),
-            steps=steps,
-        )
         stand_config = config.get('stand').get('services').get('stand')
-        headers = {"X-Auth-Token": stand_config["auth_token"]}
-        url = f"{stand_config['url']}/pipeline-runs"
-        update_data('POST', url, payload=pipeline_run, headers=headers)
+        headers = {"X-Auth-Token": str(stand_config["auth_token"])}
+        url = f"{stand_config['url']}/pipeline-runs/create"
+        payload ={"id":self.pipeline["id"],"start":str(self.get_pipeline_run_start()),"finish":str(self.get_pipeline_run_end())}
+        await update_data( url = url,method='POST', payload=payload, headers=headers)
 
-        return pipeline_run
+        return self.pipeline
 
 
 class TriggerWorkflow(Command):
