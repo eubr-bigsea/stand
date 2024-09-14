@@ -39,15 +39,16 @@ async def execute(config, current_time=datetime.now()):
     valid_schedule_pipelines ={}
     for  id in updated_pipelines:
         if pipeline_steps_have_valid_schedulings(updated_pipelines[id]["steps"]):
-        
             valid_schedule_pipelines[id] = updated_pipelines[id]
- 
+    
+    #FIXME
+    #this function doesnt return the pipeline steps correctly
     active_pipeline_runs = await get_latest_pipeline_runs(
     config['stand']['services']['stand'],
     pipeline_ids=valid_schedule_pipelines.keys())
 
-
-   
+    #FIXME
+    #need to use the individual pipeline run step to get the steps runs
     valid_pipeline_runs =[]
     for i in active_pipeline_runs:
         p=await get_pipeline_run(
@@ -64,38 +65,38 @@ async def execute(config, current_time=datetime.now()):
         current_time=current_time,
     )
     
+    # print(update_pipeline_runs_commands)
     for command in update_pipeline_runs_commands:
+        print(command)
         await command.execute(config)
         
 
-    # must be called again bc pipeline_runs_commands can create new runs
-    valid_pipeline_runs =[]
-    for i in active_pipeline_runs:
-        p=await get_pipeline_run(
-              config['stand']['services']['stand'],
-              i.id
-        )
-        valid_pipeline_runs.append(p)
-    trigger_commands =[]
+    # # must be called again bc pipeline_runs_commands can create new runs
+    # valid_pipeline_runs =[]
+    # for i in active_pipeline_runs:
+    #     p=await get_pipeline_run(
+    #           config['stand']['services']['stand'],
+    #           i.id
+    #     )
+    #     valid_pipeline_runs.append(p)
+    # trigger_commands =[]
     
-    for run in valid_pipeline_runs:
-        # print(run.steps)
-            
-        step_runs = [step for step in run.steps]
-        step_infos = valid_schedule_pipelines[run.pipeline_id]["steps"]
-    
-        # for index,step_run in enumerate(step_runs):
-        #     print(step_run.id,step_infos[index],"\n\n")
-        new_command = trigger_scheduled_pipeline_steps(
-            pipeline_run=run, time=current_time, steps=step_infos,step_runs=step_runs
-        )
-        if new_command!= None:
-            trigger_commands.append(new_command)
-    # print(trigger_commands[0].pipeline_step)
-    for command in trigger_commands:
-           await command.execute(config)
+    # for run in valid_pipeline_runs:
 
-    # return [update_pipeline_runs_commands, trigger_commands]
+            
+    #     step_runs = [step for step in run.steps]
+    #     step_infos = valid_schedule_pipelines[run.pipeline_id]["steps"]
+    
+    #     new_command = trigger_scheduled_pipeline_steps(
+    #         pipeline_run=run, time=current_time, steps=step_infos,step_runs=step_runs
+    #     )
+    #     if new_command!= None:
+    #         trigger_commands.append(new_command)
+
+    # for command in trigger_commands:
+    #        await command.execute(config)
+
+    # # return [update_pipeline_runs_commands, trigger_commands]
 
 async def main(config):
     today = datetime.today()

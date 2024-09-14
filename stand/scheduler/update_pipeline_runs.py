@@ -11,6 +11,7 @@ from stand.scheduler.commands import (
     Command,
     CreatePipelineRun,
     UpdatePipelineInfo,
+    UpdatePipelineRunStatus
     
 )
 
@@ -24,9 +25,10 @@ def get_pipeline_run_commands(
     runs = dict([[r.pipeline_id, r] for r in pipeline_runs])
 
     commands = []
+
     for pipeline in updated_pipelines.values():
         run: PipelineRun = runs.get(pipeline["id"])
-
+        
         if run:
             if (
                 run.status == StatusExecution.RUNNING
@@ -53,10 +55,11 @@ def get_pipeline_run_commands(
                         commands.append(CreatePipelineRun(pipeline=pipeline))
 
                 # Test if run is using latest pipeline data
-                elif run.updated < pipeline["updated"]:
+                
+                elif run.updated < datetime.strptime(pipeline["updated"], "%Y-%m-%dT%H:%M:%S"):
                     commands.append(
                         UpdatePipelineInfo(
-                            pipeline_run=run, update_time=pipeline["update"]
+                            pipeline_run=run, update_time=pipeline["updated"]
                         )
                     )
 
