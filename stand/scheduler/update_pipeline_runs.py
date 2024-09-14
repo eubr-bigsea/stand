@@ -28,7 +28,7 @@ def get_pipeline_run_commands(
 
     for pipeline in updated_pipelines.values():
         run: PipelineRun = runs.get(pipeline["id"])
-        
+       
         if run:
             if (
                 run.status == StatusExecution.RUNNING

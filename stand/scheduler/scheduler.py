@@ -71,36 +71,36 @@ async def execute(config, current_time=datetime.now()):
         await command.execute(config)
         
 
-    # # must be called again bc pipeline_runs_commands can create new runs
-    # valid_pipeline_runs =[]
-    # for i in active_pipeline_runs:
-    #     p=await get_pipeline_run(
-    #           config['stand']['services']['stand'],
-    #           i.id
-    #     )
-    #     valid_pipeline_runs.append(p)
-    # trigger_commands =[]
+    # must be called again bc pipeline_runs_commands can create new runs
+    valid_pipeline_runs =[]
+    for i in active_pipeline_runs:
+        p=await get_pipeline_run(
+              config['stand']['services']['stand'],
+              i.id
+        )
+        valid_pipeline_runs.append(p)
+    trigger_commands =[]
     
-    # for run in valid_pipeline_runs:
+    for run in valid_pipeline_runs:
 
             
-    #     step_runs = [step for step in run.steps]
-    #     step_infos = valid_schedule_pipelines[run.pipeline_id]["steps"]
+        step_runs = [step for step in run.steps]
+        step_infos = valid_schedule_pipelines[run.pipeline_id]["steps"]
     
-    #     new_command = trigger_scheduled_pipeline_steps(
-    #         pipeline_run=run, time=current_time, steps=step_infos,step_runs=step_runs
-    #     )
-    #     if new_command!= None:
-    #         trigger_commands.append(new_command)
+        new_command = trigger_scheduled_pipeline_steps(
+            pipeline_run=run, time=current_time, steps=step_infos,step_runs=step_runs
+        )
+        if new_command!= None:
+            trigger_commands.append(new_command)
 
-    # for command in trigger_commands:
-    #        await command.execute(config)
+    for command in trigger_commands:
+           await command.execute(config)
 
-    # # return [update_pipeline_runs_commands, trigger_commands]
+    # return [update_pipeline_runs_commands, trigger_commands]
 
 async def main(config):
     today = datetime.today()
-    specific_time = today.replace(hour=15, minute=5, second=0, microsecond=0)
+    specific_time = today.replace(day=13,hour=15, minute=20, second=0, microsecond=0)
     await execute(config=config,current_time=specific_time)
 
 if __name__ == "__main__":

@@ -94,6 +94,7 @@ class TriggerWorkflow(Command):
         url = f"{stand_config['url']}/pipeline-runs/execute"
         payload ={"id":self.pipeline_step.id}
         
+        print("PipelineStep with id "+str(self.pipeline_step)+" Triggered ")
         await update_data( url = url,method='POST', payload=payload, headers=headers)
 
         return self.pipeline_step.id
@@ -112,7 +113,7 @@ class UpdatePipelineRunStatus(Command):
         payload ={"status":self.new_status}
         
         await update_data( url = url,method='PATCH', payload=payload, headers=headers)
-        print("status of run"+self.pipeline_run.id+" changed to"+self.new_status)
+        print("status of run"+ str(self.pipeline_run.id)+" changed to "+self.new_status)
         return self.pipeline_run.id
 
   
@@ -123,5 +124,6 @@ class UpdatePipelineInfo(Command):
         self.pipeline_run = pipeline_run
         self.update_time = update_time
 
+    #TODO
     async def execute(self, config):
         print("pipeline info updated")
