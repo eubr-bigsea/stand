@@ -21,13 +21,13 @@ from stand.scheduler.utils import (
 async def check_and_execute(config):
     while True:
         current_time = datetime.now()
-        execute(config, current_time=current_time)
+        await execute(config, current_time=current_time)
 
-        # updating current_time to consider execute() execution time
         current_time = datetime.now()
         remaining_seconds = (
             60 - current_time.second - (current_time.microsecond / 1_000_000)
         )
+        print(datetime.now())
         await asyncio.sleep(remaining_seconds)  # Sleep until next minute
 
 
@@ -58,7 +58,6 @@ async def execute(config, current_time=datetime.now()):
         valid_pipeline_runs.append(p)
 
    
-            
     update_pipeline_runs_commands = get_pipeline_run_commands(
         updated_pipelines= valid_schedule_pipelines,
         pipeline_runs=valid_pipeline_runs,
@@ -100,10 +99,13 @@ async def execute(config, current_time=datetime.now()):
 
 async def main(config):
     today = datetime.today()
-    specific_time = today.replace(day=13,hour=15, minute=20, second=0, microsecond=0)
-    await execute(config=config,current_time=specific_time)
+    # specific_time = today.replace(day=14,hour=20, minute=51, second=12, microsecond=12312)
+    await execute(config=config,current_time= datetime.now())
+    # await check_and_execute(config=config)
 
 if __name__ == "__main__":
     config = load_config()  
 
     asyncio.run(main(config))  
+    # asyncio.run(main(config))  
+    

@@ -48,7 +48,7 @@ async def get_pipelines(
     reference = date.today() - timedelta(days=days)
     params = {
         #commented out for testing
-        # "after": reference.isoformat(),
+        "after": reference.isoformat(),
         "fields": 'id,name,enabled,steps,updated'
     }
     headers = {"X-Auth-Token": str(tahiti_config["auth_token"])}

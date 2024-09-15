@@ -79,7 +79,7 @@ class CreatePipelineRun(Command):
         url = f"{stand_config['url']}/pipeline-runs/create"
         payload ={"id":self.pipeline["id"],"start":str(self.get_pipeline_run_start()),"finish":str(self.get_pipeline_run_end())}
         await update_data( url = url,method='POST', payload=payload, headers=headers)
-
+        print("created run for pipeline "+ str(self.pipeline["id"]))
         return self.pipeline
 
 
