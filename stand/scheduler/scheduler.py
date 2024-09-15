@@ -30,11 +30,12 @@ async def check_and_execute(config):
         print(datetime.now())
         await asyncio.sleep(remaining_seconds)  # Sleep until next minute
 
-
+#FIXME: Theres redundancy in the api call to get the pipelines
+# first they are called in a batch then called individualy,bc the  batch api doesnt return the step runs
 async def execute(config, current_time=datetime.now()):
     # returned as pipeline_id:pipeline_in_json dict
     updated_pipelines = await get_pipelines(tahiti_config=config['stand']['services']['tahiti'], days=7)
-    
+
     #only using pipelines with valid scheduling steps
     valid_schedule_pipelines ={}
     for  id in updated_pipelines:
@@ -46,7 +47,7 @@ async def execute(config, current_time=datetime.now()):
     active_pipeline_runs = await get_latest_pipeline_runs(
     config['stand']['services']['stand'],
     pipeline_ids=valid_schedule_pipelines.keys())
-
+  
     #FIXME
     #need to use the individual pipeline run step to get the steps runs
     valid_pipeline_runs =[]
@@ -71,6 +72,9 @@ async def execute(config, current_time=datetime.now()):
         
 
     # must be called again bc pipeline_runs_commands can create new runs
+    active_pipeline_runs = await get_latest_pipeline_runs(
+    config['stand']['services']['stand'],
+    pipeline_ids=valid_schedule_pipelines.keys())
     valid_pipeline_runs =[]
     for i in active_pipeline_runs:
         p=await get_pipeline_run(
@@ -95,13 +99,13 @@ async def execute(config, current_time=datetime.now()):
     for command in trigger_commands:
            await command.execute(config)
 
-    # return [update_pipeline_runs_commands, trigger_commands]
+    return [update_pipeline_runs_commands, trigger_commands]
 
 async def main(config):
     today = datetime.today()
     # specific_time = today.replace(day=14,hour=20, minute=51, second=12, microsecond=12312)
-    await execute(config=config,current_time= datetime.now())
-    # await check_and_execute(config=config)
+    # await execute(config=config,current_time= datetime.now())
+    await check_and_execute(config=config)
 
 if __name__ == "__main__":
     config = load_config()  

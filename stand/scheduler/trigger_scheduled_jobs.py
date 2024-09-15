@@ -30,7 +30,7 @@ def time_match(scheduling, current_time: datetime) -> bool:
     parsed_scheduling = json.loads(scheduling)
 
     start_time = get_step_start_time(scheduling)
-    print(start_time,current_time )
+  
     # prevents matches before start_time
     if start_time > current_time:
         return False
@@ -101,7 +101,7 @@ def get_step_start_time(scheduling) -> datetime:
         #FIXME
         start_datetime_str[:16], "%Y-%m-%dT%H:%M"
     )
-    print(start_datetime_obj)
+    # print(start_datetime_obj)
     return start_datetime_obj
 
 
