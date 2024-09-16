@@ -161,10 +161,11 @@ def update_pipeline_run(job: Job) -> None:
         job.pipeline_run.status = job.status
         job.pipeline_run.final_status = job.status
     elif job.status in (EXEC.COMPLETED, ):
-        #this needs to be improved later
-        job.pipeline_run.last_executed_step +=1
+      
         # Test if the step is the last one
         step_order = job.pipeline_step_run.order
+          #this needs to be improved later
+        job.pipeline_run.last_executed_step = step_order
         if step_order == len(job.pipeline_run.steps):
             job.pipeline_run.status = EXEC.COMPLETED
         else:
