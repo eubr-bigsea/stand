@@ -15,9 +15,6 @@ from stand.scheduler.utils import (
     get_pipeline_run
 )
 
-
-
-
 async def check_and_execute(config):
     while True:
         current_time = datetime.now()
@@ -31,7 +28,8 @@ async def check_and_execute(config):
         await asyncio.sleep(remaining_seconds)  # Sleep until next minute
 
 #FIXME: Theres redundancy in the api call to get the pipelines
-# first they are called in a batch then called individualy,bc the  batch api doesnt return the step runs
+# first they are called in a batch then called individualy,bc the  
+# batch api doesnt return the step runs
 async def execute(config, current_time=datetime.now()):
     # returned as pipeline_id:pipeline_in_json dict
     updated_pipelines = await get_pipelines(tahiti_config=config['stand']['services']['tahiti'], days=7)
@@ -58,20 +56,24 @@ async def execute(config, current_time=datetime.now()):
         )
         valid_pipeline_runs.append(p)
 
-   
+    #managing states and creating pipelines
     update_pipeline_runs_commands = get_pipeline_run_commands(
         updated_pipelines= valid_schedule_pipelines,
         pipeline_runs=valid_pipeline_runs,
         current_time=current_time,
     )
     
-    # print(update_pipeline_runs_commands)
+   
     for command in update_pipeline_runs_commands:
         print(command)
         await command.execute(config)
         
 
     # must be called again bc pipeline_runs_commands can create new runs
+    #TODO
+    # instead of calling it again, check the commands and see what
+    # pipeline was created from there ,or use the api but only get
+    # the pipelines created less than 2 minutes ago.
     active_pipeline_runs = await get_latest_pipeline_runs(
     config['stand']['services']['stand'],
     pipeline_ids=valid_schedule_pipelines.keys())
@@ -84,6 +86,7 @@ async def execute(config, current_time=datetime.now()):
         valid_pipeline_runs.append(p)
     trigger_commands =[]
     
+    #triggering stepruns
     for run in valid_pipeline_runs:
 
             
@@ -103,7 +106,7 @@ async def execute(config, current_time=datetime.now()):
 
 async def main(config):
     today = datetime.today()
-    # specific_time = today.replace(day=14,hour=20, minute=51, second=12, microsecond=12312)
+    specific_time = today.replace(day=16,hour=15, minute=45, second=12, microsecond=12312)
     # await execute(config=config,current_time= datetime.now())
     await check_and_execute(config=config)
 
@@ -111,5 +114,5 @@ if __name__ == "__main__":
     config = load_config()  
 
     asyncio.run(main(config))  
-    # asyncio.run(main(config))  
+  
     

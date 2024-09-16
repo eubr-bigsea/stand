@@ -34,7 +34,8 @@ def time_match(scheduling, current_time: datetime) -> bool:
     # prevents matches before start_time
     if start_time > current_time:
         return False
-
+   
+                       
     function_dict = {
         "once": once_schedule,
         "daily": daily_schedule,
@@ -111,13 +112,18 @@ def trigger_scheduled_pipeline_steps(
 ):
     for index,step in enumerate(steps):
         # time scheduled job
-     
+        # if step["id"]==347:
+        #     print(step)
         if not get_step_is_immediate(step["scheduling"]):
-         
+            # if step["id"]==347:
+            #      print(step)
             if is_next_step_in_order(step, pipeline_run):
+                # if step["id"]==347:
+                #     print(step)
                 
                 if time_match(step["scheduling"], time):
-                    
+                    if step["id"]==347:
+                        print(step["scheduling"],time)
                     command = TriggerWorkflow(pipeline_step=step_runs[index])
                     return command
                 # else:
