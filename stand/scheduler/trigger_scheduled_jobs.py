@@ -5,8 +5,9 @@ from stand.models import (
     PipelineRun,
     StatusExecution,
     PipelineStepRun,
+    
 )
-from stand.scheduler.commands import TriggerWorkflow
+from stand.scheduler.commands import (TriggerWorkflow,UpdatePipelineRunStatus)
 
 
 def is_next_step_in_order(step: PipelineStepRun, pipeline_run: PipelineRun) -> bool:
@@ -111,28 +112,23 @@ def trigger_scheduled_pipeline_steps(
     step_runs:typing.List
 ):
     for index,step in enumerate(steps):
-        # time scheduled job
-        # if step["id"]==347:
-        #     print(step)
+  
         if not get_step_is_immediate(step["scheduling"]):
-            # if step["id"]==347:
-            #      print(step)
+     
             if is_next_step_in_order(step, pipeline_run):
-                # if step["id"]==347:
-                #     print(step)
-                
+        
                 if time_match(step["scheduling"], time):
                     if step["id"]==347:
                         print(step["scheduling"],time)
                     command = TriggerWorkflow(pipeline_step=step_runs[index])
                     return command
-                # else:
-                    # only time match, execution out of order
+                else:
+                    #only time match, execution out of order
 
-                    # command = UpdatePipelineRunStatus(
-                    #     pipeline_run=pipeline_run, status=StatusExecution.PENDING
-                    # )
-                    # return command
+                    command = UpdatePipelineRunStatus(
+                        pipeline_run=pipeline_run, status=StatusExecution.PENDING
+                    )
+                    return command
 
         # steps that occur imediatelly after the last one
         if get_step_is_immediate(step["scheduling"]):

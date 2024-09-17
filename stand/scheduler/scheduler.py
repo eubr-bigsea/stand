@@ -106,9 +106,9 @@ async def execute(config, current_time=datetime.now()):
 
 async def main(config):
     today = datetime.today()
-    specific_time = today.replace(day=16,hour=15, minute=45, second=12, microsecond=12312)
-    # await execute(config=config,current_time= datetime.now())
-    await check_and_execute(config=config)
+    specific_time = today.replace(day=16,hour=15, minute=58, second=12, microsecond=12312)
+    await execute(config=config,current_time= specific_time)
+    # await check_and_execute(config=config)
 
 if __name__ == "__main__":
     config = load_config()  
