@@ -108,18 +108,25 @@ def pipeline_steps_have_valid_schedulings(steps:typing.List):
     #no steps, no need to create a pipeline_run
     if len(steps)==0:
         return False
+    
     for step in steps:
        
+        
         if 'scheduling' in step and 'workflow' in step:
             schedule = json.loads(step['scheduling'])
+         
             schedule = schedule['stepSchedule']            
     
             if schedule['executeImmediately'] == "true" or schedule['startDateTime']!= "null":
                 pass
             else:
+               
                 return False
         else:
+            
             return False
+    
+
     return True
              
         

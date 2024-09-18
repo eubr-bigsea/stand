@@ -15,6 +15,8 @@ from stand.scheduler.utils import (
     get_pipeline_run
 )
 
+from stand.models import StatusExecution
+
 async def check_and_execute(config):
     while True:
         current_time = datetime.now()
@@ -33,10 +35,11 @@ async def check_and_execute(config):
 async def execute(config, current_time=datetime.now()):
     # returned as pipeline_id:pipeline_in_json dict
     updated_pipelines = await get_pipelines(tahiti_config=config['stand']['services']['tahiti'], days=7)
-
+  
     #only using pipelines with valid scheduling steps
     valid_schedule_pipelines ={}
     for  id in updated_pipelines:
+        
         if pipeline_steps_have_valid_schedulings(updated_pipelines[id]["steps"]):
             valid_schedule_pipelines[id] = updated_pipelines[id]
     
@@ -45,7 +48,8 @@ async def execute(config, current_time=datetime.now()):
     active_pipeline_runs = await get_latest_pipeline_runs(
     config['stand']['services']['stand'],
     pipeline_ids=valid_schedule_pipelines.keys())
-  
+   
+   
     #FIXME
     #need to use the individual pipeline run step to get the steps runs
     valid_pipeline_runs =[]
@@ -56,6 +60,7 @@ async def execute(config, current_time=datetime.now()):
         )
         valid_pipeline_runs.append(p)
 
+   
     #managing states and creating pipelines
     update_pipeline_runs_commands = get_pipeline_run_commands(
         updated_pipelines= valid_schedule_pipelines,
@@ -79,6 +84,7 @@ async def execute(config, current_time=datetime.now()):
     pipeline_ids=valid_schedule_pipelines.keys())
     valid_pipeline_runs =[]
     for i in active_pipeline_runs:
+        
         p=await get_pipeline_run(
               config['stand']['services']['stand'],
               i.id
@@ -88,16 +94,16 @@ async def execute(config, current_time=datetime.now()):
     
     #triggering stepruns
     for run in valid_pipeline_runs:
-
-            
-        step_runs = [step for step in run.steps]
-        step_infos = valid_schedule_pipelines[run.pipeline_id]["steps"]
-    
-        new_command = trigger_scheduled_pipeline_steps(
-            pipeline_run=run, time=current_time, steps=step_infos,step_runs=step_runs
-        )
-        if new_command!= None:
-            trigger_commands.append(new_command)
+       
+       
+            step_runs = [step for step in run.steps]
+            step_infos = valid_schedule_pipelines[run.pipeline_id]["steps"]
+        
+            new_command = trigger_scheduled_pipeline_steps(
+                pipeline_run=run, time=current_time, steps=step_infos,step_runs=step_runs
+            )
+            if new_command!= None:
+                trigger_commands.append(new_command)
 
     for command in trigger_commands:
            await command.execute(config)
@@ -106,7 +112,7 @@ async def execute(config, current_time=datetime.now()):
 
 async def main(config):
     today = datetime.today()
-    specific_time = today.replace(day=16,hour=15, minute=58, second=12, microsecond=12312)
+    specific_time = today.replace(day=17,hour=21, minute=21, second=12, microsecond=12312)
     await execute(config=config,current_time= specific_time)
     # await check_and_execute(config=config)
 
