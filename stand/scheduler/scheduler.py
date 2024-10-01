@@ -106,13 +106,14 @@ async def execute(config, current_time=datetime.now()):
                 trigger_commands.append(new_command)
 
     for command in trigger_commands:
-           await command.execute(config)
+           
+            await command.execute(config)
 
     return [update_pipeline_runs_commands, trigger_commands]
 
 async def main(config):
     today = datetime.today()
-    specific_time = today.replace(day=17,hour=21, minute=21, second=12, microsecond=12312)
+    specific_time = today.replace(day=1,hour=10, minute=24, second=12, microsecond=12312)
     await execute(config=config,current_time= specific_time)
     # await check_and_execute(config=config)
 

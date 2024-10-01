@@ -31,11 +31,11 @@ def time_match(scheduling, current_time: datetime) -> bool:
     """
     parsed_scheduling = json.loads(scheduling)
 
-    start_time = get_step_start_time(scheduling)
+    # start_time = get_step_start_time(scheduling)
   
     # prevents matches before start_time
-    if start_time > current_time:
-        return False
+    # if start_time > current_time:
+    #     return False
    
                        
     function_dict = {
@@ -77,14 +77,15 @@ def monthly_schedule(scheduling, current_time: datetime) -> bool:
     current_hour = current_time.hour
     currrent_minute = current_time.minute
     scheduled_months = parsed_scheduling["stepSchedule"]["months"]
+    
     scheduled_days = parsed_scheduling["stepSchedule"]["days"]
+    scheduled_days.append(str(parsed_scheduling["stepSchedule"]["startDay"]))
     scheduled_hour = start_time.hour
     scheduled_minute = start_time.minute
 
 
     if scheduled_hour == current_hour and scheduled_minute == currrent_minute:
         if current_month in scheduled_months and current_day in scheduled_days:
-        
             return True
         
     return False
@@ -99,13 +100,21 @@ def get_step_start_time(scheduling) -> datetime:
    
     parsed_scheduling = json.loads(scheduling)
     start_datetime_str = parsed_scheduling["stepSchedule"]["startDateTime"]
-    # print(start_datetime_str)
-    start_datetime_obj = datetime.strptime(
-        #FIXME
-        start_datetime_str[:16], "%Y-%m-%dT%H:%M"
-    )
-    # print(start_datetime_obj)
-    return start_datetime_obj
+  
+    if start_datetime_str!=None :
+        start_datetime_obj = datetime.strptime(
+            #FIXME
+            
+            start_datetime_str[:16], "%Y-%m-%dT%H:%M"
+        )
+        # print(start_datetime_obj)
+        return start_datetime_obj
+    else:
+        start_datetime_obj =datetime.strptime(
+          parsed_scheduling["stepSchedule"]["startTime"], "%H:%M"
+        )
+        return start_datetime_obj
+        
 
 
 def trigger_scheduled_pipeline_steps(
@@ -114,15 +123,15 @@ def trigger_scheduled_pipeline_steps(
 ):
     for index,step in enumerate(steps):
   
-        
+       
         if not get_step_is_immediate(step["scheduling"]):
-     
+            
             if is_next_step_in_order(step, pipeline_run):
         
                 if time_match(step["scheduling"], time):
-                    if step["id"]==347:
-                        print(step["scheduling"],time)
+             
                     command = TriggerWorkflow(pipeline_step=step_runs[index])
+                    
                     return command
                 else:
                     if pipeline_run.status!= StatusExecution.PENDING:
