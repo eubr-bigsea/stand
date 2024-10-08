@@ -17,18 +17,22 @@ from stand.scheduler.utils import (
 
 from stand.models import StatusExecution
 
+
 async def check_and_execute(config):
     while True:
-        current_time = datetime.now()
-        await execute(config, current_time=current_time)
+        try:
+            current_time = datetime.now()
+            await execute(config, current_time=current_time)
+        except Exception as e:
+            print(f"an error occurred: {e}")  
 
         current_time = datetime.now()
         remaining_seconds = (
             60 - current_time.second - (current_time.microsecond / 1_000_000)
         )
         print(datetime.now())
-        await asyncio.sleep(remaining_seconds)  # Sleep until next minute
-
+        await asyncio.sleep(remaining_seconds)  # Sleep until the next minute
+        
 #FIXME: Theres redundancy in the api call to get the pipelines
 # first they are called in a batch then called individualy,bc the  
 # batch api doesnt return the step runs
@@ -77,7 +81,7 @@ async def execute(config, current_time=datetime.now()):
     # must be called again bc pipeline_runs_commands can create new runs
     #TODO
     # instead of calling it again, check the commands and see what
-    # pipeline was created from there ,or use the api but only get
+    # pipeline was created from there ,or use the api and only get
     # the pipelines created less than 2 minutes ago.
     active_pipeline_runs = await get_latest_pipeline_runs(
     config['stand']['services']['stand'],
@@ -113,9 +117,9 @@ async def execute(config, current_time=datetime.now()):
 
 async def main(config):
     today = datetime.today()
-    specific_time = today.replace(day=1,hour=10, minute=24, second=12, microsecond=12312)
-    await execute(config=config,current_time= specific_time)
-    # await check_and_execute(config=config)
+    # specific_time = today.replace(month=11,day=8,hour=9, minute=27, second=12, microsecond=12312)
+    # await execute(config=config,current_time= specific_time)
+    await check_and_execute(config=config)
 
 if __name__ == "__main__":
     config = load_config()  

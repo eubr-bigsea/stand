@@ -30,10 +30,7 @@ def get_pipeline_run_commands(
         run: PipelineRun = runs.get(pipeline["id"])
        
         if run:
-            if (
-                run.status == StatusExecution.RUNNING
-                or run.status == StatusExecution.WAITING
-            ):
+       
                 # run expired
                 if run.finish < current_time:
                     # all steps completed
@@ -62,14 +59,6 @@ def get_pipeline_run_commands(
                             pipeline_run=run, update_time=pipeline["updated"]
                         )
                     )
-
-            if run.status == StatusExecution.COMPLETED:
-                if run.finish < current_time:
-                    commands.append(CreatePipelineRun(pipeline=pipeline))
-
-            elif run.status == StatusExecution.INTERRUPTED:
-                if run.finish < current_time:
-                    commands.append(CreatePipelineRun(pipeline=pipeline))
 
         else:
             commands.append(CreatePipelineRun(pipeline=pipeline))
