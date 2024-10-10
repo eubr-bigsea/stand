@@ -82,7 +82,8 @@ def create_pipeline_run_from_pipeline(
         f'[{start.strftime("%d-%m-%Y")} '
         f'/ {finish.strftime("%d-%m-%Y")}]',
         updated=now,
-        status=StatusExecution.PENDING,
+        #default status should waiting
+        status=StatusExecution.WAITING,
         final_status=None,
         steps=[create_step(st) for st in pipeline.steps],
     )
@@ -161,15 +162,15 @@ def update_pipeline_run(job: Job) -> None:
         job.pipeline_run.status = job.status
         job.pipeline_run.final_status = job.status
     elif job.status in (EXEC.COMPLETED, ):
-      
+
         # Test if the step is the last one
         step_order = job.pipeline_step_run.order
-          #this needs to be improved later
         job.pipeline_run.last_executed_step = step_order
         if step_order == len(job.pipeline_run.steps):
             job.pipeline_run.status = EXEC.COMPLETED
         else:
-            job.pipeline_run.status = EXEC.RUNNING #??
+            #job completed should make pipeline run go to waiting
+            job.pipeline_run.status = EXEC.WAITING
 
     elif job.status in (EXEC.PENDING, EXEC.WAITING,
                         EXEC.WAITING_INTERVENTION):
