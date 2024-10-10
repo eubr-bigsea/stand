@@ -162,6 +162,7 @@ def update_pipeline_run(job: Job) -> None:
         job.pipeline_run.status = job.status
         job.pipeline_run.final_status = job.status
     elif job.status in (EXEC.COMPLETED, ):
+
         # Test if the step is the last one
         step_order = job.pipeline_step_run.order
         job.pipeline_run.last_executed_step = step_order
@@ -169,7 +170,7 @@ def update_pipeline_run(job: Job) -> None:
             job.pipeline_run.status = EXEC.COMPLETED
         else:
             #job completed should make pipeline run go to waiting
-            job.pipeline_run.status = EXEC.WAITING 
+            job.pipeline_run.status = EXEC.WAITING
 
     elif job.status in (EXEC.PENDING, EXEC.WAITING,
                         EXEC.WAITING_INTERVENTION):
