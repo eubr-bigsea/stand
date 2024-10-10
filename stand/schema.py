@@ -887,6 +887,11 @@ class PipelineRunListResponseSchema(BaseSchema):
                            validate=[OneOf(StatusExecution.values())])
     final_status = fields.String(required=False, allow_none=True,
                                  validate=[OneOf(StatusExecution.values())])
+    steps = fields.Nested(
+        'stand.schema.PipelineStepRunListResponseSchema',
+        required=True,
+        many=True,
+        only=['id', 'name', 'created', 'updated', 'workflow_id', 'retries', 'order', 'status', 'final_status'])
 
     # noinspection PyUnresolvedReferences
     @post_load
