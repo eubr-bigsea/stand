@@ -1,12 +1,9 @@
-from datetime import datetime, timedelta, time
 from calendar import monthrange
-import typing
+from datetime import datetime, time, timedelta
 
-from stand.models import PipelineRun, StatusExecution
+from stand.models import PipelineRun
+from stand.scheduler.utils import update_data
 
-from stand.scheduler.utils import PipelineStepRun, update_data
-
-import json  
 
 class Command:
     def execute(self, config):
@@ -56,30 +53,32 @@ class CreatePipelineRun(Command):
     def get_pipeline_run_start(
         self, current_time=datetime.now(), next_window_option=False
     ) -> datetime:
-        #hard coded for testing
+        # hard coded for testing
         # frequency = self.pipeline["execution_window"]
-        frequency = 'monthly'
+        frequency = "monthly"
         return getattr(self, "_get_limit_dates_" + frequency)(current_time)[0]
 
     def get_pipeline_run_end(
         self, current_time=datetime.now(), next_window_option=False
     ) -> datetime:
-        #hard coded for testing
+        # hard coded for testing
         # frequency = self.pipeline["execution_window"]
-        frequency = 'monthly'
+        frequency = "monthly"
         return getattr(self, "_get_limit_dates_" + frequency)(current_time)[1]
 
-
-    
-
     async def execute(self, config) -> PipelineRun:
-
-        stand_config = config.get('stand').get('services').get('stand')
+        stand_config = config.get("stand").get("services").get("stand")
         headers = {"X-Auth-Token": str(stand_config["auth_token"])}
         url = f"{stand_config['url']}/pipeline-runs/create"
-        payload ={"id":self.pipeline["id"],"start":str(self.get_pipeline_run_start()),"finish":str(self.get_pipeline_run_end())}
-        await update_data( url = url,method='POST', payload=payload, headers=headers)
-        print("created run for pipeline "+ str(self.pipeline["id"]))
+        payload = {
+            "id": self.pipeline["id"],
+            "start": str(self.get_pipeline_run_start()),
+            "finish": str(self.get_pipeline_run_end()),
+        }
+        await update_data(
+            url=url, method="POST", payload=payload, headers=headers
+        )
+        print("created run for pipeline " + str(self.pipeline["id"]))
         return self.pipeline
 
 
@@ -88,35 +87,42 @@ class TriggerWorkflow(Command):
         self.pipeline_step = pipeline_step
 
     async def execute(self, config):
-        stand_config = config.get('stand').get('services').get('stand')
+        stand_config = config.get("stand").get("services").get("stand")
         headers = {"X-Auth-Token": str(stand_config["auth_token"])}
-        
+
         url = f"{stand_config['url']}/pipeline-runs/execute"
-        payload ={"id":self.pipeline_step.id}
-        
-        print("PipelineStep with id "+str(self.pipeline_step)+" Triggered ")
-        await update_data( url = url,method='POST', payload=payload, headers=headers)
+        payload = {"id": self.pipeline_step.id}
+
+        print("PipelineStep with id " + str(self.pipeline_step) + " Triggered ")
+        await update_data(
+            url=url, method="POST", payload=payload, headers=headers
+        )
 
         return self.pipeline_step.id
 
 
 class UpdatePipelineRunStatus(Command):
-    def __init__(self, pipeline_run,status):
+    def __init__(self, pipeline_run, status):
         self.pipeline_run = pipeline_run
-        self.new_status =status
+        self.new_status = status
 
     async def execute(self, config):
-        stand_config = config.get('stand').get('services').get('stand')
+        stand_config = config.get("stand").get("services").get("stand")
         headers = {"X-Auth-Token": str(stand_config["auth_token"])}
-        
-        url = f"{stand_config['url']}/pipeline-runs/{self.pipeline_run.id}"
-        payload ={"status":self.new_status}
-        
-        await update_data( url = url,method='PATCH', payload=payload, headers=headers)
-        print("status of run"+ str(self.pipeline_run.id)+" changed to "+self.new_status)
-        return self.pipeline_run.id
 
-  
+        url = f"{stand_config['url']}/pipeline-runs/{self.pipeline_run.id}"
+        payload = {"status": self.new_status}
+
+        await update_data(
+            url=url, method="PATCH", payload=payload, headers=headers
+        )
+        print(
+            "status of run"
+            + str(self.pipeline_run.id)
+            + " changed to "
+            + self.new_status
+        )
+        return self.pipeline_run.id
 
 
 class UpdatePipelineInfo(Command):
@@ -124,6 +130,6 @@ class UpdatePipelineInfo(Command):
         self.pipeline_run = pipeline_run
         self.update_time = update_time
 
-    #TODO
+    # TODO
     async def execute(self, config):
         print("pipeline info updated")
