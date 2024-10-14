@@ -7,7 +7,10 @@ Create Date: 2024-06-20 10:14:27.158188
 """
 from alembic import op
 import sqlalchemy as sa
-from stand.migration_utils import is_sqlite
+from stand.migration_utils import is_sqlite, is_psql
+
+from sqlalchemy.dialects import postgresql
+
 
 # revision identifiers, used by Alembic.
 revision = 'fcca200be4a0'
@@ -65,7 +68,15 @@ def upgrade():
     op.create_index(op.f('ix_cluster_configuration_cluster_id'), 'cluster_configuration', ['cluster_id'], unique=False)
     op.create_index(op.f('ix_cluster_flavor_cluster_id'), 'cluster_flavor', ['cluster_id'], unique=False)
     op.create_index(op.f('ix_cluster_platform_cluster_id'), 'cluster_platform', ['cluster_id'], unique=False)
-    op.add_column('job', sa.Column('trigger_type', sa.Enum('MANUAL', 'TIME_SCHEDULE', 'MESSAGE', 'API', 'WATCH', 'OTHER', name='TriggerTypeEnumType'), nullable=True))
+
+    trigger_type = ['MANUAL', 'TIME_SCHEDULE', 'MESSAGE', 'API', 'WATCH', 'OTHER']
+    if is_psql():
+        triggertype_enum = postgresql.ENUM(*trigger_type, name='TriggerType', create_type=False)
+        triggertype_enum.create(op.get_bind(), checkfirst=True)
+        op.add_column('job', sa.Column('trigger_type', triggertype_enum, nullable=True))
+    else:
+        op.add_column('job', sa.Column('trigger_type', sa.Enum(*trigger_type, name='TriggerTypeEnumType'), nullable=True))
+
     op.add_column('job', sa.Column('pipeline_step_run_id', sa.Integer(), nullable=True))
     op.create_index(op.f('ix_job_cluster_id'), 'job', ['cluster_id'], unique=False)
     op.create_index(op.f('ix_job_pipeline_step_run_id'), 'job', ['pipeline_step_run_id'], unique=False)
