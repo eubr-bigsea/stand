@@ -61,13 +61,13 @@ class StandSocketIO:
         self.redis_store.rpush("queue_start", json.dumps(message))
 
     def on_echo(self, sid, message):
-        print('=' * 20, ' echo ')
-        print(message)
-        print('=' * 20)
+        # print('=' * 20, ' echo ')
+        # print(message)
+        # print('=' * 20)
         if isinstance(message, dict):
             self.socket_io.emit(
-                event=message.get('type','echo'), 
-                data=message, 
+                event=message.get('type','echo'),
+                data=message,
                 room=message.get('room', 'echo'),
                 namespace=self.namespace)
         else:
@@ -75,7 +75,9 @@ class StandSocketIO:
                 namespace=self.namespace)
 
     def on_join_room(self, sid, message):
-        # print('=== > ', message)
+        # print('*'* 20)
+        # print(sid, message)
+        # print('*'* 20)
         room = str(message.get('room'))
         replay_cached = message.get('cached', True)
 
@@ -84,8 +86,7 @@ class StandSocketIO:
             json.dumps({'joined': datetime.datetime.utcnow().isoformat()}))
 
         self.redis_store.expire('room_{}'.format(room), 3600)
-        if room.isdigit():
-            self.redis_store.expire('cache_room_{}'.format(room), 600)
+        self.redis_store.expire(f'cache_room_{room}', 600)
 
         self.logger.info(gettext('[%s] joined room %s'), sid, room)
         self.socket_io.enter_room(sid, room, namespace=self.namespace)
@@ -93,12 +94,15 @@ class StandSocketIO:
         self.socket_io.emit(
             'response', {'message': gettext('Entered room: *{}*').format(room)},
             room=sid, namespace=self.namespace)
+        self.socket_io.emit(
+            'joined', {'message': gettext('Entered room: *{}*').format(room)},
+            room=sid, namespace=self.namespace)
 
         # # Resend all statuses
         if not replay_cached:
             return
 
-        cached = self.redis_store.lrange('cache_room_{}'.format(room), 0, -1)
+        cached = self.redis_store.lrange(f'cache_room_{room}', 0, -1)
         for msg in cached:
             msg = json.loads(msg)
             self.socket_io.emit(msg['event'], msg['data'], room=sid,
@@ -136,16 +140,18 @@ class StandSocketIO:
         self.socket_io.close_room(room, namespace=self.namespace)
 
     def on_connect(self, sid, message):
-        self.logger.info(gettext('%s connected'), sid)
-        self.logger.info(message)
+        self.logger.info(
+            f'[{sid}] {gettext("connected")} IP: {message.get("REMOTE_ADDR")}')
         self.socket_io.emit('response',
                             {'message': gettext('Connected'), 'count': 0},
                             room=sid, namespace=self.namespace)
-
+        self.socket_io.emit('invite room',
+                            {'message': gettext('Connected'), 'count': 0},
+                            namespace=self.namespace)
     def on_disconnect(self, sid):
         for room_id in self.socket_io.rooms(sid, self.namespace):
-            if room_id.isdigit():
-                self.on_leave_room(sid, {'room': room_id}, False)
+            #if room_id.isdigit():
+            self.on_leave_room(sid, {'room': room_id}, False)
         self.logger.info(gettext('%s disconnected'), sid)
 
     def on_disconnect_request(self, sid):

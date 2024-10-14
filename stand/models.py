@@ -17,6 +17,7 @@ class StatusExecution:
     RUNNING = 'RUNNING'
     WAITING = 'WAITING'
     CANCELED = 'CANCELED'
+    WAITING_INTERVENTION = 'WAITING_INTERVENTION'
 
     @staticmethod
     def values():
@@ -113,17 +114,7 @@ class JobException(BaseException):
     def __str__(self):
         return self.message
 
-
 # Association tables definition
-    # noinspection PyUnresolvedReferences
-job_pipeline_step_run = db.Table(
-    'job_pipeline_step_run',
-    Column('pipeline_step_run_id', Integer,
-           ForeignKey('pipeline_step_run.id'),
-           nullable=False, index=True),
-    Column('job_id', Integer,
-           ForeignKey('job.id'),
-           nullable=False, index=True))
 
 
 class Cluster(db.Model):
@@ -306,6 +297,7 @@ class Job(db.Model):
     # Fields
     id = Column(Integer, primary_key=True)
     name = Column(String(50))
+    description = Column(String(400))
     created = Column(DateTime,
                      default=func.now(), nullable=False)
     type = Column(Enum(*list(JobType.values()),
@@ -325,10 +317,10 @@ class Job(db.Model):
     user_login = Column(String(50), nullable=False)
     user_name = Column(String(200), nullable=False)
     source_code = Column(Text(4294000000))
-    job_key = Column(String(200), nullable=False)
+    job_key = Column(String(200))
     trigger_type = Column(Enum(*list(TriggerType.values()),
                                name='TriggerTypeEnumType'),
-                          default=TriggerType.MANUAL, nullable=False)
+                          default=TriggerType.MANUAL)
 
     # Associations
     cluster_id = Column(
@@ -348,8 +340,17 @@ class Job(db.Model):
         index=True)
     pipeline_step_run = relationship(
         "PipelineStepRun",
-        overlaps='jobs',
+        overlaps='job',
         foreign_keys=[pipeline_step_run_id])
+    pipeline_run_id = Column(
+        Integer,
+        ForeignKey("pipeline_run.id",
+                   name="fk_job_pipeline_run_id"),
+        index=True)
+    pipeline_run = relationship(
+        "PipelineRun",
+        overlaps='job',
+        foreign_keys=[pipeline_run_id])
     steps = relationship("JobStep",
                          cascade="all, delete-orphan")
     results = relationship("JobResult",
@@ -477,15 +478,19 @@ class PipelineRun(db.Model):
     start = Column(DateTime, nullable=False, index=True)
     finish = Column(DateTime, nullable=False, index=True)
     pipeline_id = Column(Integer, nullable=False, index=True)
+    pipeline_name = Column(String(200), nullable=False)
     last_executed_step = Column(Integer, nullable=False)
     comment = Column(String(200))
+    updated = Column(DateTime,
+                     default=datetime.datetime.utcnow, nullable=False, index=True)
     status = Column(Enum(*list(StatusExecution.values()),
                          name='StatusExecutionEnumType'), nullable=False)
     final_status = Column(Enum(*list(StatusExecution.values()),
                                name='StatusExecutionEnumType'))
 
     # Associations
-    steps = relationship("PipelineStepRun", back_populates="pipeline_run")
+    steps = relationship("PipelineStepRun", back_populates="pipeline_run",
+                         cascade="all, delete-orphan")
 
     def __str__(self):
         return self.start
@@ -500,12 +505,15 @@ class PipelineStepRun(db.Model):
 
     # Fields
     id = Column(Integer, primary_key=True)
+    name = Column(String(200), nullable=False)
     created = Column(DateTime,
                      default=datetime.datetime.utcnow, nullable=False)
     updated = Column(DateTime, nullable=False, index=True)
     workflow_id = Column(Integer, nullable=False, index=True)
     retries = Column(Integer,
                      default=0, nullable=False)
+    order = Column(Integer,
+                   default=0, nullable=False)
     comment = Column(String(200))
     status = Column(Enum(*list(StatusExecution.values()),
                          name='StatusExecutionEnumType'), nullable=False)
@@ -513,10 +521,7 @@ class PipelineStepRun(db.Model):
                                name='StatusExecutionEnumType'))
 
     # Associations
-    jobs = relationship(
-        "Job",
-        overlaps="pipeline_step_runs",
-        secondary=job_pipeline_step_run)
+    jobs = relationship("Job", overlaps='pipeline_step_run')
     pipeline_run_id = Column(
         Integer,
         ForeignKey("pipeline_run.id",
@@ -532,7 +537,7 @@ class PipelineStepRun(db.Model):
     logs = relationship("PipelineStepRunLog")
 
     def __str__(self):
-        return self.created
+        return self.name
 
     def __repr__(self):
         return '<Instance {}: {}>'.format(self.__class__, self.id)

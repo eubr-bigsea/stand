@@ -8,7 +8,7 @@ import rq
 import stand.util
 from rq.exceptions import NoSuchJobError
 from stand.models import (
-    db, StatusExecution, JobException, JobType, Cluster)
+    JobStep, db, StatusExecution, JobException, JobType, Cluster)
 from stand.services.redis_service import connect_redis_store
 from stand.schema import ClusterItemResponseSchema
 
@@ -62,9 +62,9 @@ class JobService:
               testing=False, lang=None):
         if app_configs is None:
             app_configs = {}
-        invalid_statuses = [StatusExecution.RUNNING, StatusExecution.PENDING,
-                            StatusExecution.INTERRUPTED,
-                            StatusExecution.WAITING]
+        #invalid_statuses = [StatusExecution.RUNNING, StatusExecution.PENDING,
+        #                    StatusExecution.INTERRUPTED,
+        #                    StatusExecution.WAITING]
 
         # @FIXME Validate workflow
 
@@ -97,6 +97,15 @@ class JobService:
         else:
             # Offset when job is not persistent. E.g. Data Explorer
             job.id = 800000 + job.workflow_id
+
+        now = datetime.datetime.utcnow()
+        job.steps = [JobStep(date=now, status=StatusExecution.PENDING,
+                                 task_id=t['id'],
+                                 task_name=t.get('name'),
+                                 operation_id=t['operation']['id'],
+                                 operation_name=t.get('name')) #FIXME
+                         for t in workflow.get('tasks', [])]
+        log.info(gettext('Creating a total of {} step(s)').format(len(job.steps)))
 
         # Test if workflow has a variable indicating the Redis db to be used.
         # Useful when debugging a shared environment
@@ -131,7 +140,7 @@ class JobService:
         # Is job persisted in database? If so,
         # its generated source code must be updated by Juicer
         app_configs['persist'] = persist
-        app_configs['locale'] = lang
+        app_configs['locale'] = lang or 'pt'
         msg = json.dumps(dict(workflow_id=job.workflow_id,
                               app_id=job.workflow_id,
                               job_id=job.id,
@@ -157,48 +166,61 @@ class JobService:
             db.session.rollback()
 
     @staticmethod
-    def stop(job, ignore_if_stopped=False):
-        valid_status_in_stop = [StatusExecution.WAITING,
-                                StatusExecution.PENDING,
-                                StatusExecution.RUNNING,
-                                StatusExecution.INTERRUPTED]
-        valid_end_status = [StatusExecution.COMPLETED, StatusExecution.CANCELED,
-                            StatusExecution.ERROR]
-        if job.status not in valid_status_in_stop + valid_end_status:
-            raise JobException(
-                'You cannot stop a job in the state \'{}\''.format(job.status),
-                'INVALID_STATE')
-        if job.status in valid_status_in_stop:
-            job.status = StatusExecution.CANCELED
-            job.finished = datetime.datetime.utcnow()
-            db.session.add(job)
-            db.session.flush()
-
-            redis_store = JobService._get_redis_store(None)
-
-            # @FIXME Each workflow has only one app. In future, we may support N
-            cluster = job.cluster
+    def stop(job, ignore_if_stopped=False, job_id=None):
+        redis_store = JobService._get_redis_store(None)
+        if job_id:
+            workflow_id = job_id - 800000
             msg = json.dumps(
-                dict(workflow_id=job.workflow_id,
-                     app_id=job.workflow_id,
-                     job_id=job.id,
-                     cluster=ClusterItemResponseSchema().dump(cluster),
-                     type='terminate'))
+                dict(workflow_id=workflow_id,
+                    app_id=workflow_id,
+                    job_id=job_id,
+                    type='terminate'))
             redis_store.rpush("queue_start", msg)
+        else:
+            valid_status_in_stop = [StatusExecution.WAITING,
+                                    StatusExecution.PENDING,
+                                    StatusExecution.RUNNING,
+                                    StatusExecution.INTERRUPTED]
+            valid_end_status = [StatusExecution.COMPLETED,
+                                StatusExecution.CANCELED,
+                                StatusExecution.ERROR]
+            if job.status not in valid_status_in_stop + valid_end_status:
+                raise JobException(
+                    f'You cannot stop a job in the state \'{job.status}\''
+                    'INVALID_STATE')
+            if job.status in valid_status_in_stop:
+                job.status = StatusExecution.CANCELED
+                job.finished = datetime.datetime.utcnow()
+                db.session.add(job)
+                db.session.flush()
 
-            # # This hash controls the status of job. Used for prevent starting
-            # # a canceled job be started by Juicer (FIXME: is it used?).
-            # redis_store.hset('record_workflow_{}'.format(job.workflow_id),
-            #                  'status', StatusExecution.CANCELED)
-            #
-            redis_store.hset('job_{}'.format(job.id),
-                             'status', StatusExecution.CANCELED)
 
-            db.session.commit()
-        elif job.status in valid_end_status and not ignore_if_stopped:
-            raise JobException(
-                'You cannot stop a job in the state \'{}\''.format(job.status),
-                'ALREADY_FINISHED')
+
+                # @FIXME Each workflow has only one app. In future,
+                # we may support N
+                cluster = job.cluster
+                msg = json.dumps(
+                    dict(workflow_id=job.workflow_id,
+                        app_id=job.workflow_id,
+                        job_id=job.id,
+                        cluster=ClusterItemResponseSchema().dump(cluster),
+                        type='terminate'))
+                redis_store.rpush("queue_start", msg)
+
+                # # This hash controls the status of job. Used for prevent
+                # starting a canceled job be started by Juicer (FIXME: is it
+                # used?).
+                # redis_store.hset('record_workflow_{}'.format(job.workflow_id),
+                #                  'status', StatusExecution.CANCELED)
+                #
+                redis_store.hset('job_{}'.format(job.id),
+                                'status', StatusExecution.CANCELED)
+
+                db.session.commit()
+            elif job.status in valid_end_status and not ignore_if_stopped:
+                raise JobException(
+                    'You cannot stop a job in the state \'{}\''.format(job.status),
+                    'ALREADY_FINISHED')
 
     @staticmethod
     def lock(job, user, computer, force=False):

@@ -1,13 +1,15 @@
-# -*- coding: utf-8 -*-
 import datetime
+import sys
+from marshmallow import ValidationError
+from werkzeug.exceptions import HTTPException
 import json
 import logging
 import logging.config
 
 import os
-import rq
 import socketio
-from flask import Flask, request
+from babel import negotiate_locale
+from flask import Flask, g, request
 from flask_babel import Babel, gettext
 from flask_caching import Cache
 from flask_cors import CORS
@@ -17,22 +19,32 @@ from mockredis import MockRedis
 from sqlalchemy import and_
 from stand.cluster_api import ClusterDetailApi, PerformanceModelEstimationApi
 from stand.cluster_api import ClusterListApi
+from stand.pipeline_run_api import (PipelineRunDetailApi, PipelineRunListApi,
+                                    PipelineRunFromPipelineApi,
+                                    ExecutePipelineRunStepApi,
+                                    PipelineRunSummaryApi,
+                                    ChangePipelineRunStepApi)
 from stand.room_api import RoomApi
-from stand.job_api import (JobListApi, JobDetailApi, 
-    JobStopActionApi, JobLockActionApi, JobUnlockActionApi, 
+from stand.job_api import (JobListApi, JobDetailApi,
+    JobStopActionApi, JobLockActionApi, JobUnlockActionApi,
     UpdateJobStatusActionApi, UpdateJobStepStatusActionApi,
     JobSampleActionApi, JobSourceCodeApi, LatestJobDetailApi,
-    PerformanceModelEstimationApi, PerformanceModelEstimationResultApi, 
+    PerformanceModelEstimationResultApi,
     DataSourceInitializationApi, WorkflowStartActionApi, WorkflowSourceCodeApi,
     WorkflowSourceCodeResultApi)
 
 from stand.gateway_api import MetricListApi
-from stand.models import db, Job, JobStep, JobStepLog, StatusExecution, \
+from stand.models import db, Job, JobStep, JobStepLog, StatusExecution as EXEC, \
     JobResult
+from stand.schema import translate_validation
+from stand.services import ServiceException
+from stand.services.pipeline_run_service import update_pipeline_run
 from stand.services.redis_service import connect_redis_store
 
 SEED_QUEUE_NAME = 'seed'
 SEED_METRIC_JOB_NAME = 'seed.jobs.metric_probe_updater'
+
+log = logging.getLogger(__name__)
 
 
 class MockRedisWrapper(MockRedis):
@@ -74,15 +86,57 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
     if engine_config:
         final_config = {'pool_pre_ping': True}
         if 'mysql://' in app.config['SQLALCHEMY_DATABASE_URI']:
-            if 'SQLALCHEMY_POOL_SIZE' in engine_config: 
-                final_config['pool_size'] = engine_config['SQLALCHEMY_POOL_SIZE'] 
-            if 'SQLALCHEMY_POOL_RECYCLE' in engine_config: 
+            if 'SQLALCHEMY_POOL_SIZE' in engine_config:
+                final_config['pool_size'] = engine_config['SQLALCHEMY_POOL_SIZE']
+            if 'SQLALCHEMY_POOL_RECYCLE' in engine_config:
                 final_config['pool_recycle'] = engine_config['SQLALCHEMY_POOL_RECYCLE']
         app.config['SQLALCHEMY_ENGINE_OPTIONS'] = final_config
     app.debug = config['stand'].get('debug', False)
 
+
+    # Error handlers
+    @app.errorhandler(ValidationError)
+    def register_validation_error(e):
+        result = {'status': 'ERROR',
+                  'message': gettext("Validation error"),
+                  'errors': translate_validation(e.messages)}
+        db.session.rollback()
+        return result, 400
+
+    @app.errorhandler(ServiceException)
+    def register_service_exception(e):
+        result = {'status': 'ERROR',
+                  'message': str(e)}
+        db.session.rollback()
+        return result, 400
+
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        # pass through HTTP errors
+        if isinstance(e, HTTPException):
+            return e
+        result = {'status': 'ERROR',
+                  'message': gettext("Internal error")}
+        if app.debug:
+            result['debug_detail'] = str(e)
+        log.exception(e)
+        print(e, file=sys.stderr)
+        db.session.rollback()
+        return result, 500
+
     if settings_override:
         app.config.update(settings_override)
+    babel = create_babel_i18n(app)
+
+    @babel.localeselector
+    def get_locale():
+        user = getattr(g, 'user', None)
+        if user is not None and user.locale:
+            return user.locale
+        preferred = [x.replace('-', '_') for x in
+                     list(request.accept_languages.values())]
+        return negotiate_locale(preferred, ['pt_BR', 'en_US'])
+
 
     db.init_app(app)
     if app.testing:
@@ -118,6 +172,13 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
         '/jobs/<int:job_id>/sample/<task_id>': JobSampleActionApi,
         '/clusters': ClusterListApi,
         '/clusters/<int:cluster_id>': ClusterDetailApi,
+        '/pipeline-runs': PipelineRunListApi,
+        '/pipeline-runs/<int:pipeline_run_id>': PipelineRunDetailApi,
+        '/pipeline-runs/create': PipelineRunFromPipelineApi,
+        '/pipeline-runs/execute': ExecutePipelineRunStepApi,
+        '/pipeline-runs/summary': PipelineRunSummaryApi,
+        '/pipeline-runs/<int:pipeline_run_id>/status/<status>':
+            ChangePipelineRunStepApi,
         '/performance/<int:model_id>': PerformanceModelEstimationApi,
         '/performance/result/<key>': PerformanceModelEstimationResultApi,
         '/datasource/init': DataSourceInitializationApi,
@@ -128,6 +189,17 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
     }
     for path, view in mappings.items():
         api.add_resource(view, path)
+
+    # Global error handling
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        # pass through HTTP errors
+        if isinstance(e, HTTPException):
+            return e
+
+        logger = logging.getLogger(__name__)
+        logger.exception(e)
+        return {"error": "Internal error"}, 500
 
     # Cache configuration for API
     app.config['CACHE_TYPE'] = 'simple'
@@ -147,16 +219,19 @@ def mocked_emit(original_emit, app_):
     def new_emit(self, event, data, namespace, room=None, skip_sid=None,
                  callback=None):
         use_callback = callback
-        if room and room.isdigit():
+        if room:
             use_callback = handle_emit(data, event, namespace, room, self,
                                        skip_sid, use_callback, redis_store_)
             if isinstance(data.get('message', ''), bytes):
                 data['message'] = str(data['message'], 'utf-8')
             if data.get('type') == 'OBJECT':
                 data['message'] = json.loads(data['message'])
-            redis_store_.rpush('cache_room_{}'.format(room), json.dumps(
-                {'event': event, 'data': data, 'namespace': namespace,
+            cached_data = data.copy()
+            cached_data['fromcache'] = True
+            redis_store_.rpush(f'cache_room_{room}', json.dumps(
+                {'event': event, 'data': cached_data, 'namespace': namespace,
                  'room': room}, indent=0))
+            redis_store_.expire(f'cache_room_{room}', 600)
         return original_emit(self, event, data, namespace, room=room,
                              skip_sid=skip_sid,
                              callback=use_callback)
@@ -171,24 +246,26 @@ def mocked_emit(original_emit, app_):
                     redis_store):
         logger = logging.getLogger(__name__)
         # print(('-' * 40))
-        #print((data, event, namespace, room, self, skip_sid, use_callback,
-        #      redis_store_))
-        #print(('-' * 40))
+        # print((data, event, namespace, room, self, skip_sid, use_callback,
+        #       redis_store_))
+        # print(('-' * 40))
         try:
             now = datetime.datetime.now().strftime(
                 '%Y-%m-%dT%H:%m:%S')
             with app_.app_context():
-
                 if event == 'update job':
+                    status = data.get('status')
+                    if status is None:
+                        raise ValueError('Status not provided!')
                     job_id = int(room)
-                    logger.info(_gettext('Updating job id=%s'), job_id)
-                    job = Job.query.get(job_id)
+                    #logger.info(_gettext('Updating job id=%s'), job_id)
+                    job: Job = Job.query.get(job_id)
                     if job is not None:
-                        final_states = [StatusExecution.COMPLETED,
-                                        StatusExecution.CANCELED,
-                                        StatusExecution.ERROR]
-                        job.status = data.get('status')
-                        logger.info(_gettext('Updating job id=%s to status %s'), 
+                        final_states = [EXEC.COMPLETED,
+                                        EXEC.CANCELED,
+                                        EXEC.ERROR]
+                        job.status = status
+                        logger.info(_gettext('Updating job id=%s to status %s'),
                             job_id, job.status)
                         job.status_text = data.get('msg',
                                                    data.get('message', ''))
@@ -197,13 +274,14 @@ def mocked_emit(original_emit, app_):
                             job.finished = datetime.datetime.utcnow()
                             data['finished'] = job.finished.strftime(
                                 '%Y-%m-%dT%H:%m:%S')
-                        if job.status == StatusExecution.COMPLETED:
+                        # Update Job Step status
+                        if job.status == EXEC.COMPLETED:
                             for job_step in job.steps:
                                 if job_step.status == 'PENDING':
                                     job_step.status = 'COMPLETED'
                                     db.session.add(job_step)
-                            db.session.commit()
-                        elif job.status == StatusExecution.ERROR:
+                        elif job.status == EXEC.ERROR:
+                            # Something went wrong, record the cause
                             for job_step in job.steps:
                                 level = data.get('level', 'ERROR')
 
@@ -224,46 +302,79 @@ def mocked_emit(original_emit, app_):
                                     'id': step_log.id,
                                     'level': level,
                                     'date': now,
+                                    'room': job_id
                                 }
+                                # Indicate if the message should be stored for
+                                # the client
                                 cache = False
-                                if job_step.status == StatusExecution.RUNNING:
-                                    job_step.status = StatusExecution.ERROR
+                                if job_step.status == EXEC.RUNNING:
+                                    job_step.status = EXEC.ERROR
                                     msg['message'] = _gettext(
                                         'Canceled by error')
-                                    msg['status'] = StatusExecution.ERROR
-                                    original_emit(self, 'update task', msg,
-                                                  namespace, room, skip_sid,
-                                                  use_callback)
+                                    msg['status'] = EXEC.ERROR
+                                    #original_emit(self, 'update task', msg,
+                                    #              namespace, room, skip_sid,
+                                    #              use_callback)
                                     cache = True
                                 elif job_step.status not in final_states:
-                                    job_step.status = StatusExecution.CANCELED
+                                    job_step.status = EXEC.CANCELED
                                     msg['message'] = _gettext('Skiped by error')
-                                    msg['status'] = StatusExecution.CANCELED
+                                    msg['status'] = EXEC.CANCELED
 
-                                    original_emit(self, 'update task', msg,
-                                                  namespace, room, skip_sid,
-                                                  use_callback)
+                                    #original_emit(self, 'update task', msg,
+                                    #              namespace, room, skip_sid,
+                                    #              use_callback)
                                     cache = True
                                 if cache:
                                     redis_store.rpush(
-                                        'cache_room_{}'.format(room),
+                                        f'cache_room_{room}',
                                         json.dumps({'event': 'update task',
                                                     'data': msg,
                                                     'namespace': namespace,
                                                     'room': room}))
+
                                 if job_id > 0:
                                     db.session.add(job_step)
 
-                        elif job.status == StatusExecution.CANCELED:
+                        elif job.status == EXEC.CANCELED:
                             for job_step in job.steps:
                                 if job_step.status not in final_states:
-                                    job_step.status = StatusExecution.CANCELED
+                                    job_step.status = EXEC.CANCELED
                                 if job_id > 0:
                                     db.session.add(job_step)
-                        if job_id > 0:
-                            db.session.add(job)
-                            db.session.commit()
-                elif event == 'update task':
+
+                        logger.info('Is job associated to pipeline run? %s',
+                                 f'Yes, {job.pipeline_step_run.id}' if
+                                 job.pipeline_step_run is not None else 'No')
+                        if (job.pipeline_step_run):
+                            update_pipeline_run(job)
+                            notification_msg = {
+                                'date': datetime.datetime.utcnow().isoformat(),
+                                'pipeline_run': {
+                                    'id': job.pipeline_run.id,
+                                    'status': job.pipeline_run.status,
+                                },
+                                'pipeline_step_run': {
+                                    'id': job.pipeline_step_run.id,
+                                    'status': job.pipeline_step_run.status,
+                                    'order': job.pipeline_step_run.order
+                                },
+                                'job': {
+                                    'id': job.id,
+                                    'status': job.status,
+                                },
+                                'message': data.get('message')
+                            }
+                            log.info('Notify room pipeline_runs: %s', notification_msg)
+                            self.emit('update pipeline run',
+                                            notification_msg,
+                                            namespace, 'pipeline_runs', skip_sid,
+                                            use_callback)
+                        db.session.add(job)
+                        db.session.commit()
+                    else:
+                        logger.info(gettext("Job %s is not persistent."), job_id)
+                elif event == 'update task' or event == 'user message':
                     job_id = int(room)
                     job_step = JobStep.query.filter(and_(
                         JobStep.job_id == job_id,
@@ -271,12 +382,14 @@ def mocked_emit(original_emit, app_):
                     # print('=' * 20)
                     # print(data)
                     # print(job_step)
+                    # print(event)
                     # print('=' * 20)
+                    status = data.get('status')
                     if job_step is not None:
-                        job_step.status = data.get('status')
+                        job_step.status = status
                         level = data.get('level')
                         if level is None:
-                            if job_step.status == StatusExecution.ERROR:
+                            if job_step.status == EXEC.ERROR:
                                 level = 'WARN'
                             else:
                                 level = 'INFO'
@@ -286,6 +399,9 @@ def mocked_emit(original_emit, app_):
                             step_log_msg = json.dumps(step_log_msg)
 
                         step_log_type = data.get('type', 'TEXT')
+                        if event == 'user message':
+                            step_log_type = 'USER'
+
 
                         # Messages must be serialized in the client
                         #if step_log_type == 'OBJECT':
@@ -344,6 +460,7 @@ def mocked_emit(original_emit, app_):
             logger.exception(ex)
         return use_callback
 
+
     return new_emit
 
 
@@ -366,7 +483,8 @@ def create_socket_io_app(_app):
     sio.manager_initialized = True
     import eventlet
     eventlet.spawn(mgr.initialize)
-
+    log.info('Started socketio')
+    _app.sio = sio
     return sio, socketio.Middleware(sio, _app)
 
 
