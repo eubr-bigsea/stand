@@ -20,14 +20,14 @@ logger = logging.getLogger(__name__)
 
 async def check_and_execute(config):
     while True:
-        current_time = datetime.now()
+        current_time = datetime.datetime.utcnow()
         logger.info("Checking scheduler. Now = %s", current_time.isoformat())
         try:
             await execute(config, current_time=current_time)
         except Exception as e:
             logger.exception(e)
 
-        current_time = datetime.now()
+        current_time = datetime.datetime.utcnow()
         remaining_seconds = (
             60 - current_time.second - (current_time.microsecond / 1_000_000)
         )
@@ -37,7 +37,7 @@ async def check_and_execute(config):
 # FIXME: Theres redundancy in the api call to get the pipelines
 # first they are called in a batch then called individualy,bc the
 # batch api doesnt return the step runs
-async def execute(config, current_time=datetime.now()):
+async def execute(config, current_time=datetime.datetime.utcnow()):
     # returned as pipeline_id:pipeline_in_json dict
     period = 7
     updated_pipelines = await get_pipelines(
