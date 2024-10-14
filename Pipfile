@@ -5,7 +5,7 @@ name = "pypi"
 
 [packages]
 coverage = "==5.5"
-eventlet = "==0.31.0"
+eventlet = "==0.35.2"
 flask = "==2.2.5"
 flask-babel = "==2.0.0"
 flask-caching = "==1.10.1"
