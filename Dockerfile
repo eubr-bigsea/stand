@@ -18,5 +18,5 @@ WORKDIR $STAND_HOME
 COPY . $STAND_HOME
 
 RUN pybabel compile -d $STAND_HOME/stand/i18n/locales
-
+ENV PYTHONPATH=.
 CMD ["/usr/local/stand/sbin/stand-daemon.sh", "docker"]
