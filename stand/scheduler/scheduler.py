@@ -1,4 +1,6 @@
 import asyncio
+import logging
+
 from datetime import datetime
 
 from stand.scheduler.trigger_scheduled_jobs import (
@@ -13,20 +15,21 @@ from stand.scheduler.utils import (
     pipeline_steps_have_valid_schedulings,
 )
 
+logger = logging.getLogger(__name__)
 
 async def check_and_execute(config):
     while True:
+        current_time = datetime.now()
+        logger.info("Checking scheduler. Now = %s", current_time.isoformat())
         try:
-            current_time = datetime.now()
             await execute(config, current_time=current_time)
         except Exception as e:
-            print(f"an error occurred: {e}")
+            logger.exception(e)
 
         current_time = datetime.now()
         remaining_seconds = (
             60 - current_time.second - (current_time.microsecond / 1_000_000)
         )
-        print(datetime.now())
         await asyncio.sleep(remaining_seconds)  # Sleep until the next minute
 
 
@@ -67,7 +70,7 @@ async def execute(config, current_time=datetime.now()):
     )
 
     for command in update_pipeline_runs_commands:
-        print(command)
+        logger.info('Executing command %s', command)
         await command.execute(config)
 
     # must be called again bc pipeline_runs_commands can create new runs
@@ -106,7 +109,6 @@ async def execute(config, current_time=datetime.now()):
 
 
 async def main(config):
-    today = datetime.today()
     # specific_time = today.replace(month=11,day=8,hour=9, minute=27, second=12, microsecond=12312)
     # await execute(config=config,current_time= specific_time)
     await check_and_execute(config=config)
@@ -114,5 +116,5 @@ async def main(config):
 
 if __name__ == "__main__":
     config = load_config()
-
+    logger.info('Starting Stand Scheduler')
     asyncio.run(main(config))

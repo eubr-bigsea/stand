@@ -1,8 +1,13 @@
+import logging
+import logging.config
 from calendar import monthrange
 from datetime import datetime, time, timedelta
 
 from stand.models import PipelineRun
 from stand.scheduler.utils import update_data
+
+logging.config.fileConfig('logging_config.ini')
+logger = logging.getLogger(__name__)
 
 
 class Command:
@@ -78,7 +83,7 @@ class CreatePipelineRun(Command):
         await update_data(
             url=url, method="POST", payload=payload, headers=headers
         )
-        print("created run for pipeline " + str(self.pipeline["id"]))
+        logger.info("Created run for pipeline %s", self.pipeline["id"])
         return self.pipeline
 
 
@@ -93,7 +98,7 @@ class TriggerWorkflow(Command):
         url = f"{stand_config['url']}/pipeline-runs/execute"
         payload = {"id": self.pipeline_step.id}
 
-        print("PipelineStep with id " + str(self.pipeline_step) + " Triggered ")
+        logger.info("PipelineStep with id %s triggered.", self.pipeline_step)
         await update_data(
             url=url, method="POST", payload=payload, headers=headers
         )
@@ -116,11 +121,10 @@ class UpdatePipelineRunStatus(Command):
         await update_data(
             url=url, method="PATCH", payload=payload, headers=headers
         )
-        print(
-            "status of run"
-            + str(self.pipeline_run.id)
-            + " changed to "
-            + self.new_status
+        logger.info(
+            "Status of run %s changed to %s",
+            self.pipeline_run.id,
+            self.new_status,
         )
         return self.pipeline_run.id
 
@@ -132,4 +136,4 @@ class UpdatePipelineInfo(Command):
 
     # TODO
     async def execute(self, config):
-        print("pipeline info updated")
+        logger.info("Pipeline info updated.")
