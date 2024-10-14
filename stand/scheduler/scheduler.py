@@ -17,6 +17,7 @@ from stand.scheduler.utils import (
 
 logger = logging.getLogger(__name__)
 
+
 async def check_and_execute(config):
     while True:
         current_time = datetime.now()
@@ -38,15 +39,27 @@ async def check_and_execute(config):
 # batch api doesnt return the step runs
 async def execute(config, current_time=datetime.now()):
     # returned as pipeline_id:pipeline_in_json dict
+    period = 7
     updated_pipelines = await get_pipelines(
-        tahiti_config=config["stand"]["services"]["tahiti"], days=7
+        tahiti_config=config["stand"]["services"]["tahiti"], days=period
     )
-
+    if logger.isEnabledFor(logging.INFO):
+        logger.info(
+            "%s pipelines were updated in the last %s days.",
+            len(updated_pipelines),
+            period,
+        )
     # only using pipelines with valid scheduling steps
     valid_schedule_pipelines = {}
     for id in updated_pipelines:
         if pipeline_steps_have_valid_schedulings(updated_pipelines[id]["steps"]):
             valid_schedule_pipelines[id] = updated_pipelines[id]
+
+    if logger.isEnabledFor(logging.INFO):
+        logger.info(
+            "%s pipelines have valid steps.",
+            len(valid_schedule_pipelines)
+        )
 
     # FIXME
     # this function doesnt return the pipeline steps correctly
@@ -54,6 +67,11 @@ async def execute(config, current_time=datetime.now()):
         config["stand"]["services"]["stand"],
         pipeline_ids=valid_schedule_pipelines.keys(),
     )
+    if logger.isEnabledFor(logging.INFO):
+        logger.info(
+            "%s pipelines are active.",
+            len(valid_schedule_pipelines)
+        )
 
     # FIXME
     # need to use the individual pipeline run step to get the steps runs
@@ -61,6 +79,12 @@ async def execute(config, current_time=datetime.now()):
     for i in active_pipeline_runs:
         p = await get_pipeline_run(config["stand"]["services"]["stand"], i.id)
         valid_pipeline_runs.append(p)
+
+    if logger.isEnabledFor(logging.INFO):
+        logger.info(
+            "%s pipelines runs are valid.",
+            len(valid_pipeline_runs)
+        )
 
     # managing states and creating pipelines
     update_pipeline_runs_commands = get_pipeline_run_commands(
@@ -70,7 +94,8 @@ async def execute(config, current_time=datetime.now()):
     )
 
     for command in update_pipeline_runs_commands:
-        logger.info('Executing command %s', command)
+        if logger.isEnabledFor(logging.INFO):
+            logger.info("Executing command %s.", command)
         await command.execute(config)
 
     # must be called again bc pipeline_runs_commands can create new runs
@@ -88,6 +113,12 @@ async def execute(config, current_time=datetime.now()):
         valid_pipeline_runs.append(p)
     trigger_commands = []
 
+    if logger.isEnabledFor(logging.INFO):
+        logger.info(
+            "%s pipelines runs are now valid (from %s active).",
+            len(valid_pipeline_runs),
+            len(active_pipeline_runs)
+        )
     # triggering stepruns
     for run in valid_pipeline_runs:
         step_runs = [step for step in run.steps]
@@ -99,10 +130,12 @@ async def execute(config, current_time=datetime.now()):
             steps=step_infos,
             step_runs=step_runs,
         )
-        if new_command != None:
+        if new_command is not None:
             trigger_commands.append(new_command)
 
     for command in trigger_commands:
+        if logger.isEnabledFor(logging.INFO):
+            logger.info("Executing command %s for step.", command)
         await command.execute(config)
 
     return [update_pipeline_runs_commands, trigger_commands]
@@ -116,5 +149,5 @@ async def main(config):
 
 if __name__ == "__main__":
     config = load_config()
-    logger.info('Starting Stand Scheduler')
+    logger.info("Starting Stand Scheduler")
     asyncio.run(main(config))
