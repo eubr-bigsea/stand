@@ -133,6 +133,8 @@ async def execute(config, current_time=datetime.now()):
         if new_command is not None:
             trigger_commands.append(new_command)
 
+    if logger.isEnabledFor(logging.INFO):
+        logger.info("%s command(s) found.", len(trigger_commands))
     for command in trigger_commands:
         if logger.isEnabledFor(logging.INFO):
             logger.info("Executing command %s for step.", command)
