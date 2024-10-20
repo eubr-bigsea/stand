@@ -88,7 +88,7 @@ async def execute(config, current_time=datetime.now(timezone.utc)):
     for command in update_pipeline_runs_commands:
         if logger.isEnabledFor(logging.INFO):
             logger.info("Executing command %s.", command)
-        # await command.execute(config)
+        await command.execute(config)
 
     # must be called again bc pipeline_runs_commands can create new runs
 
