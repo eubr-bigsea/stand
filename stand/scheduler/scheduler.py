@@ -2,7 +2,7 @@ import asyncio
 import logging
 
 from datetime import datetime
-
+from datetime import timezone
 from stand.scheduler.trigger_scheduled_jobs import (
     trigger_scheduled_pipeline_steps,
 )
@@ -20,24 +20,21 @@ logger = logging.getLogger(__name__)
 
 async def check_and_execute(config):
     while True:
-        current_time = datetime.datetime.utcnow()
+        current_time = datetime.now(timezone.utc)
         logger.info("Checking scheduler. Now = %s", current_time.isoformat())
         try:
             await execute(config, current_time=current_time)
         except Exception as e:
             logger.exception(e)
 
-        current_time = datetime.datetime.utcnow()
+        current_time = datetime.now(timezone.utc)
         remaining_seconds = (
             60 - current_time.second - (current_time.microsecond / 1_000_000)
         )
         await asyncio.sleep(remaining_seconds)  # Sleep until the next minute
 
 
-# FIXME: Theres redundancy in the api call to get the pipelines
-# first they are called in a batch then called individualy,bc the
-# batch api doesnt return the step runs
-async def execute(config, current_time=datetime.datetime.utcnow()):
+async def execute(config, current_time=datetime.now(timezone.utc)):
     # returned as pipeline_id:pipeline_in_json dict
     period = 7
     updated_pipelines = await get_pipelines(
@@ -73,12 +70,7 @@ async def execute(config, current_time=datetime.datetime.utcnow()):
             len(valid_schedule_pipelines)
         )
 
-    # FIXME
-    # need to use the individual pipeline run step to get the steps runs
-    valid_pipeline_runs = []
-    for i in active_pipeline_runs:
-        p = await get_pipeline_run(config["stand"]["services"]["stand"], i.id)
-        valid_pipeline_runs.append(p)
+    valid_pipeline_runs =active_pipeline_runs
 
     if logger.isEnabledFor(logging.INFO):
         logger.info(
@@ -96,21 +88,16 @@ async def execute(config, current_time=datetime.datetime.utcnow()):
     for command in update_pipeline_runs_commands:
         if logger.isEnabledFor(logging.INFO):
             logger.info("Executing command %s.", command)
-        await command.execute(config)
+        # await command.execute(config)
 
     # must be called again bc pipeline_runs_commands can create new runs
-    # TODO
-    # instead of calling it again, check the commands and see what
-    # pipeline was created from there ,or use the api and only get
-    # the pipelines created less than 2 minutes ago.
+
     active_pipeline_runs = await get_latest_pipeline_runs(
         config["stand"]["services"]["stand"],
         pipeline_ids=valid_schedule_pipelines.keys(),
     )
-    valid_pipeline_runs = []
-    for i in active_pipeline_runs:
-        p = await get_pipeline_run(config["stand"]["services"]["stand"], i.id)
-        valid_pipeline_runs.append(p)
+    valid_pipeline_runs = active_pipeline_runs
+
     trigger_commands = []
 
     if logger.isEnabledFor(logging.INFO):
