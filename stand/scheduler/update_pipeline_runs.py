@@ -1,6 +1,6 @@
 import typing
 from datetime import datetime
-
+import pytz
 from stand.models import (
     PipelineRun,
     StatusExecution,
@@ -28,7 +28,9 @@ def get_pipeline_run_commands(
 
         if run:
             # run expired
-            if run.finish < current_time:
+            finish_utc = run.finish.astimezone(pytz.utc) if run.finish.tzinfo else pytz.utc.localize(run.finish)
+            current_time_utc = current_time.astimezone(pytz.utc) if current_time.tzinfo else pytz.utc.localize(current_time)
+            if finish_utc < current_time_utc:
                 # all steps completed
                 if run.last_executed_step == len(run.steps):
                     commands.append(

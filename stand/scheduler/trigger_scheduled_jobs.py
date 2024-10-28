@@ -1,6 +1,7 @@
 import json
 import typing
 from datetime import date, datetime
+import pytz
 
 from stand.models import (
     PipelineRun,
@@ -67,26 +68,39 @@ def daily_schedule(scheduling, current_time: datetime) -> bool:
     # diference  is divisible by frenquency , so match
     return difference_in_minutes % (int(frequency_in_days) * 1440) == 0
 
-
-def monthly_schedule(scheduling, current_time: datetime) -> bool:
+def monthly_schedule(scheduling, current_time: datetime,  timezone_str: str = "America/Sao_Paulo") -> bool:
     parsed_scheduling = json.loads(scheduling)
     start_time = get_step_start_time(scheduling)
-    current_month = str(current_time.month)
-    current_day = str(current_time.day)
-    current_hour = current_time.hour
-    currrent_minute = current_time.minute
-    scheduled_months = parsed_scheduling["stepSchedule"]["months"]
 
+    # Convert start_time (which is in UTC) to a UTC-aware datetime
+    start_time_utc = pytz.utc.localize(start_time)
+
+    # Convert current_time to the specified timezone
+    specified_timezone = pytz.timezone(timezone_str)
+    current_time_in_timezone = current_time.astimezone(specified_timezone)
+
+    # Extract month, day, hour, and minute information from current_time in specified timezone
+    current_month = str(current_time_in_timezone.month)
+    current_day = str(current_time_in_timezone.day)
+    current_hour = current_time_in_timezone.hour
+    current_minute = current_time_in_timezone.minute
+
+    # Scheduled month and days
+    scheduled_months = parsed_scheduling["stepSchedule"]["months"]
     scheduled_days = parsed_scheduling["stepSchedule"]["days"]
     scheduled_days.append(str(parsed_scheduling["stepSchedule"]["startDay"]))
-    scheduled_hour = start_time.hour
-    scheduled_minute = start_time.minute
 
-    if scheduled_hour == current_hour and scheduled_minute == currrent_minute:
+    # Get the hour and minute from the scheduled time (which is in UTC)
+    scheduled_hour = start_time_utc.hour
+    scheduled_minute = start_time_utc.minute
+
+    # Check if the current time (in the specified timezone) matches the scheduled time (in UTC)
+    if scheduled_hour == current_hour and scheduled_minute == current_minute:
         if current_month in scheduled_months and current_day in scheduled_days:
             return True
 
     return False
+
 
 
 def get_step_is_immediate(scheduling) -> bool:
