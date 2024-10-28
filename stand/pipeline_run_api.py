@@ -383,7 +383,7 @@ class PipelineRunSummaryApi(Resource):
             start_filter = request.args.get("start")
             end_filter = request.args.get("end")
 
-            today = datetime.datetime.now().replace(
+            today = datetime.datetime.utcnow().replace(
                 hour=0, minute=0, second=0, microsecond=0
             )
             if start_filter:
