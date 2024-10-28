@@ -1,3 +1,4 @@
+from collections import defaultdict
 import datetime
 import logging
 import math
@@ -8,11 +9,12 @@ from flask import g as flask_g
 from flask_babel import gettext
 from flask_restful import Resource
 from marshmallow import Schema, fields
+import pytz
 from sqlalchemy import and_, func, or_
 
 from stand.services import ServiceException
 from stand.app_auth import requires_auth
-from stand.models import Job, PipelineRun, PipelineStepRun, db
+from stand.models import Job, PipelineRun, PipelineStepRun, StatusExecution, db
 from stand.models_extra import Period
 from stand.schema import (
     PipelineRunCreateRequestSchema,
@@ -25,7 +27,7 @@ from stand.services.pipeline_run_service import (
     create_pipeline_run_from_pipeline,
     execute_pipeline_step_run,
     get_pipeline_from_api,
-    change_pipeline_run_status
+    change_pipeline_run_status,
 )
 
 log = logging.getLogger(__name__)
@@ -351,10 +353,7 @@ class PipelineRunFromPipelineApi(Resource):
                     pipeline, Period(params.get("start"), params.get("finish"))
                 )
             except ServiceException as se:
-                return {
-                    'status': 'ERROR',
-                    'message': str(se)
-                }, 400
+                return {"status": "ERROR", "message": str(se)}, 400
             return {
                 "status": "OK",
                 "message": gettext(
@@ -372,18 +371,21 @@ class PipelineRunFromPipelineApi(Resource):
 
 class PipelineRunSummaryApi(Resource):
     """REST API to generate summary of pipeline run.
-    Used for reporting"""
+    Used for reporting
+    """
 
     @requires_auth
     def get(self):
         result = []
         pipeline_runs = _get_pipeline_runs_query()
-        if request.args.get("type") == "line":
+        chart_type = request.args.get("type")
+        interval = request.args.get("timeInterval")
+        if chart_type in ("line", "histogram"):
             pipeline_runs = _get_pipeline_runs_basic_query()
             start_filter = request.args.get("start")
             end_filter = request.args.get("end")
 
-            today = datetime.datetime.utcnow().replace(
+            today = datetime.datetime.now(datetime.timezone.utc).replace(
                 hour=0, minute=0, second=0, microsecond=0
             )
             if start_filter:
@@ -395,6 +397,13 @@ class PipelineRunSummaryApi(Resource):
             else:
                 end_date = today + datetime.timedelta(days=1)
 
+            # Localize dates
+            start_date = start_date.astimezone(pytz.UTC)
+            end_date = end_date.astimezone(pytz.UTC)
+
+            start_date, end_date = self.get_start_end_for_interval(
+                interval, start_date, end_date
+            )
             # Subquery for filtered PipelineRuns
             filtered_pipeline_runs = pipeline_runs.subquery()
 
@@ -422,15 +431,39 @@ class PipelineRunSummaryApi(Resource):
             # Generates a list of intervals
             time_intervals = []
             current_time = min_start_time
+            delta = {
+                "hourly": {"hours": 1},
+                "daily": {"days": 1},
+                "weekly": {"weeks": 1},
+                "monthly": {"days": 31},
+            }.get(interval, {"hours": 1})
+
             while current_time <= end_date:
                 time_intervals.append(current_time)
-                current_time += datetime.timedelta(minutes=60)
+                if interval == "monthly":
+                    current_time = (
+                        current_time + datetime.timedelta(**delta)
+                    ).replace(day=1)
+                else:
+                    current_time += datetime.timedelta(**delta)
 
-            time_series = {time: 0 for time in time_intervals}
+            if chart_type == "histogram":
+                by_status = dict((k, 0) for k in StatusExecution.values())
+                time_series = {time: by_status.copy() for time in time_intervals}
+            else:
+                time_series = {time: 0 for time in time_intervals}
+
             for job in jobs:
                 start = job.started.replace(minute=0, second=0, microsecond=0)
-                time_series[start] += 1
                 end = job.finished.replace(minute=0, second=0, microsecond=0)
+                start, end = self.get_start_end_for_interval(
+                    interval, start, end
+                )
+
+                if chart_type == "histogram":
+                    time_series[start][job.status] += 1
+                else:
+                    time_series[start] += 1
                 if start != end:
                     time_series[end] += 1
 
@@ -452,15 +485,68 @@ class PipelineRunSummaryApi(Resource):
 
         return result
 
+    def get_start_end_for_interval(self, interval, start, end):
+        """
+        Adjust start and end dates based on the specified interval, treating
+        Sunday as first day of week.
+
+        Args:
+            interval: String specifying the interval type ("daily", "weekly",
+                or "monthly")
+            start: Starting datetime
+            end: Ending datetime
+
+        Returns:
+            Tuple of adjusted (start, end) datetimes
+        """
+
+        def normalize_time(dt: datetime) -> datetime:
+            return dt.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        start = normalize_time(start)
+        end = normalize_time(end)
+
+        if interval in ("daily",):
+            pass
+        elif interval in ("weekly",):
+            # Convert from Python's Monday-based weekday (0-6) to Sunday-based (0-6)
+            # Python: Mon=0, Sun=6 -> Our system: Sun=0, Sat=6
+            def to_sunday_based_weekday(dt: datetime) -> int:
+                return (dt.weekday() + 1) % 7
+
+            # Adjust to previous Sunday for start, next Saturday for end
+            start_weekday = to_sunday_based_weekday(start)
+            end_weekday = to_sunday_based_weekday(end)
+
+            start = start - datetime.timedelta(days=start_weekday)
+            end = end + datetime.timedelta(days=6 - end_weekday)
+
+        elif interval in ("monthly",):
+            start = start.replace(day=1)
+            if end.month == 12:
+                last_day = end.replace(
+                    year=end.year + 1, month=1, day=1
+                ) - datetime.timedelta(days=1)
+            else:
+                last_day = end.replace(
+                    month=end.month + 1, day=1
+                ) - datetime.timedelta(days=1)
+            end = last_day
+
+        return start, end
+
 
 class ChangePipelineRunStepApi(Resource):
     """REST API to change pipeline run status"""
+
     @requires_auth
     def patch(self, pipeline_run_id, status):
         run = PipelineRun.query.get_or_404(pipeline_run_id)
         change_pipeline_run_status(run, status, current_app.sio.emit)
-        return {"status": "OK",
-                "message": gettext("Status changed to {}").format(status)}
+        return {
+            "status": "OK",
+            "message": gettext("Status changed to {}").format(status),
+        }
 
 
 class ExecutePipelineRunStepApi(Resource):
