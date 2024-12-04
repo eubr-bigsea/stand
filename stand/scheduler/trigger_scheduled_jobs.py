@@ -11,9 +11,7 @@ from stand.models import (
 from stand.scheduler.commands import TriggerWorkflow, UpdatePipelineRunStatus
 
 
-def is_next_step_in_order(
-    step: PipelineStepRun, pipeline_run: PipelineRun
-) -> bool:
+def is_next_step_in_order(step: PipelineStepRun, pipeline_run: PipelineRun) -> bool:
     "returns if step is the next step in a pipeline run execution"
     if step["order"] == pipeline_run.last_executed_step + 1:
         return True
@@ -68,7 +66,10 @@ def daily_schedule(scheduling, current_time: datetime) -> bool:
     # diference  is divisible by frenquency , so match
     return difference_in_minutes % (int(frequency_in_days) * 1440) == 0
 
-def monthly_schedule(scheduling, current_time: datetime,  timezone_str: str = "America/Sao_Paulo") -> bool:
+
+def monthly_schedule(
+    scheduling, current_time: datetime, timezone_str: str = "America/Sao_Paulo"
+) -> bool:
     parsed_scheduling = json.loads(scheduling)
     start_time = get_step_start_time(scheduling)
 
@@ -102,7 +103,6 @@ def monthly_schedule(scheduling, current_time: datetime,  timezone_str: str = "A
     return False
 
 
-
 def get_step_is_immediate(scheduling) -> bool:
     parsed_scheduling = json.loads(scheduling)
     return parsed_scheduling["stepSchedule"]["executeImmediately"]
@@ -127,31 +127,60 @@ def get_step_start_time(scheduling) -> datetime:
         return start_datetime_obj
 
 
+def no_job_already_active_for_step_run(
+    step: PipelineStepRun, pipeline_run: PipelineRun
+) -> bool:
+    "returns if step is the next step in a pipeline run execution"
+
+    
+    if pipeline_run.steps[step["order"] - 1].status == StatusExecution.PENDING:
+        return True
+    else:
+        return False
+
+
 def trigger_scheduled_pipeline_steps(
     pipeline_run: PipelineRun,
     time: datetime,
     steps: typing.List,
     step_runs: typing.List,
+    scheduled: bool
 ):
-    for index, step in enumerate(steps):
-        if not get_step_is_immediate(step["scheduling"]):
-            if is_next_step_in_order(step, pipeline_run):
+
+    # run created by the scheduler
+    if scheduled:
+        for index, step in enumerate(steps):
+            if not get_step_is_immediate(step["scheduling"]):
+               
                 if time_match(step["scheduling"], time):
-                    command = TriggerWorkflow(pipeline_step=step_runs[index])
+                    if is_next_step_in_order(step, pipeline_run):
 
-                    return command
-                else:
-                    if pipeline_run.status != StatusExecution.PENDING:
-                        # only time match, execution out of order
-
-                        command = UpdatePipelineRunStatus(
-                            pipeline_run=pipeline_run,
-                            status=StatusExecution.PENDING,
-                        )
+                        command = TriggerWorkflow(pipeline_step=step_runs[index])
                         return command
 
-        # steps that occur imediatelly after the last one
-        if get_step_is_immediate(step["scheduling"]):
-            if is_next_step_in_order(step, pipeline_run):
-                command = TriggerWorkflow(pipeline_step=step)
+                    else:
+                        if pipeline_run.status != StatusExecution.PENDING:
+
+                            command = UpdatePipelineRunStatus(
+                                pipeline_run=pipeline_run,
+                                status=StatusExecution.PENDING,
+                            )
+                            return command
+
+            # steps that occur imediatelly after the last one
+            if get_step_is_immediate(step["scheduling"]):
+                if is_next_step_in_order(
+                    step, pipeline_run
+                ) and no_job_already_active_for_step_run(step, pipeline_run):
+                    command = TriggerWorkflow(pipeline_step=step_runs[index])
+                    return command
+
+    # run created by the coletor, only needs to check order and if theres any step
+    # of this run already running
+    else:
+        for index, step in enumerate(steps):
+            if is_next_step_in_order(
+                step, pipeline_run
+            ) and no_job_already_active_for_step_run(step, pipeline_run):
+                command = TriggerWorkflow(pipeline_step=step_runs[index])
                 return command

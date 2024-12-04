@@ -15,44 +15,60 @@ from stand.schema import PipelineRunItemResponseSchema
 
 
 async def get_latest_pipeline_step_run(run: PipelineRun) -> PipelineStepRun:
-    return next(
-        [step for step in run.steps if step.id == run.last_completed_step]
-    )
+    return next([step for step in run.steps if step.id == run.last_completed_step])
 
 
 async def get_latest_pipeline_runs(
     stand_config: typing.Dict, pipeline_ids: typing.List[int]
 ) -> typing.List[PipelineRun]:
     """"""
+
+    if len(pipeline_ids) == 0:
+        return []
     headers = {"X-Auth-Token": str(stand_config["auth_token"])}
     url = f"{stand_config['url']}/pipeline-runs"
+
     params = {
         "latest": "true",
         "pipelines": ",".join([str(x) for x in pipeline_ids]),
     }
+
     data = await retrieve_data(url, params=params, headers=headers)
 
     return PipelineRunItemResponseSchema(many=True, partial=True).load(data)
 
 
 async def get_pipelines(
-    tahiti_config: typing.Dict, days: int
+    tahiti_config: typing.Dict
 ) -> typing.Dict[int, typing.Dict]:
-    """Read pipelines from Tahiti API.
-    Don't need to read all pipelines, only those updated in the last window.
-    """
+    """Read all pipelines from Tahiti API."""
 
     tahiti_api_url = tahiti_config["url"]
-    reference = date.today() - timedelta(days=days)
+
     params = {
-        # commented out for testing
-        "after": reference.isoformat(),
-        "fields": "id,name,enabled,steps,updated",
+        "fields": "id,name,enabled,steps,updated,run_creation_method",
+        "page": 1,
+        "size": 20,
     }
     headers = {"X-Auth-Token": str(tahiti_config["auth_token"])}
     url = f"{tahiti_api_url}/pipelines"
-    data = await retrieve_data(url, params, headers)
-    return dict([[p["id"], p] for p in data["data"]])
+    all_pipelines = []
+    while True:
+
+        data = await retrieve_data(url, params, headers)
+        pipelines = data.get("data", [])
+        all_pipelines.extend(pipelines)
+
+        pagination = data.get("pagination", {})
+        current_page = pagination.get("page", 1)
+        total_pages = pagination.get("pages", 1)
+
+        if current_page >= total_pages:
+            break
+
+        params["page"] += 1
+
+    return {p["id"]: p for p in all_pipelines}
 
 
 async def get_pipeline_run(
@@ -85,9 +101,7 @@ async def retrieve_data(
         async with session.get(url, params=params) as resp:
             if resp.status != 200:
                 raise RuntimeError(
-                    gettext("Error {} while getting pipeline runs").format(
-                        resp.status
-                    )
+                    gettext("Error {} while getting pipeline runs").format(resp.status)
                 )
             return await resp.json()
 
@@ -115,12 +129,16 @@ def pipeline_steps_have_valid_schedulings(steps: typing.List):
     for step in steps:
         if "scheduling" in step and "workflow" in step:
             schedule = json.loads(step["scheduling"])
-
+            
             schedule = schedule["stepSchedule"]
-
+          
             if (
                 schedule["executeImmediately"] == "true"
-                or schedule["startDateTime"] != "null"
+                or (schedule["startDateTime"] != "null"
+               
+                and schedule["months"]!=[])
+              
+                
             ):
                 pass
             else:

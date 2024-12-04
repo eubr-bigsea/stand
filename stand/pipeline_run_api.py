@@ -98,6 +98,7 @@ class PipelineRunListApi(Resource):
         :return: A JSON object containing the list of PipelineRun instances data.
         :rtype: dict
         """
+        
         if request.args.get("fields"):
             only = [f.strip() for f in request.args.get("fields").split(",")]
         else:
@@ -109,6 +110,7 @@ class PipelineRunListApi(Resource):
         pipeline_runs = _get_pipeline_runs_query()
 
         pipelines_filter = request.args.get("pipelines")
+   
         if pipelines_filter:
             pipeline_ids = [int(x) for x in pipelines_filter.split(",")]
             pipeline_runs = pipeline_runs.filter(
@@ -332,7 +334,7 @@ class CreatePipelineRunSchema(Schema):
     id = fields.Integer(required=True)
     start = fields.DateTime(required=True)
     finish = fields.DateTime(required=True)
-
+    run_creation_method = fields.String(missing=True)
 
 class PipelineRunFromPipelineApi(Resource):
     """REST API for creating a pipeline run from pipeline"""
@@ -343,14 +345,16 @@ class PipelineRunFromPipelineApi(Resource):
             request.content_type == "application/json"
             and request.json is not None
         ):
+            
             params = CreatePipelineRunSchema().load(request.json)
             config = current_app.config["STAND_CONFIG"]
             pipeline, _ = get_pipeline_from_api(
                 config.get("services").get("tahiti"), params.get("id")
             )
+          
             try:
                 run = create_pipeline_run_from_pipeline(
-                    pipeline, Period(params.get("start"), params.get("finish"))
+                    pipeline, Period(params.get("start"), params.get("finish")),run_creation_method = params.get("run_creation_method")
                 )
             except ServiceException as se:
                 return {"status": "ERROR", "message": str(se)}, 400
@@ -359,8 +363,10 @@ class PipelineRunFromPipelineApi(Resource):
                 "message": gettext(
                     "%(name)s created with success!",
                     name=gettext("Pipeline Run"),
+                    
                 ),
                 "id": run.id,
+                "run_creation_method":run.run_creation_method
             }, 200
         else:
             return {

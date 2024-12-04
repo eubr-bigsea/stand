@@ -12,7 +12,6 @@ from stand.scheduler.commands import (
     UpdatePipelineRunStatus,
 )
 
-
 def get_pipeline_run_commands(
     updated_pipelines: typing.Dict,
     pipeline_runs: typing.List,
@@ -23,6 +22,7 @@ def get_pipeline_run_commands(
 
     commands = []
 
+    #Creating pipeline runs from pipelines that were updated/created in the last 7 days
     for pipeline in updated_pipelines.values():
         run: PipelineRun = runs.get(pipeline["id"])
 
@@ -54,13 +54,15 @@ def get_pipeline_run_commands(
             elif run.updated < datetime.strptime(
                 pipeline["updated"], "%Y-%m-%dT%H:%M:%S"
             ):
-                commands.append(
-                    UpdatePipelineInfo(
-                        pipeline_run=run, update_time=pipeline["updated"]
-                    )
-                )
+                #TODO: discuss if this will be done or not
+                pass
+                # commands.append(
+                #     UpdatePipelineInfo(
+                #         pipeline_run=run, update_time=pipeline["updated"]
+                #     )
+                # )
 
         else:
             commands.append(CreatePipelineRun(pipeline=pipeline))
-
+   
     return commands

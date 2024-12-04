@@ -99,3 +99,7 @@ tests/test_project.db
 
 # Vscode
 .vscode/
+
+*.yaml
+
+.ENV

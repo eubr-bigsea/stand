@@ -46,7 +46,7 @@ def get_workflow_from_api(config: typing.Dict, workflow_id: int) -> \
 
 
 def create_pipeline_run_from_pipeline(
-    pipeline: Pipeline, period: Period
+    pipeline: Pipeline, period: Period, run_creation_method="scheduler"
 ) -> None:
     """Create a pipeline run from a pipeline"""
     now = datetime.utcnow()
@@ -68,6 +68,7 @@ def create_pipeline_run_from_pipeline(
             comment=None,
             status=StatusExecution.PENDING,
             final_status=None,
+          
         )
 
     start = period.start.astimezone(pytz.UTC)
@@ -86,7 +87,9 @@ def create_pipeline_run_from_pipeline(
         status=StatusExecution.WAITING,
         final_status=None,
         steps=[create_step(st) for st in pipeline.steps],
+        run_creation_method = run_creation_method
     )
+    
     db.session.add(pipeline_run)
     db.session.commit()
     return pipeline_run

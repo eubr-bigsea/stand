@@ -58,7 +58,7 @@ class CreatePipelineRun(Command):
     def get_pipeline_run_start(
         self, current_time=datetime.now(), next_window_option=False
     ) -> datetime:
-        # hard coded for testing
+        # TODO: unhard code this frequency later if necessary
         # frequency = self.pipeline["execution_window"]
         frequency = "monthly"
         return getattr(self, "_get_limit_dates_" + frequency)(current_time)[0]
@@ -66,7 +66,7 @@ class CreatePipelineRun(Command):
     def get_pipeline_run_end(
         self, current_time=datetime.now(), next_window_option=False
     ) -> datetime:
-        # hard coded for testing
+        # TODO: unhard code this frequency later if necessary
         # frequency = self.pipeline["execution_window"]
         frequency = "monthly"
         return getattr(self, "_get_limit_dates_" + frequency)(current_time)[1]
@@ -96,6 +96,7 @@ class TriggerWorkflow(Command):
         headers = {"X-Auth-Token": str(stand_config["auth_token"])}
 
         url = f"{stand_config['url']}/pipeline-runs/execute"
+    
         payload = {"id": self.pipeline_step.id}
 
         logger.info("PipelineStep with id %s triggered.", self.pipeline_step)
@@ -136,4 +137,5 @@ class UpdatePipelineInfo(Command):
 
     # TODO
     async def execute(self, config):
-        logger.info("Pipeline info updated.")
+        pass
+        # logger.info("Pipeline info updated.")
