@@ -853,6 +853,11 @@ class PipelineRunCreateRequestSchema(BaseSchema):
                            validate=[OneOf(StatusExecution.values())])
     final_status = fields.String(required=False, allow_none=True,
                                  validate=[OneOf(StatusExecution.values())])
+    run_creation_method = fields.String(
+        required=False,
+        allow_none=True,
+        load_default="scheduler",
+        dump_default="scheduler")
     steps = fields.Nested(
         'stand.schema.PipelineStepRunCreateRequestSchema',
         required=True,
@@ -887,6 +892,11 @@ class PipelineRunListResponseSchema(BaseSchema):
                            validate=[OneOf(StatusExecution.values())])
     final_status = fields.String(required=False, allow_none=True,
                                  validate=[OneOf(StatusExecution.values())])
+    run_creation_method = fields.String(
+        required=False,
+        allow_none=True,
+        load_default="scheduler",
+        dump_default="scheduler")
     steps = fields.Nested(
         'stand.schema.PipelineStepRunListResponseSchema',
         required=True,
@@ -922,6 +932,11 @@ class PipelineRunItemResponseSchema(BaseSchema):
                            validate=[OneOf(StatusExecution.values())])
     final_status = fields.String(required=False, allow_none=True,
                                  validate=[OneOf(StatusExecution.values())])
+    run_creation_method = fields.String(
+        required=False,
+        allow_none=True,
+        load_default="scheduler",
+        dump_default="scheduler")
     steps = fields.Nested(
         'stand.schema.PipelineStepRunItemResponseSchema',
         required=True,
@@ -956,6 +971,11 @@ class PipelineRunCreateRequestSchema(BaseSchema):
                            validate=[OneOf(StatusExecution.values())])
     final_status = fields.String(required=False, allow_none=True,
                                  validate=[OneOf(StatusExecution.values())])
+    run_creation_method = fields.String(
+        required=False,
+        allow_none=True,
+        load_default="scheduler",
+        dump_default="scheduler")
     steps = fields.Nested(
         'stand.schema.PipelineStepRunCreateRequestSchema',
         required=True,
