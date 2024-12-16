@@ -49,6 +49,7 @@ class Pipeline:
     periodicity: str = 'monthly'
     periodicity_start: int = 1
     periodicity_interval: int = None
+    run_creation_method: str = None
 
     def __setattr__(self, prop, val):
         new_val = val
