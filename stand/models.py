@@ -159,14 +159,14 @@ class Job(db.Model):
     description = Column(String(400))
     created = Column(DateTime, default=func.now(), nullable=False)
     type = Column(
-        Enum(JobType, name="JobTypeEnumType"),
+        Enum(*list(JobType.values()), name="JobTypeEnumType"),
         default=JobType.NORMAL,
         nullable=False,
     )
     started = Column(DateTime)
     finished = Column(DateTime)
     status = Column(
-        Enum(StatusExecution, name="StatusExecutionEnumType"),
+        Enum(*list(StatusExecution.values()), name="StatusExecutionEnumType"),
         default=StatusExecution.WAITING,
         nullable=False,
     )
@@ -181,7 +181,8 @@ class Job(db.Model):
     source_code = Column(Text(4294000000))
     job_key = Column(String(200))
     trigger_type = Column(
-        Enum(TriggerType, name="TriggerTypeEnumType"), default=TriggerType.MANUAL
+        Enum(*list(TriggerType.values()), name="TriggerTypeEnumType"),
+        default=TriggerType.MANUAL,
     )
 
     # Associations
@@ -230,7 +231,8 @@ class JobStep(db.Model):
     task_name = Column(String(200))
     date = Column(DateTime, nullable=False)
     status = Column(
-        Enum(StatusExecution, name="StatusExecutionEnumType"), nullable=False
+        Enum(*list(StatusExecution.values()), name="StatusExecutionEnumType"),
+        nullable=False,
     )
     task_id = Column(String(200), nullable=False)
     operation_id = Column(Integer, nullable=False)
@@ -264,7 +266,8 @@ class JobStepLog(db.Model):
     id = Column(Integer, primary_key=True)
     level = Column(String(200), nullable=False)
     status = Column(
-        Enum(StatusExecution, name="StatusExecutionEnumType"), nullable=False
+        Enum(*list(StatusExecution.values()), name="StatusExecutionEnumType"),
+        nullable=False,
     )
     date = Column(DateTime, nullable=False)
     message = Column(Text(4294000000), nullable=False)
@@ -298,7 +301,10 @@ class JobResult(db.Model):
     task_id = Column(String(200), nullable=False)
     operation_id = Column(Integer, nullable=False)
     title = Column(String(200))
-    type = Column(Enum(ResultType, name="ResultTypeEnumType"), nullable=False)
+    type = Column(
+        Enum(*list(ResultType.values()), name="ResultTypeEnumType"),
+        nullable=False,
+    )
     content = Column(Text(4294000000))
 
     # Associations
@@ -333,7 +339,7 @@ class Cluster(db.Model):
     description = Column(String(200), nullable=False)
     enabled = Column(Boolean, nullable=False)
     type = Column(
-        Enum(ClusterType, name="ClusterTypeEnumType"),
+        Enum(*list(ClusterType.values()), name="ClusterTypeEnumType"),
         default=ClusterType.SPARK_LOCAL,
         nullable=False,
     )
@@ -426,7 +432,9 @@ class ClusterAccess(db.Model):
     # Fields
     id = Column(Integer, primary_key=True)
     permission = Column(
-        Enum(ClusterPermission, name="ClusterPermissionEnumType"),
+        Enum(
+            *list(ClusterPermission.values()), name="ClusterPermissionEnumType"
+        ),
         default=ClusterPermission.EXECUTE,
         nullable=False,
     )
@@ -540,7 +548,8 @@ class ExecutionPermission(db.Model):
     # Fields
     id = Column(Integer, primary_key=True)
     permission = Column(
-        Enum(PermissionType, name="PermissionTypeEnumType"), nullable=False
+        Enum(*list(PermissionType.values()), name="PermissionTypeEnumType"),
+        nullable=False,
     )
     user_id = Column(Integer, nullable=False)
 
@@ -572,9 +581,12 @@ class PipelineRun(db.Model):
         onupdate=datetime.datetime.utcnow,
     )
     status = Column(
-        Enum(StatusExecution, name="StatusExecutionEnumType"), nullable=False
+        Enum(*list(StatusExecution.values()), name="StatusExecutionEnumType"),
+        nullable=False,
     )
-    final_status = Column(Enum(StatusExecution, name="StatusExecutionEnumType"))
+    final_status = Column(
+        Enum(*list(StatusExecution.values()), name="StatusExecutionEnumType")
+    )
 
     # Associations
     steps = relationship(
@@ -607,9 +619,12 @@ class PipelineStepRun(db.Model):
     order = Column(Integer, default=0, nullable=False)
     comment = Column(String(200))
     status = Column(
-        Enum(StatusExecution, name="StatusExecutionEnumType"), nullable=False
+        Enum(*list(StatusExecution.values()), name="StatusExecutionEnumType"),
+        nullable=False,
     )
-    final_status = Column(Enum(StatusExecution, name="StatusExecutionEnumType"))
+    final_status = Column(
+        Enum(*list(StatusExecution.values()), name="StatusExecutionEnumType")
+    )
 
     # Associations
     jobs = relationship("Job")
