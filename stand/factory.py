@@ -1,6 +1,8 @@
 import datetime
 import sys
 from marshmallow import ValidationError
+import sqlalchemy
+import sqlalchemy.orm
 from werkzeug.exceptions import HTTPException
 import json
 import logging
@@ -8,6 +10,7 @@ import logging.config
 
 import os
 import socketio
+from sqlalchemy import event
 from babel import negotiate_locale
 from flask import Flask, g, request
 from flask_babel import Babel, gettext
@@ -510,3 +513,39 @@ def create_redis_store(_app):
 
 def create_services(_app):
     pass
+
+
+def on_job_before_update(
+    mapper,
+    connection: sqlalchemy.engine.base.Connection,
+    target: Job,
+):
+    payload = {
+        "status": target.status, "pipeline_step_id": target.pipeline_step_run_id,
+        "updated": datetime.datetime.utcnow()
+    },
+    connection.execute(
+        sqlalchemy.text(
+            """
+            UPDATE pipeline_step_run
+            SET status = :status, updated = :updated
+            WHERE id = :pipeline_step_id"""
+        ), payload
+    )
+    connection.execute(
+        sqlalchemy.text(
+            """
+            UPDATE pipeline_run
+            SET status = :status, updated = :updated
+            WHERE id = (
+                SELECT pipeline_run_id
+                FROM pipeline_step_run
+                WHERE id = :pipeline_step_id
+            )
+            """
+        ), payload
+    )
+    log.info("Updating Job %s", target.id)
+
+
+event.listen(Job, "before_update", on_job_before_update)
