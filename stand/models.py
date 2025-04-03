@@ -587,6 +587,7 @@ class PipelineRun(db.Model):
     final_status = Column(
         Enum(*list(StatusExecution.values()), name="StatusExecutionEnumType")
     )
+    run_creation_method = Column(String(50), default="scheduler", nullable=False)
 
     # Associations
     steps = relationship(
