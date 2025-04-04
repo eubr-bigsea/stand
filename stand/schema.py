@@ -1457,3 +1457,77 @@ class PipelineStepRunLogCreateRequestSchema(BaseSchema):
     class Meta:
         ordered = True
         unknown = EXCLUDE
+
+
+class PipelineRunContextDataCreateRequestSchema(BaseSchema):
+    """JSON serialization schema for creating an instance"""
+
+    name = fields.String(required=True)
+    value = fields.String(required=True)
+    pipeline_run = fields.Nested(
+        "stand.schema.PipelineRunCreateRequestSchema", required=True
+    )
+
+    # noinspection PyUnresolvedReferences
+    @post_load
+    def make_object(self, data, **kwargs):
+        """Deserialize data into an instance of PipelineRunContextData"""
+        return PipelineRunContextData(**data)
+
+    class Meta:
+        ordered = True
+        unknown = EXCLUDE
+
+
+class PipelineRunContextDataListResponseSchema(BaseSchema):
+    """JSON serialization schema for serializing a list of objects"""
+
+    id = fields.Integer(required=True)
+    name = fields.String(required=True)
+    value = fields.String(required=True)
+
+    # noinspection PyUnresolvedReferences
+    @post_load
+    def make_object(self, data, **kwargs):
+        """Deserialize data into an instance of PipelineRunContextData"""
+        return PipelineRunContextData(**data)
+
+    class Meta:
+        ordered = True
+        unknown = EXCLUDE
+
+
+class PipelineRunContextDataItemResponseSchema(BaseSchema):
+    """JSON serialization schema for serializing a single object"""
+
+    id = fields.Integer(required=True)
+    name = fields.String(required=True)
+    value = fields.String(required=True)
+
+    # noinspection PyUnresolvedReferences
+    @post_load
+    def make_object(self, data, **kwargs):
+        """Deserialize data into an instance of PipelineRunContextData"""
+        return PipelineRunContextData(**data)
+
+    class Meta:
+        ordered = True
+        unknown = EXCLUDE
+
+
+class PipelineRunContextDataCreateRequestSchema(BaseSchema):
+    """JSON serialization schema for creating an instance"""
+
+    id = fields.Integer(allow_none=True)
+    name = fields.String(required=True)
+    value = fields.String(required=True)
+
+    # noinspection PyUnresolvedReferences
+    @post_load
+    def make_object(self, data, **kwargs):
+        """Deserialize data into an instance of PipelineRunContextData"""
+        return PipelineRunContextData(**data)
+
+    class Meta:
+        ordered = True
+        unknown = EXCLUDE
