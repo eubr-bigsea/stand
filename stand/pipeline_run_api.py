@@ -9,12 +9,13 @@ from flask import g as flask_g
 from flask_babel import gettext
 from flask_restful import Resource
 from marshmallow import Schema, fields
+from pkg_resources import require
 import pytz
 from sqlalchemy import and_, func, or_
 
 from stand.services import ServiceException
 from stand.app_auth import requires_auth
-from stand.models import Job, PipelineRun, PipelineStepRun, StatusExecution, db
+from stand.models import Job, PipelineRun, PipelineRunContextData, PipelineStepRun, StatusExecution, db
 from stand.models_extra import Period
 from stand.schema import (
     PipelineRunCreateRequestSchema,
@@ -98,7 +99,7 @@ class PipelineRunListApi(Resource):
         :return: A JSON object containing the list of PipelineRun instances data.
         :rtype: dict
         """
-        
+
         if request.args.get("fields"):
             only = [f.strip() for f in request.args.get("fields").split(",")]
         else:
@@ -110,7 +111,7 @@ class PipelineRunListApi(Resource):
         pipeline_runs = _get_pipeline_runs_query()
 
         pipelines_filter = request.args.get("pipelines")
-   
+
         if pipelines_filter:
             pipeline_ids = [int(x) for x in pipelines_filter.split(",")]
             pipeline_runs = pipeline_runs.filter(
@@ -329,12 +330,17 @@ class PipelineRunDetailApi(Resource):
                 }
         return result, return_code
 
+class PipelineRunContextSchema(Schema):
+    pipeline_run_id = fields.Integer(required=False)
+    name = fields.String(required=True)
+    value = fields.String(required=True)
 
 class CreatePipelineRunSchema(Schema):
     id = fields.Integer(required=True)
     start = fields.DateTime(required=True)
     finish = fields.DateTime(required=True)
     run_creation_method = fields.String(missing=True)
+    context = fields.Nested(PipelineRunContextSchema, required=False, many=True)
 
 class PipelineRunFromPipelineApi(Resource):
     """REST API for creating a pipeline run from pipeline"""
@@ -345,16 +351,17 @@ class PipelineRunFromPipelineApi(Resource):
             request.content_type == "application/json"
             and request.json is not None
         ):
-            
+
             params = CreatePipelineRunSchema().load(request.json)
             config = current_app.config["STAND_CONFIG"]
             pipeline, _ = get_pipeline_from_api(
                 config.get("services").get("tahiti"), params.get("id")
             )
-          
+
             try:
                 run = create_pipeline_run_from_pipeline(
-                    pipeline, Period(params.get("start"), params.get("finish")),run_creation_method = params.get("run_creation_method")
+                    pipeline, Period(params.get("start"), params.get("finish")),run_creation_method = params.get("run_creation_method"),
+                    context = params.get("context")
                 )
             except ServiceException as se:
                 return {"status": "ERROR", "message": str(se)}, 400
@@ -363,7 +370,7 @@ class PipelineRunFromPipelineApi(Resource):
                 "message": gettext(
                     "%(name)s created with success!",
                     name=gettext("Pipeline Run"),
-                    
+
                 ),
                 "id": run.id,
                 "run_creation_method":run.run_creation_method
@@ -372,6 +379,78 @@ class PipelineRunFromPipelineApi(Resource):
             return {
                 "status": "ERROR",
                 "message": "Unsupported content type",
+            }, 415
+
+
+class SetPipelineRunContextDataApi(Resource):
+    """REST API for setting context data for a pipeline run"""
+
+    @requires_auth
+    def post(self):
+        if (
+            request.content_type == "application/json"
+            and request.json is not None
+        ):
+            params = PipelineRunContextSchema().from_dict(request.json)
+            try:
+                name = params.name
+                value  = params.value
+                run_id  = params.pipeline_run_id
+                ctx = PipelineRunContextData.query.filter(
+                    PipelineRunContextData.pipeline_run_id==run_id,
+                    PipelineRunContextData.name==name
+                ).first()
+                if ctx is None:
+                    ctx = PipelineRunContextData(
+                        pipeline_run_id=run_id,
+                        name=name,
+                        value=value
+                    )
+                else:
+                    ctx.pipeline_run_id=run_id
+                    ctx.name=name
+                    ctx.value=value
+                db.session.add(ctx)
+                db.session.commit()
+            except ServiceException as se:
+                return {"status": "ERROR", "message": str(se)}, 400
+            return {
+                "status": "OK",
+                "message": gettext(
+                    "Context set",
+                )
+            }, 200
+        else:
+            return {
+                "status": "ERROR",
+                "message": "Unsupported content type",
+            }, 415
+
+
+class GetPipelineRunContextDataApi(Resource):
+    """REST API for setting context data for a pipeline run"""
+
+    @requires_auth
+    @requires_auth
+    def get(self, pipeline_run_id: int, name: str):
+        if name and pipeline_run_id:
+            try:
+                ctx = PipelineRunContextData.query.filter(
+                    PipelineRunContextData.pipeline_run_id==pipeline_run_id,
+                    PipelineRunContextData.name==name
+                ).first()
+                if ctx is None:
+                    return {"status": "Not found"}, 404
+                else:
+                    return {"value": ctx.value}, 200
+
+            except ServiceException as se:
+                return {"status": "ERROR", "message": str(se)}, 400
+
+        else:
+            return {
+                "status": "ERROR",
+                "message": "Parameter not informed",
             }, 415
 
 

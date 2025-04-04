@@ -595,6 +595,11 @@ class PipelineRun(db.Model):
         back_populates="pipeline_run",
         cascade="all, delete-orphan",
     )
+    context_data = relationship(
+        "PipelineRunContextData",
+        back_populates="pipeline_run",
+        cascade="all, delete-orphan",
+    )
 
     def __str__(self):
         return self.start
@@ -685,6 +690,40 @@ class PipelineStepRunLog(db.Model):
 
     def __str__(self):
         return self.created
+
+    def __repr__(self):
+        return "<Instance {}: {}>".format(self.__class__, self.id)
+
+
+class PipelineRunContextData(db.Model):
+    """Pipeline run context data"""
+
+    __tablename__ = "pipeline_run_context_data"
+
+    # Fields
+    id = Column(Integer, primary_key=True)
+    name = Column(String(200), nullable=False)
+    value = Column(String(4000), nullable=False)
+
+    # Associations
+    pipeline_run_id = Column(
+        Integer,
+        ForeignKey(
+            "pipeline_run.id",
+            name="fk_pipeline_run_context_data_pipeline_run_id",
+        ),
+        nullable=False,
+        index=True,
+    )
+    pipeline_run = relationship(
+        "PipelineRun",
+        overlaps="context_data",
+        foreign_keys=[pipeline_run_id],
+        back_populates="context_data",
+    )
+
+    def __str__(self):
+        return self.name
 
     def __repr__(self):
         return "<Instance {}: {}>".format(self.__class__, self.id)

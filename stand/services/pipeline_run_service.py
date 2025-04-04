@@ -6,7 +6,7 @@ import requests
 from flask_babel import gettext
 
 from stand.app_auth import User
-from stand.models import Cluster, Job, JobType, PipelineRun, PipelineStepRun, StatusExecution, db
+from stand.models import Cluster, Job, JobType, PipelineRun, PipelineRunContextData, PipelineStepRun, StatusExecution, db
 from stand.models_extra import Period, Pipeline, PipelineStep, Workflow
 from stand.services import ServiceException
 from stand.services.job_services import JobService
@@ -46,7 +46,8 @@ def get_workflow_from_api(config: typing.Dict, workflow_id: int) -> \
 
 
 def create_pipeline_run_from_pipeline(
-    pipeline: Pipeline, period: Period, run_creation_method="scheduler"
+    pipeline: Pipeline, period: Period, run_creation_method="scheduler",
+    context=None,
 ) -> None:
     """Create a pipeline run from a pipeline"""
     now = datetime.utcnow()
@@ -68,11 +69,18 @@ def create_pipeline_run_from_pipeline(
             comment=None,
             status=StatusExecution.PENDING,
             final_status=None,
-          
+
         )
 
     start = period.start.astimezone(pytz.UTC)
     finish = period.finish.astimezone(pytz.UTC)
+    if context is None or len(context) == 0:
+        context_data=None
+    else:
+        context_data = [
+            PipelineRunContextData(name=ctx.get('name'), value=ctx.get('value'))
+            for ctx in context
+        ]
     pipeline_run = PipelineRun(
         start=start,
         finish=finish,
@@ -87,9 +95,10 @@ def create_pipeline_run_from_pipeline(
         status=StatusExecution.WAITING,
         final_status=None,
         steps=[create_step(st) for st in pipeline.steps],
-        run_creation_method = run_creation_method
+        run_creation_method = run_creation_method,
+        context_data=context_data
     )
-    
+
     db.session.add(pipeline_run)
     db.session.commit()
     return pipeline_run
@@ -119,6 +128,19 @@ def execute_pipeline_step_run(config: typing.Dict,
             ]
             workflow["variables"].append(run_ref)
         log.info(gettext('Set "ref" variable to {}').format(run_ref))
+
+        run_id = {
+            "name": "pipeline_run_id",
+            "type": "INT",
+            "default_value": pipeline_run.id,
+        }
+        step_id = {
+            "name": "pipeline_run_step_id",
+            "type": "INT",
+            "default_value": pipeline_step_run_id,
+        }
+        workflow["variables"].append(run_id)
+        workflow["variables"].append(step_id)
 
         job = Job(
                 created=now,
