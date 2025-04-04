@@ -41,7 +41,7 @@ def get_pipeline_from_api(config: typing.Dict, pipeline_id: int) -> \
     return get_resource_from_api(config, "pipeline", pipeline_id)
 
 def get_workflow_from_api(config: typing.Dict, workflow_id: int) -> \
-        typing.Tuple[Workflow, typing.Dict]:
+        typing.Tuple[typing.Dict, typing.Dict]:
     return get_resource_from_api(config, "workflow", workflow_id)
 
 
@@ -121,12 +121,12 @@ def execute_pipeline_step_run(config: typing.Dict,
             "default_value": pipeline_run.start.date().isoformat(),
         }
         if not workflow.get("variables"):
-            workflow["variables"] = [run_ref]
+            variables = [run_ref]
         else:
-            workflow["variables"] = [
+            variables = [
                 v for v in workflow["variables"] if v.get("name") != "ref"
             ]
-            workflow["variables"].append(run_ref)
+            variables.append(run_ref)
         log.info(gettext('Set "ref" variable to {}').format(run_ref))
 
         run_id = {
@@ -139,9 +139,19 @@ def execute_pipeline_step_run(config: typing.Dict,
             "type": "INT",
             "default_value": pipeline_step_run_id,
         }
-        workflow["variables"].append(run_id)
-        workflow["variables"].append(step_id)
+        variables.append(run_id)
+        variables.append(step_id)
 
+        # Set the pipeline context as workflow variables
+        for ctx in pipeline_run.context_data:
+            variables.append({
+                "name":ctx.name,
+                "value": ctx.value,
+                "type": "STRING"
+            }
+            )
+
+        workflow["variables"] = variables
         job = Job(
                 created=now,
                 status=StatusExecution.WAITING,
