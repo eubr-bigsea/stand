@@ -147,6 +147,7 @@ def trigger_scheduled_pipeline_steps(
     scheduled: bool
 ):
 
+ 
     # run created by the scheduler
     if scheduled:
         for index, step in enumerate(steps):
@@ -176,7 +177,7 @@ def trigger_scheduled_pipeline_steps(
                     return command
 
     # run created by the coletor, only needs to check order and if theres any step
-    # of this run already running
+    # of this run already running. 
     else:
         for index, step in enumerate(steps):
             if is_next_step_in_order(

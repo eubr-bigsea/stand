@@ -10,6 +10,7 @@ import yaml
 from stand.models import (
     PipelineRun,
     PipelineStepRun,
+    StatusExecution,
 )
 from stand.schema import PipelineRunItemResponseSchema
 
@@ -19,23 +20,53 @@ async def get_latest_pipeline_step_run(run: PipelineRun) -> PipelineStepRun:
 
 
 async def get_latest_pipeline_runs(
-    stand_config: typing.Dict, pipeline_ids: typing.List[int]
+    stand_config: typing.Dict, pipeline_ids: typing.List[int],latest_only= True
 ) -> typing.List[PipelineRun]:
-    """"""
-
     if len(pipeline_ids) == 0:
         return []
+
     headers = {"X-Auth-Token": str(stand_config["auth_token"])}
     url = f"{stand_config['url']}/pipeline-runs"
 
-    params = {
+    page = 1
+    page_size = 20
+    all_runs = []
+    if not latest_only:
+        while True:
+            params = {
+                "pipelines": ",".join([str(x) for x in pipeline_ids]),
+                "page": page,
+                "size": page_size,
+            }
+
+            data = await retrieve_data(url, params=params, headers=headers)
+
+        
+            page_data = data.get("data", [])
+            if not page_data:
+                break
+
+        
+            runs = PipelineRunItemResponseSchema(many=True, partial=True).load(page_data)
+            all_runs.extend(runs)
+
+            pagination = data.get("pagination", {})
+            total_pages = pagination.get("pages", 1)
+
+            if page >= total_pages:
+                break
+            page += 1
+
+        return all_runs
+    else:
+        params = {
         "latest": "true",
         "pipelines": ",".join([str(x) for x in pipeline_ids]),
-    }
+        }
 
-    data = await retrieve_data(url, params=params, headers=headers)
+        data = await retrieve_data(url, params=params, headers=headers)
 
-    return PipelineRunItemResponseSchema(many=True, partial=True).load(data)
+        return PipelineRunItemResponseSchema(many=True, partial=True).load(data)
 
 
 async def get_pipelines(
@@ -129,18 +160,16 @@ def pipeline_steps_have_valid_schedulings(steps: typing.List):
     for step in steps:
         if "scheduling" in step and "workflow" in step:
             schedule = json.loads(step["scheduling"])
-            
             schedule = schedule["stepSchedule"]
           
             if (
                 schedule["executeImmediately"] == "true"
                 or (schedule["startDateTime"] != "null"
                
-                and schedule["months"]!=[])
-              
-                
+                and schedule["months"]!=[]) 
             ):
                 pass
+            
             else:
                 return False
         else:

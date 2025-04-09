@@ -117,8 +117,8 @@ class PipelineRunListApi(Resource):
                 PipelineRun.pipeline_id.in_(pipeline_ids)
             )
 
+    
         latest_filter = request.args.get("latest")
-
         if latest_filter in ("true", 1, "True", "1"):
             subquery = db.session.query(
                 PipelineRun.pipeline_id,
