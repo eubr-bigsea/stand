@@ -161,11 +161,19 @@ def update_pipeline_run(job: Job) -> None:
     """ Update associated pipeline step run, if any """
 
     job.pipeline_step_run.status = job.status
-    if job.status in (EXEC.ERROR, EXEC.CANCELED, EXEC.INTERRUPTED):
+    
+    #if the run was  completed once, only change the status of the run 
+    # to error if an error occur otherwise ignore
+    if job.pipeline_run.status in (EXEC.COMPLETED,EXEC.CANCELED, ):
+        if job.status in (EXEC.ERROR,):
+            job.pipeline_run.status = job.status
+            
+    elif job.status in (EXEC.ERROR, EXEC.CANCELED, EXEC.INTERRUPTED):
         job.pipeline_run.status = job.status
         job.pipeline_run.final_status = job.status
-    elif job.status in (EXEC.COMPLETED, ):
+        
 
+    elif job.status in (EXEC.COMPLETED, ):
         # Test if the step is the last one
         step_order = job.pipeline_step_run.order
         job.pipeline_run.last_executed_step = step_order
@@ -179,7 +187,7 @@ def update_pipeline_run(job: Job) -> None:
                         EXEC.WAITING_INTERVENTION):
         pass # Ignore
     elif job.status in (EXEC.RUNNING, ):
-        pass # FIXME
+        pass # Ignore
 
     db.session.add(job.pipeline_step_run)
     db.session.add(job.pipeline_run)

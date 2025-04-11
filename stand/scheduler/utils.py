@@ -56,7 +56,7 @@ async def get_latest_pipeline_runs(
             if page >= total_pages:
                 break
             page += 1
-
+        
         return all_runs
     else:
         params = {

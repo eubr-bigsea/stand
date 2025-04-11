@@ -182,6 +182,6 @@ def trigger_scheduled_pipeline_steps(
         for index, step in enumerate(steps):
             if is_next_step_in_order(
                 step, pipeline_run
-            ) and no_job_already_active_for_step_run(step, pipeline_run):
+            ) and no_job_already_active_for_step_run(step, pipeline_run) and pipeline_run.status not in (StatusExecution.ERROR,StatusExecution.CANCELED):
                 command = TriggerWorkflow(pipeline_step=step_runs[index])
                 return command
