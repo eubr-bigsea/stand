@@ -161,28 +161,46 @@ def update_pipeline_run(job: Job) -> None:
     """ Update associated pipeline step run, if any """
 
     job.pipeline_step_run.status = job.status
-    if job.status in (EXEC.ERROR, EXEC.CANCELED, EXEC.INTERRUPTED):
-        job.pipeline_run.status = job.status
-        job.pipeline_run.final_status = job.status
-    elif job.status in (EXEC.COMPLETED, ):
 
-        # Test if the step is the last one
-        step_order = job.pipeline_step_run.order
+    step_order = job.pipeline_step_run.order
+    if job.status == EXEC.COMPLETED and job.pipeline_run.last_executed_step < step_order:
         job.pipeline_run.last_executed_step = step_order
-        if step_order == len(job.pipeline_run.steps):
-            job.pipeline_run.status = EXEC.COMPLETED
-        else:
-            #job completed should make pipeline run go to waiting
-            job.pipeline_run.status = EXEC.WAITING
 
-    elif job.status in (EXEC.PENDING, EXEC.WAITING,
-                        EXEC.WAITING_INTERVENTION):
-        pass # Ignore
-    elif job.status in (EXEC.RUNNING, ):
-        pass # FIXME
+    last_step = job.pipeline_run.last_executed_step
+
+ 
+    step_statuses = {
+        step.order: (job.status if step.id == job.pipeline_step_run.id else step.status)
+        for step in job.pipeline_run.steps
+    }
+
+    all_statuses = list(step_statuses.values())
+
+    all_prior_completed = all(
+        step_statuses[o] == EXEC.COMPLETED
+        for o in step_statuses
+        if o < last_step
+    )
+    all_after_pending = all(
+        step_statuses[o] == EXEC.PENDING
+        for o in step_statuses
+        if o >= last_step
+    )
+
+    if EXEC.RUNNING in all_statuses:
+        job.pipeline_run.status = EXEC.RUNNING
+    elif EXEC.ERROR in all_statuses:
+        job.pipeline_run.status = EXEC.ERROR
+    elif all_prior_completed and all_after_pending:
+        job.pipeline_run.status = EXEC.WAITING
+    elif all(status == EXEC.COMPLETED for status in all_statuses):
+        job.pipeline_run.status = EXEC.COMPLETED
+    else:
+        job.pipeline_run.status = EXEC.PENDING
 
     db.session.add(job.pipeline_step_run)
     db.session.add(job.pipeline_run)
+
     
 def change_pipeline_run_status(run: PipelineRun, status: StatusExecution,
                                emit: callable) -> None:
