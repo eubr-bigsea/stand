@@ -6,6 +6,9 @@ from datetime import timezone
 from stand.scheduler.trigger_scheduled_jobs import (
     trigger_scheduled_pipeline_steps,
 )
+from stand.models import (
+    StatusExecution,
+)
 from stand.scheduler.update_pipeline_runs import get_pipeline_run_commands
 from stand.scheduler.utils import (
     get_latest_pipeline_runs,
@@ -54,8 +57,7 @@ async def execute(config, current_time=None):
         config, valid_schedule_pipelines
     )
     if logger.isEnabledFor(logging.INFO):
-    
-        logger.info("fetched %s active pipelines runs.", len(active_pipeline_runs))
+        logger.info("fetched %s active and scheduled pipelines runs.", len(active_pipeline_runs))
 
     # update pipeline runs for scheduled pipelines
     update_pipeline_runs_commands = get_pipeline_run_commands(
@@ -78,8 +80,10 @@ async def execute(config, current_time=None):
 
     # fetching pipeline runs created by the API
     active_pipeline_runs = await fetch_active_pipeline_runs(
-        config, unvalid_schedule_pipelines
+        config, unvalid_schedule_pipelines,latest_only=False
     )
+    if logger.isEnabledFor(logging.INFO):
+        logger.info("fetched %s active and API created pipelines runs.", len(active_pipeline_runs))
 
     # triggering pipeline steps for non scheduled pipelines (pipeline runs created by api)
     trigger_commands = prepare_trigger_commands(
@@ -118,11 +122,13 @@ def filter_non_valid_schedule_pipelines(updated_pipelines):
     }
 
 
-async def fetch_active_pipeline_runs(config, valid_schedule_pipelines):
+async def fetch_active_pipeline_runs(config, valid_schedule_pipelines,latest_only=True):
     """Fetches the latest pipeline runs for valid pipelines."""
     return await get_latest_pipeline_runs(
+       
         config["stand"]["services"]["stand"],
         pipeline_ids=valid_schedule_pipelines.keys(),
+        latest_only=latest_only
     )
 
 
@@ -134,6 +140,16 @@ def prepare_trigger_commands(
     for run in active_pipeline_runs:
         step_infos = valid_schedule_pipelines[run.pipeline_id]["steps"]
         step_runs = [step for step in run.steps]
+        if  run.status in(StatusExecution.COMPLETED, StatusExecution.CANCELED,StatusExecution.ERROR):
+            continue
+        if(len(step_infos)!=len(step_runs)):
+            if logger.isEnabledFor(logging.INFO):
+                log_message = (
+                    f"Pipeline run {run.id} and its base Pipeline {run.pipeline_id} don't have the same number of steps.The pipeline's steps were changed after the run was created. This run will be ignored until a user manually complete it or cancel it"
+                )
+                logger.info(log_message)
+            continue
+      
         new_command = trigger_scheduled_pipeline_steps(
             pipeline_run=run,
             time=current_time,
