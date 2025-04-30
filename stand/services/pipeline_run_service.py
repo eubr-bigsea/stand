@@ -75,7 +75,7 @@ def create_pipeline_run_from_pipeline(
     start = period.start.astimezone(pytz.UTC)
     finish = period.finish.astimezone(pytz.UTC)
     if context is None or len(context) == 0:
-        context_data=None
+        context_data=[]
     else:
         context_data = [
             PipelineRunContextData(name=ctx.get('name'), value=ctx.get('value'))
