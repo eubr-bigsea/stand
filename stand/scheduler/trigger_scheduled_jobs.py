@@ -107,6 +107,9 @@ def get_step_is_immediate(scheduling) -> bool:
     parsed_scheduling = json.loads(scheduling)
     return parsed_scheduling["stepSchedule"]["executeImmediately"]
 
+def get_step_is_user_triggered(scheduling)->bool:
+    parsed_scheduling = json.loads(scheduling)
+    return parsed_scheduling["stepSchedule"]["frequency"] == "user"
 
 def get_step_start_time(scheduling) -> datetime:
     parsed_scheduling = json.loads(scheduling)
@@ -180,8 +183,13 @@ def trigger_scheduled_pipeline_steps(
     # of this run already running. 
     else:
         for index, step in enumerate(steps):
-            if is_next_step_in_order(
-                step, pipeline_run
-            ) and no_job_already_active_for_step_run(step, pipeline_run) and pipeline_run.status not in (StatusExecution.ERROR,StatusExecution.CANCELED):
-                command = TriggerWorkflow(pipeline_step=step_runs[index])
-                return command
+            if get_step_is_user_triggered(step["scheduling"]):
+                continue
+
+            is_in_order = is_next_step_in_order(step, pipeline_run)
+            is_step_free = no_job_already_active_for_step_run(step, pipeline_run)
+            is_pipeline_active = pipeline_run.status not in (StatusExecution.ERROR, StatusExecution.CANCELED)
+
+            if is_in_order and is_step_free and is_pipeline_active:
+                return TriggerWorkflow(pipeline_step=step_runs[index])
+    
