@@ -183,7 +183,7 @@ def trigger_scheduled_pipeline_steps(
     # of this run already running. 
     else:
         for index, step in enumerate(steps):
-            if get_step_is_user_triggered(step["scheduling"]):
+            if "scheduling" in step and get_step_is_user_triggered(step["scheduling"]):
                 continue
 
             is_in_order = is_next_step_in_order(step, pipeline_run)
