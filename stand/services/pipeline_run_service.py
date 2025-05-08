@@ -1,4 +1,5 @@
 import typing
+import json
 from datetime import datetime
 
 import pytz
@@ -59,6 +60,7 @@ def create_pipeline_run_from_pipeline(
                     "At least a pipeline step is not associated to a workflow"
                 )
             )
+        scheduling = json.loads(st.scheduling)
         return PipelineStepRun(
             name=st.name,
             created=now,
@@ -66,6 +68,7 @@ def create_pipeline_run_from_pipeline(
             workflow_id=st.workflow.id,
             retries=0,
             order=st.order,
+            trigger_mode=scheduling.get('stepSchedule', {}).get('frequency', 'manual'),
             comment=None,
             status=StatusExecution.PENDING,
             final_status=None,

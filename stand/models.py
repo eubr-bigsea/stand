@@ -624,6 +624,7 @@ class PipelineStepRun(db.Model):
     retries = Column(Integer, default=0, nullable=False)
     order = Column(Integer, default=0, nullable=False)
     comment = Column(String(200))
+    trigger_mode = Column(String(100))
     status = Column(
         Enum(*list(StatusExecution.values()), name="StatusExecutionEnumType"),
         nullable=False,

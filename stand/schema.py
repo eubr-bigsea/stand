@@ -1151,6 +1151,7 @@ class PipelineStepRunCreateRequestSchema(BaseSchema):
         required=False, allow_none=True, load_default=0, dump_default=0
     )
     comment = fields.String(required=False, allow_none=True)
+    trigger_mode = fields.String(required=False, allow_none=True)
     status = fields.String(
         required=True, validate=[OneOf(StatusExecution.values())]
     )
@@ -1215,6 +1216,7 @@ class PipelineStepRunListResponseSchema(BaseSchema):
         required=False, allow_none=True, load_default=0, dump_default=0
     )
     comment = fields.String(required=False, allow_none=True)
+    trigger_mode = fields.String(required=False, allow_none=True)
     status = fields.String(
         required=True, validate=[OneOf(StatusExecution.values())]
     )
@@ -1276,6 +1278,7 @@ class PipelineStepRunItemResponseSchema(BaseSchema):
         required=False, allow_none=True, load_default=0, dump_default=0
     )
     comment = fields.String(required=False, allow_none=True)
+    trigger_mode = fields.String(required=False, allow_none=True)
     status = fields.String(
         required=True, validate=[OneOf(StatusExecution.values())]
     )
@@ -1337,6 +1340,7 @@ class PipelineStepRunCreateRequestSchema(BaseSchema):
         required=False, allow_none=True, load_default=0, dump_default=0
     )
     comment = fields.String(required=False, allow_none=True)
+    trigger_mode = fields.String(required=False, allow_none=True)
     status = fields.String(
         required=True, validate=[OneOf(StatusExecution.values())]
     )
