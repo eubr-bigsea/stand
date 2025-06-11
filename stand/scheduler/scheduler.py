@@ -5,6 +5,7 @@ from datetime import datetime
 from datetime import timezone
 from stand.scheduler.trigger_scheduled_jobs import (
     trigger_scheduled_pipeline_steps,
+    get_step_is_user_triggered
 )
 from stand.models import (
     StatusExecution,
@@ -22,11 +23,12 @@ logger = logging.getLogger(__name__)
 
 
 async def check_and_execute(config):
+    current_queue= []
     while True:
         current_time = datetime.now(timezone.utc)
         logger.info("Checking scheduler. Now = %s", current_time.isoformat())
         try:
-            await execute(config, current_time=current_time)
+            current_queue=  await execute(config,current_queue= current_queue,current_time=current_time)
         except Exception as e:
             logger.exception(e)
 
@@ -40,13 +42,13 @@ async def check_and_execute(config):
 
 
 
-async def execute(config, current_time=None):
+async def execute(config,current_queue, current_time=None):
     current_time = current_time or datetime.now(timezone.utc)
 
     # fetch pipelines and filter valid ones
     updated_pipelines = await get_pipelines(config["stand"]["services"]["tahiti"])
     valid_schedule_pipelines = filter_valid_schedule_pipelines(updated_pipelines)
-    unvalid_schedule_pipelines = filter_non_valid_schedule_pipelines(updated_pipelines)
+    invalid_schedule_pipelines = filter_non_valid_schedule_pipelines(updated_pipelines)
 
     if logger.isEnabledFor(logging.INFO):
         
@@ -78,19 +80,23 @@ async def execute(config, current_time=None):
     )
     await execute_commands(trigger_commands, config, step_logging=True)
 
-    # fetching pipeline runs created by the API
+    # fetching pipeline runs created by the API (pipelines that arent scheduled)
     active_pipeline_runs = await fetch_active_pipeline_runs(
-        config, unvalid_schedule_pipelines,latest_only=False
+        config, invalid_schedule_pipelines,latest_only=False
     )
+    
+    new_queue = manage_pipeline_queue(current_queue=current_queue,all_runs=active_pipeline_runs,pipelines_info=invalid_schedule_pipelines)
+    
     if logger.isEnabledFor(logging.INFO):
         logger.info("fetched %s active and API created pipelines runs.", len(active_pipeline_runs))
 
     # triggering pipeline steps for non scheduled pipelines (pipeline runs created by api)
     trigger_commands = prepare_trigger_commands(
-        active_pipeline_runs, unvalid_schedule_pipelines, current_time, scheduled=False
+        [new_queue[0]], invalid_schedule_pipelines, current_time, scheduled=False
     )
     await execute_commands(trigger_commands, config, step_logging=True)
-    return [update_pipeline_runs_commands, trigger_commands]
+    
+    return new_queue
 
 
 def filter_valid_schedule_pipelines(updated_pipelines):
@@ -174,7 +180,34 @@ async def execute_commands(commands, config, step_logging=False):
             logger.info(log_message)
         await command.execute(config)
 
+def manage_pipeline_queue(current_queue,all_runs,pipelines_info):
+    
+    queue=current_queue
+    for run in all_runs:
+        if run.id not in [r.id for r in queue ]:
+            queue.append(run)
+            
+    
+    #removing runs that are completed or with an error
+    queue = [run for run in queue if run.status not in[StatusExecution.ERROR, StatusExecution.CANCELED,StatusExecution.COMPLETED]]
+    #removing runs that had the last step already executed
+    queue = [run for run in queue if run.last_executed_step +1 != len(pipelines_info[run.pipeline_id]["steps"])]
+            
 
+    first_run = queue[0]
+
+    step_infos = pipelines_info[first_run.pipeline_id]["steps"]
+    last_executed_step = first_run.last_executed_step 
+    next_step = step_infos[last_executed_step+1]
+    if "scheduling" in next_step and get_step_is_user_triggered(next_step["scheduling"]):
+            queue.pop(0)
+    
+    
+  
+    
+    return queue
+
+    
 async def main(config):
     await check_and_execute(config=config)
 
