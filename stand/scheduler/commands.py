@@ -98,8 +98,8 @@ class TriggerWorkflow(Command):
         url = f"{stand_config['url']}/pipeline-runs/execute"
     
         payload = {"id": self.pipeline_step.id}
-
-        logger.info("PipelineStep with id %s triggered.", self.pipeline_step)
+        logger.info(self.pipeline_step)
+        logger.info("PipelineStep  %s  from workflow %s and pipeline run id %s triggered", self.pipeline_step,self.pipeline_step.workflow_id,self.pipeline_step.pipeline_run_id)
         await update_data(
             url=url, method="POST", payload=payload, headers=headers
         )

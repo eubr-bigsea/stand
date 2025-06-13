@@ -85,18 +85,23 @@ async def execute(config,current_queue, current_time=None):
         config, invalid_schedule_pipelines,latest_only=False
     )
     
-    new_queue = manage_pipeline_queue(current_queue=current_queue,all_runs=active_pipeline_runs,pipelines_info=invalid_schedule_pipelines)
+    new_queue = manage_pipeline_queue(all_runs=active_pipeline_runs,pipelines_info=invalid_schedule_pipelines)
     
     if logger.isEnabledFor(logging.INFO):
         logger.info("fetched %s active and API created pipelines runs.", len(active_pipeline_runs))
 
     # triggering pipeline steps for non scheduled pipelines (pipeline runs created by api)
-    trigger_commands = prepare_trigger_commands(
-        [new_queue[0]], invalid_schedule_pipelines, current_time, scheduled=False
-    )
-    await execute_commands(trigger_commands, config, step_logging=True)
+    if len(new_queue)>0:
+        trigger_commands = prepare_trigger_commands(
+            new_queue[0:1], invalid_schedule_pipelines, current_time, scheduled=False
+        )
+        await execute_commands(trigger_commands, config, step_logging=True)
     
-    return new_queue
+    # trigger_commands = prepare_trigger_commands(
+    #     active_pipeline_runs, invalid_schedule_pipelines, current_time, scheduled=False
+    # )
+    # await execute_commands(trigger_commands, config, step_logging=True)
+    return []
 
 
 def filter_valid_schedule_pipelines(updated_pipelines):
@@ -144,9 +149,11 @@ def prepare_trigger_commands(
     """Prepares commands to trigger scheduled pipeline steps."""
     trigger_commands = []
     for run in active_pipeline_runs:
+        print(run.id)
         step_infos = valid_schedule_pipelines[run.pipeline_id]["steps"]
         step_runs = [step for step in run.steps]
         if  run.status in(StatusExecution.COMPLETED, StatusExecution.CANCELED,StatusExecution.ERROR):
+            print("1")
             continue
         if(len(step_infos)!=len(step_runs)):
             if logger.isEnabledFor(logging.INFO):
@@ -180,32 +187,40 @@ async def execute_commands(commands, config, step_logging=False):
             logger.info(log_message)
         await command.execute(config)
 
-def manage_pipeline_queue(current_queue,all_runs,pipelines_info):
+def manage_pipeline_queue(all_runs,pipelines_info):
     
-    queue=current_queue
+    queue=[]
+
     for run in all_runs:
         if run.id not in [r.id for r in queue ]:
             queue.append(run)
+      
             
-    
+  
     #removing runs that are completed or with an error
     queue = [run for run in queue if run.status not in[StatusExecution.ERROR, StatusExecution.CANCELED,StatusExecution.COMPLETED]]
-    #removing runs that had the last step already executed
-    queue = [run for run in queue if run.last_executed_step +1 != len(pipelines_info[run.pipeline_id]["steps"])]
-            
-
-    first_run = queue[0]
-
-    step_infos = pipelines_info[first_run.pipeline_id]["steps"]
-    last_executed_step = first_run.last_executed_step 
-    next_step = step_infos[last_executed_step+1]
-    if "scheduling" in next_step and get_step_is_user_triggered(next_step["scheduling"]):
-            queue.pop(0)
     
+    #removing runs that had the last step already executed
+    queue = [run for run in queue if run.last_executed_step  != len(pipelines_info[run.pipeline_id]["steps"])]
+    
+    #removing runs with all steps completed but that for some reason dont have "completed" as a status
+    queue = [run for run in queue if not (len({step_run.status for step_run in run.steps})==1 and StatusExecution.COMPLETED  in {step_run.status for step_run in run.steps})]
+
+    #kicking elements out if their next step needs user input
+    new_queue =[]
+    for run in queue:
+        step_infos = pipelines_info[run.pipeline_id]["steps"]
+        last_executed_step = run.last_executed_step 
+        next_step = step_infos[last_executed_step]
+        if "scheduling" in next_step and get_step_is_user_triggered(next_step["scheduling"]):
+            continue
+        else:
+            new_queue.append(run)
+
     
   
-    
-    return queue
+    #print(new_queue)
+    return new_queue
 
     
 async def main(config):
