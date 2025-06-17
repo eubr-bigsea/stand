@@ -42,7 +42,7 @@ async def check_and_execute(config):
 
 
 
-async def execute(config,current_queue, current_time=None):
+async def execute(config,current_queue, current_time=None,concurrent_jobs=2):
     current_time = current_time or datetime.now(timezone.utc)
 
     # fetch pipelines and filter valid ones
@@ -93,7 +93,7 @@ async def execute(config,current_queue, current_time=None):
     # triggering pipeline steps for non scheduled pipelines (pipeline runs created by api)
     if len(new_queue)>0:
         trigger_commands = prepare_trigger_commands(
-            new_queue[0:1], invalid_schedule_pipelines, current_time, scheduled=False
+            new_queue[0:concurrent_jobs], invalid_schedule_pipelines, current_time, scheduled=False
         )
         await execute_commands(trigger_commands, config, step_logging=True)
     
