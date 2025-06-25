@@ -179,17 +179,19 @@ def trigger_scheduled_pipeline_steps(
                     command = TriggerWorkflow(pipeline_step=step_runs[index])
                     return command
 
-    # run created by the coletor, only needs to check order and if theres any step
+    # run created by the colector, only needs to check order and if theres any step
     # of this run already running. 
     else:
         for index, step in enumerate(steps):
             if "scheduling" in step and get_step_is_user_triggered(step["scheduling"]):
+               
                 continue
 
             is_in_order = is_next_step_in_order(step, pipeline_run)
             is_step_free = no_job_already_active_for_step_run(step, pipeline_run)
             is_pipeline_active = pipeline_run.status not in (StatusExecution.ERROR, StatusExecution.CANCELED)
-
+            
+          
             if is_in_order and is_step_free and is_pipeline_active:
                 return TriggerWorkflow(pipeline_step=step_runs[index])
     
