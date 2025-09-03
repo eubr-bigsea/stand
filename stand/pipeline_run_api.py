@@ -336,7 +336,7 @@ class PipelineRunContextSchema(Schema):
     value = fields.String(required=True)
 
 class CreatePipelineRunSchema(Schema):
-    id = fields.Integer(required=True)
+    id = fields.Raw(required=True)
     start = fields.DateTime(required=True)
     finish = fields.DateTime(required=True)
     run_creation_method = fields.String(missing=True)
