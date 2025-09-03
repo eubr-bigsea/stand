@@ -34,6 +34,7 @@ class PipelineStep:
 class Pipeline:
     id: int
     name: str
+    identififer: str
     enabled: bool
     user_id: int
     user_login: str
