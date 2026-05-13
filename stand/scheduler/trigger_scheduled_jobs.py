@@ -131,12 +131,14 @@ def get_step_start_time(scheduling) -> datetime:
 
 
 def no_job_already_active_for_step_run(
-    step: PipelineStepRun, pipeline_run: PipelineRun
+    step, pipeline_run: PipelineRun
 ) -> bool:
-    "returns if step is the next step in a pipeline run execution"
+    "returns if a  step has pending as its status"
 
+    step_run= [step_run for step_run in  pipeline_run.steps if step_run.order==step["order"]][0]
+
+    if step_run.status == StatusExecution.PENDING:
     
-    if pipeline_run.steps[step["order"] - 1].status == StatusExecution.PENDING:
         return True
     else:
         return False
@@ -190,6 +192,7 @@ def trigger_scheduled_pipeline_steps(
             is_in_order = is_next_step_in_order(step, pipeline_run)
             is_step_free = no_job_already_active_for_step_run(step, pipeline_run)
             is_pipeline_active = pipeline_run.status not in (StatusExecution.ERROR, StatusExecution.CANCELED)
+            print(is_in_order,is_step_free,is_pipeline_active,step)
             
           
             if is_in_order and is_step_free and is_pipeline_active:
