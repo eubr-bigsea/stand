@@ -47,38 +47,12 @@ async def execute(config,current_queue, current_time=None,concurrent_jobs=2):
 
     # fetch pipelines and filter valid ones
     updated_pipelines = await get_pipelines(config["stand"]["services"]["tahiti"])
-    valid_schedule_pipelines = filter_valid_schedule_pipelines(updated_pipelines)
     invalid_schedule_pipelines = filter_non_valid_schedule_pipelines(updated_pipelines)
 
     if logger.isEnabledFor(logging.INFO):
         
         logger.info("fetched %s pipelines.", len(updated_pipelines))
         
-    # fetch active pipeline runs with scheduled pipelines
-    active_pipeline_runs = await fetch_active_pipeline_runs(
-        config, valid_schedule_pipelines
-    )
-    if logger.isEnabledFor(logging.INFO):
-        logger.info("fetched %s active and scheduled pipelines runs.", len(active_pipeline_runs))
-
-    # update pipeline runs for scheduled pipelines
-    update_pipeline_runs_commands = get_pipeline_run_commands(
-        updated_pipelines=valid_schedule_pipelines,
-        pipeline_runs=active_pipeline_runs,
-        current_time=current_time,
-    )
-    await execute_commands(update_pipeline_runs_commands, config)
-
-    # fetch active pipeline runs again (to account for new runs)
-    active_pipeline_runs = await fetch_active_pipeline_runs(
-        config, valid_schedule_pipelines
-    )
-
-    # trigger pipeline step commands for scheduled pipelines
-    trigger_commands = prepare_trigger_commands(
-        active_pipeline_runs, valid_schedule_pipelines, current_time, scheduled=True
-    )
-    await execute_commands(trigger_commands, config, step_logging=True)
 
     # fetching pipeline runs created by the API (pipelines that arent scheduled)
     active_pipeline_runs = await fetch_active_pipeline_runs(
@@ -97,10 +71,7 @@ async def execute(config,current_queue, current_time=None,concurrent_jobs=2):
         )
         await execute_commands(trigger_commands, config, step_logging=True)
     
-    # trigger_commands = prepare_trigger_commands(
-    #     active_pipeline_runs, invalid_schedule_pipelines, current_time, scheduled=False
-    # )
-    # await execute_commands(trigger_commands, config, step_logging=True)
+
     return []
 
 
@@ -149,12 +120,11 @@ def prepare_trigger_commands(
     """Prepares commands to trigger scheduled pipeline steps."""
     trigger_commands = []
     for run in active_pipeline_runs:
-        print(run.id)
         step_infos = valid_schedule_pipelines[run.pipeline_id]["steps"]
         step_runs = [step for step in run.steps]
         if  run.status in(StatusExecution.COMPLETED, StatusExecution.CANCELED,StatusExecution.ERROR):
-            print("1")
             continue
+        
         if(len(step_infos)!=len(step_runs)):
             if logger.isEnabledFor(logging.INFO):
                 log_message = (
@@ -216,10 +186,6 @@ def manage_pipeline_queue(all_runs,pipelines_info):
             continue
         else:
             new_queue.append(run)
-
-    
-  
-    #print(new_queue)
     return new_queue
 
     
