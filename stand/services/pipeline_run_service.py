@@ -100,7 +100,8 @@ def create_pipeline_run_from_pipeline(
         #default status should waiting
         status=StatusExecution.WAITING,
         final_status=None,
-        steps=[create_step(st) for st in pipeline.steps],
+        steps=[create_step(st)
+            for st in sorted(pipeline.steps, key=lambda s: s.order)],
         run_creation_method = run_creation_method,
         context_data=context_data
     )
