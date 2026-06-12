@@ -918,6 +918,9 @@ class PipelineRunCreateRequestSchema(BaseSchema):
     """JSON serialization schema for creating an instance"""
 
     start = fields.DateTime(required=True)
+    deleted = fields.Boolean(
+        required=False, allow_none=True, load_default=False, dump_default=False
+    )
     finish = fields.DateTime(required=True)
     pipeline_id = fields.Integer(required=True)
     pipeline_name = fields.String(required=True)
@@ -943,6 +946,7 @@ class PipelineRunCreateRequestSchema(BaseSchema):
         load_default="scheduler",
         dump_default="scheduler",
     )
+    tags = fields.String(required=False, allow_none=True)
     steps = fields.Nested(
         "stand.schema.PipelineStepRunCreateRequestSchema",
         required=True,
@@ -970,6 +974,9 @@ class PipelineRunListResponseSchema(BaseSchema):
 
     id = fields.Integer(required=True)
     start = fields.DateTime(required=True)
+    deleted = fields.Boolean(
+        required=False, allow_none=True, load_default=False, dump_default=False
+    )
     finish = fields.DateTime(required=True)
     pipeline_id = fields.Integer(required=True)
     pipeline_name = fields.String(required=True)
@@ -995,6 +1002,7 @@ class PipelineRunListResponseSchema(BaseSchema):
         load_default="scheduler",
         dump_default="scheduler",
     )
+    tags = fields.String(required=False, allow_none=True)
     steps = fields.Nested(
         "stand.schema.PipelineStepRunListResponseSchema",
         required=True,
@@ -1033,6 +1041,9 @@ class PipelineRunItemResponseSchema(BaseSchema):
 
     id = fields.Integer(required=True)
     start = fields.DateTime(required=True)
+    deleted = fields.Boolean(
+        required=False, allow_none=True, load_default=False, dump_default=False
+    )
     finish = fields.DateTime(required=True)
     pipeline_id = fields.Integer(required=True)
     pipeline_name = fields.String(required=True)
@@ -1058,6 +1069,7 @@ class PipelineRunItemResponseSchema(BaseSchema):
         load_default="scheduler",
         dump_default="scheduler",
     )
+    tags = fields.String(required=False, allow_none=True)
     steps = fields.Nested(
         "stand.schema.PipelineStepRunItemResponseSchema",
         required=True,
@@ -1085,6 +1097,9 @@ class PipelineRunCreateRequestSchema(BaseSchema):
 
     id = fields.Integer(allow_none=True)
     start = fields.DateTime(required=True)
+    deleted = fields.Boolean(
+        required=False, allow_none=True, load_default=False, dump_default=False
+    )
     finish = fields.DateTime(required=True)
     pipeline_id = fields.Integer(required=True)
     pipeline_name = fields.String(required=True)
@@ -1110,6 +1125,7 @@ class PipelineRunCreateRequestSchema(BaseSchema):
         load_default="scheduler",
         dump_default="scheduler",
     )
+    tags = fields.String(required=False, allow_none=True)
     steps = fields.Nested(
         "stand.schema.PipelineStepRunCreateRequestSchema",
         required=True,

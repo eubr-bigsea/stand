@@ -262,7 +262,8 @@ class PipelineRunDetailApi(Resource):
             )
         pipeline = PipelineRun.query.get(pipeline_run_id)
         if pipeline is not None:
-            db.session.delete(pipeline)
+            pipeline.deleted = True
+            db.session.add(pipeline)
             db.session.commit()
             result = {
                 "status": "OK",

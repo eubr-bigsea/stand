@@ -568,6 +568,7 @@ class PipelineRun(db.Model):
     # Fields
     id = Column(Integer, primary_key=True)
     start = Column(DateTime, nullable=False, index=True)
+    deleted = Column(Boolean, default=False, nullable=False)
     finish = Column(DateTime, nullable=False, index=True)
     pipeline_id = Column(Integer, nullable=False, index=True)
     pipeline_name = Column(String(200), nullable=False)
@@ -588,6 +589,7 @@ class PipelineRun(db.Model):
         Enum(*list(StatusExecution.values()), name="StatusExecutionEnumType")
     )
     run_creation_method = Column(String(50), default="scheduler", nullable=False)
+    tags = Column(String(200), index=True)
 
     # Associations
     steps = relationship(
