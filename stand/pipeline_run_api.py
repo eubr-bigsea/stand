@@ -82,7 +82,7 @@ def _get_pipeline_runs_query():
         pipeline_runs = pipeline_runs.filter(PipelineRun.finish >= start_filter)
     elif end_filter:
         pipeline_runs = pipeline_runs.filter(PipelineRun.start <= end_filter)
-    pipeline_runs = pipeline_runs.filter(not PipelineRun.deleted)
+    pipeline_runs = pipeline_runs.filter(PipelineRun.deleted==False)
     return pipeline_runs
 
 
