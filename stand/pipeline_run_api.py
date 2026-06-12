@@ -82,6 +82,7 @@ def _get_pipeline_runs_query():
         pipeline_runs = pipeline_runs.filter(PipelineRun.finish >= start_filter)
     elif end_filter:
         pipeline_runs = pipeline_runs.filter(PipelineRun.start <= end_filter)
+    pipeline_runs = pipeline_runs.filter(not PipelineRun.deleted)
     return pipeline_runs
 
 
@@ -118,7 +119,7 @@ class PipelineRunListApi(Resource):
                 PipelineRun.pipeline_id.in_(pipeline_ids)
             )
 
-    
+
         latest_filter = request.args.get("latest")
         if latest_filter in ("true", 1, "True", "1"):
             subquery = db.session.query(
