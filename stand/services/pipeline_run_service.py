@@ -60,7 +60,10 @@ def create_pipeline_run_from_pipeline(
                     "At least a pipeline step is not associated to a workflow"
                 )
             )
-        scheduling = json.loads(st.scheduling)
+        if st.scheduling is not None:
+            scheduling = json.loads(st.scheduling)
+        else:
+            scheduling = {}
         return PipelineStepRun(
             name=st.name,
             created=now,
@@ -203,7 +206,7 @@ def update_pipeline_run(job: Job) -> None:
 
     last_step = job.pipeline_run.last_executed_step
 
- 
+
     step_statuses = {
         step.order: (job.status if step.id == job.pipeline_step_run.id else step.status)
         for step in job.pipeline_run.steps
@@ -236,7 +239,7 @@ def update_pipeline_run(job: Job) -> None:
     db.session.add(job.pipeline_step_run)
     db.session.add(job.pipeline_run)
 
-    
+
 def change_pipeline_run_status(run: PipelineRun, status: StatusExecution,
                                emit: callable) -> None:
     run.status = status
