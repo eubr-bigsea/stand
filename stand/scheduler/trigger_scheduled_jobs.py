@@ -202,7 +202,7 @@ def trigger_scheduled_pipeline_steps(
                     (
                         step_run
                         for step_run in step_runs
-                        if step_run["order"] == (pipeline_run.last_executed_step + 1)
+                        if step_run.order == (pipeline_run.last_executed_step + 1)
                     ),
                     None,
                 )
