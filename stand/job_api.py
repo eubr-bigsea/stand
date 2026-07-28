@@ -17,7 +17,7 @@ from stand.schema import (Job, JobCreateRequestSchema, JobItemResponseSchema,
                           JobListResponseSchema, JobStep, ExecutionPermission,
                           PermissionType, Cluster, translate_validation,
                           JobException, db)
-from stand.models import JobType, StatusExecution
+from stand.models import JobType, StatusExecution, GlobalVariable
 from stand.services.job_services import JobService
 from stand.services.redis_service import connect_redis_store
 from rq.exceptions import NoSuchJobError
@@ -563,6 +563,10 @@ class WorkflowStartActionApi(Resource):
                             'message': gettext(
                                 'You must inform cluster_id or define a '
                                 'preferred one in workflow.')}
+
+                # Add all global vars
+                global_vars = GlobalVariable.query.filter(enabled=True)
+                workflow['global_variables'] = [{'name': v.name, 'value': v.value}]
 
                 job.cluster = Cluster.query.get(int(cluster_id))
                 job.workflow_definition = r.text
