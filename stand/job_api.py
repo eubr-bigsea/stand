@@ -569,7 +569,7 @@ class WorkflowStartActionApi(Resource):
                 workflow['global_variables'] = [{'name': v.name, 'value': v.value}]
 
                 job.cluster = Cluster.query.get(int(cluster_id))
-                job.workflow_definition = r.text
+                job.workflow_definition = json.dumps(workflow)
                 JobService.start(job, workflow, {},
                                  JobType.BATCH, persist=True)
                 return {'data': {'job': {'id': job.id}}}
