@@ -1575,6 +1575,7 @@ class GlobalVariableListResponseSchema(BaseSchema):
 class GlobalVariableItemResponseSchema(BaseSchema):
     """JSON serialization schema for serializing a single object"""
 
+    id = fields.Integer(required=True)
     name = fields.String(required=True)
     enabled = fields.Boolean(required=True)
     description = fields.String(required=False, allow_none=True)
@@ -1594,7 +1595,6 @@ class GlobalVariableItemResponseSchema(BaseSchema):
 class GlobalVariableCreateRequestSchema(BaseSchema):
     """JSON serialization schema for creating an instance"""
 
-    id = fields.Integer(required=True)
     name = fields.String(required=True)
     enabled = fields.Boolean(required=True)
     description = fields.String(required=False, allow_none=True)
