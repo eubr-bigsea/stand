@@ -1,7 +1,7 @@
 """add global variables entity
 
 Revision ID: c6d0d9df2db0
-Revises: 1099ab576c7e
+Revises: 9f8e7d6c5b4a
 Create Date: 2026-07-22 10:40:26.006306
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import mysql
 
 # revision identifiers, used by Alembic.
 revision = 'c6d0d9df2db0'
-down_revision = '1099ab576c7e'
+down_revision = '9f8e7d6c5b4a'
 branch_labels = None
 depends_on = None
 
