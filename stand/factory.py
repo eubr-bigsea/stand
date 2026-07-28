@@ -22,6 +22,8 @@ from mockredis import MockRedis
 from sqlalchemy import and_
 from stand.cluster_api import ClusterDetailApi, PerformanceModelEstimationApi
 from stand.cluster_api import ClusterListApi
+from stand.global_variable_api import GlobalVariableDetailApi, GlobalVariableListApi
+
 from stand.pipeline_run_api import (GetPipelineRunContextDataApi, PipelineRunDetailApi, PipelineRunListApi,
                                     PipelineRunFromPipelineApi,
                                     ExecutePipelineRunStepApi,
@@ -173,6 +175,8 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
         '/jobs/<int:job_id>/status': UpdateJobStatusActionApi,
         '/jobs/<int:job_id>/<task_id>/status': UpdateJobStepStatusActionApi,
         '/jobs/<int:job_id>/sample/<task_id>': JobSampleActionApi,
+        '/global-variables': GlobalVariableListApi,
+        '/global-variables/<int:global_var>': GlobalVariableDetailApi,
         '/clusters': ClusterListApi,
         '/clusters/<int:cluster_id>': ClusterDetailApi,
         '/pipeline-runs': PipelineRunListApi,

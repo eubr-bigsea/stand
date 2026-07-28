@@ -1551,3 +1551,62 @@ class PipelineRunContextDataCreateRequestSchema(BaseSchema):
     class Meta:
         ordered = True
         unknown = EXCLUDE
+
+
+class GlobalVariableListResponseSchema(BaseSchema):
+    """JSON serialization schema for serializing a list of objects"""
+
+    id = fields.Integer(required=True)
+    name = fields.String(required=True)
+    enabled = fields.Boolean(required=True)
+    description = fields.String(required=False, allow_none=True)
+
+    # noinspection PyUnresolvedReferences
+    @post_load
+    def make_object(self, data, **kwargs):
+        """Deserialize data into an instance of GlobalVariable"""
+        return GlobalVariable(**data)
+
+    class Meta:
+        ordered = True
+        unknown = EXCLUDE
+
+
+class GlobalVariableItemResponseSchema(BaseSchema):
+    """JSON serialization schema for serializing a single object"""
+
+    id = fields.Integer(required=True)
+    name = fields.String(required=True)
+    enabled = fields.Boolean(required=True)
+    description = fields.String(required=False, allow_none=True)
+    value = fields.String(required=True)
+
+    # noinspection PyUnresolvedReferences
+    @post_load
+    def make_object(self, data, **kwargs):
+        """Deserialize data into an instance of GlobalVariable"""
+        return GlobalVariable(**data)
+
+    class Meta:
+        ordered = True
+        unknown = EXCLUDE
+
+
+class GlobalVariableCreateRequestSchema(BaseSchema):
+    """JSON serialization schema for creating an instance"""
+
+    id = fields.Integer(required=True)
+    name = fields.String(required=True)
+    enabled = fields.Boolean(required=True)
+    description = fields.String(required=False, allow_none=True)
+    value = fields.String(required=True)
+
+    # noinspection PyUnresolvedReferences
+    @post_load
+    def make_object(self, data, **kwargs):
+        """Deserialize data into an instance of GlobalVariable"""
+        return GlobalVariable(**data)
+
+    class Meta:
+        ordered = True
+        unknown = EXCLUDE

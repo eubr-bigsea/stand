@@ -730,3 +730,22 @@ class PipelineRunContextData(db.Model):
 
     def __repr__(self):
         return "<Instance {}: {}>".format(self.__class__, self.id)
+
+
+class GlobalVariable(db.Model):
+    """Global variable used in workflows"""
+
+    __tablename__ = "global_variable"
+
+    # Fields
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    enabled = Column(Boolean, nullable=False)
+    description = Column(String(500))
+    value = Column(String(4000), nullable=False)
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return "<Instance {}: {}>".format(self.__class__, self.id)
