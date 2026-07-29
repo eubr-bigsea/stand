@@ -148,7 +148,12 @@ class JobListApi(Resource):
                 if cluster is None:
                     raise ValidationError({'cluster': ['Invalid cluster']})
 
-                JobService.start(new_job, request_json['workflow'],
+                workflow = request_json['workflow']
+                # Add all global vars
+                global_vars = GlobalVariable.query.filter(GlobalVariable.enabled==True)
+                workflow['global_variables'] = [{'name': v.name, 'value': v.value} for v in global_vars]
+
+                JobService.start(new_job, workflow,
                                  request_json.get('app_configs', {}),
                                  persist=persist,
                                  testing=current_app.testing,
@@ -565,8 +570,8 @@ class WorkflowStartActionApi(Resource):
                                 'preferred one in workflow.')}
 
                 # Add all global vars
-                global_vars = GlobalVariable.query.filter(enabled=True)
-                workflow['global_variables'] = [{'name': v.name, 'value': v.value}]
+                global_vars = GlobalVariable.query.filter(GlobalVariable.enabled==True)
+                workflow['global_variables'] = [{'name': v.name, 'value': v.value} for v in global_vars]
 
                 job.cluster = Cluster.query.get(int(cluster_id))
                 job.workflow_definition = json.dumps(workflow)
