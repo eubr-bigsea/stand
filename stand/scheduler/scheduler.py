@@ -175,7 +175,7 @@ def manage_pipeline_queue(all_runs,pipelines_info):
            
             new_queue.append(run)
   
-    return []
+    return new_queue
 
     
 async def main(config):
