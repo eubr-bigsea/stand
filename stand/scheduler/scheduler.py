@@ -71,7 +71,7 @@ async def execute(config,current_queue, current_time=None,concurrent_jobs=5):
             new_queue[0:concurrent_jobs], pipelines, current_time, scheduled=False
         )
       
-        await execute_commands(trigger_commands, config, step_logging=True)
+        # await execute_commands(trigger_commands, config, step_logging=True)
     
 
     return []
@@ -166,12 +166,16 @@ def manage_pipeline_queue(all_runs,pipelines_info):
     for run in queue:
         step_infos = pipelines_info[run.pipeline_id]["steps"]
         last_executed_step = run.last_executed_step 
-        next_step = step_infos[last_executed_step]
+        # next_step = step_infos[last_executed_step]
+    
+        next_step = [step for step in step_infos if step["order"]==last_executed_step +1][0]
         if "scheduling" in next_step and get_step_is_user_triggered(next_step["scheduling"]):
             continue
         else:
+           
             new_queue.append(run)
-    return new_queue
+  
+    return []
 
     
 async def main(config):
