@@ -20,6 +20,9 @@ from stand.models_extra import Period
 from stand.schema import (
     PipelineRunCreateRequestSchema,
     PipelineRunCommentUpdateRequestSchema,
+    PipelineRunContextDataItemResponseSchema,
+    PipelineRunContextDataSetRequestSchema,
+    PipelineRunContextDataUpdateRequestSchema,
     PipelineRunItemResponseSchema,
     PipelineRunListResponseSchema,
     PipelineStepRunItemResponseSchema,
@@ -422,71 +425,89 @@ class SetPipelineRunContextDataApi(Resource):
 
     @requires_auth
     def post(self):
-        if (
-            request.content_type == "application/json"
-            and request.json is not None
-        ):
-            params = PipelineRunContextSchema().from_dict(request.json)
-            try:
-                name = params.name
-                value  = params.value
-                run_id  = params.pipeline_run_id
-                ctx = PipelineRunContextData.query.filter(
-                    PipelineRunContextData.pipeline_run_id==run_id,
-                    PipelineRunContextData.name==name
-                ).first()
-                if ctx is None:
-                    ctx = PipelineRunContextData(
-                        pipeline_run_id=run_id,
-                        name=name,
-                        value=value
-                    )
-                else:
-                    ctx.pipeline_run_id=run_id
-                    ctx.name=name
-                    ctx.value=value
-                db.session.add(ctx)
-                db.session.commit()
-            except ServiceException as se:
-                return {"status": "ERROR", "message": str(se)}, 400
-            return {
-                "status": "OK",
-                "message": gettext(
-                    "Context set",
-                )
-            }, 200
-        else:
-            return {
-                "status": "ERROR",
-                "message": "Unsupported content type",
-            }, 415
+        if request.content_type != "application/json" or request.json is None:
+            return {"status": "ERROR", "message": "Unsupported content type"}, 415
+
+        params = PipelineRunContextDataSetRequestSchema().load(request.json)
+        pipeline_run_id = params.pop("pipeline_run_id")
+        if db.session.get(PipelineRun, pipeline_run_id) is None:
+            return {"status": "ERROR", "message": gettext("PipelineRun not found")}, HTTPStatus.NOT_FOUND
+        context_data = _upsert_pipeline_run_context(pipeline_run_id, params)
+        return {
+            "status": "OK",
+            "message": gettext("Context set"),
+            "data": [PipelineRunContextDataItemResponseSchema().dump(context_data)],
+        }, HTTPStatus.OK
+
+
+class PipelineRunContextDataApi(Resource):
+    """REST API for creating or updating one PipelineRun variable."""
+
+    @requires_auth
+    def patch(self, pipeline_run_id: int):
+        if db.session.get(PipelineRun, pipeline_run_id) is None:
+            return {"status": "ERROR", "message": gettext("PipelineRun not found")}, HTTPStatus.NOT_FOUND
+
+        params = PipelineRunContextDataUpdateRequestSchema().load(request.get_json())
+        context_data = _upsert_pipeline_run_context(pipeline_run_id, params)
+        return {
+            "status": "OK",
+            "message": gettext("Context set"),
+            "data": [PipelineRunContextDataItemResponseSchema().dump(context_data)],
+        }, HTTPStatus.OK
+
+
+def _upsert_pipeline_run_context(pipeline_run_id: int, params: dict):
+    """Persist one variable scoped to an existing PipelineRun."""
+    context_data = PipelineRunContextData.query.filter_by(
+        pipeline_run_id=pipeline_run_id,
+        name=params["name"],
+    ).first()
+    if context_data is None:
+        context_data = PipelineRunContextData(
+            pipeline_run_id=pipeline_run_id,
+            name=params["name"],
+            value=params["value"],
+        )
+    else:
+        context_data.value = params["value"]
+
+    db.session.add(context_data)
+    db.session.commit()
+    return context_data
 
 
 class GetPipelineRunContextDataApi(Resource):
     """REST API for setting context data for a pipeline run"""
 
     @requires_auth
-    @requires_auth
     def get(self, pipeline_run_id: int, name: str):
-        if name and pipeline_run_id:
-            try:
-                ctx = PipelineRunContextData.query.filter(
-                    PipelineRunContextData.pipeline_run_id==pipeline_run_id,
-                    PipelineRunContextData.name==name
-                ).first()
-                if ctx is None:
-                    return {"status": "Not found"}, 404
-                else:
-                    return {"value": ctx.value}, 200
+        if not name or not pipeline_run_id:
+            return {"status": "ERROR", "message": "Parameter not informed"}, 415
 
-            except ServiceException as se:
-                return {"status": "ERROR", "message": str(se)}, 400
+        ctx = PipelineRunContextData.query.filter_by(
+            pipeline_run_id=pipeline_run_id,
+            name=name,
+        ).first()
+        if ctx is None:
+            return {"status": "Not found"}, HTTPStatus.NOT_FOUND
+        return {"value": ctx.value}, HTTPStatus.OK
 
-        else:
-            return {
-                "status": "ERROR",
-                "message": "Parameter not informed",
-            }, 415
+    @requires_auth
+    def delete(self, pipeline_run_id: int, name: str):
+        if db.session.get(PipelineRun, pipeline_run_id) is None:
+            return {"status": "Not found"}, HTTPStatus.NOT_FOUND
+
+        ctx = PipelineRunContextData.query.filter_by(
+            pipeline_run_id=pipeline_run_id,
+            name=name,
+        ).first()
+        if ctx is None:
+            return {"status": "Not found"}, HTTPStatus.NOT_FOUND
+
+        db.session.delete(ctx)
+        db.session.commit()
+        return "", HTTPStatus.NO_CONTENT
 
 
 class PipelineRunSummaryApi(Resource):

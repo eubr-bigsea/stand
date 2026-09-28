@@ -3,7 +3,7 @@ import json
 import re
 from copy import deepcopy
 from marshmallow import Schema, fields, post_load, post_dump, EXCLUDE, INCLUDE, RAISE
-from marshmallow.validate import OneOf
+from marshmallow.validate import Length, OneOf
 from flask_babel import gettext
 from .models import *
 
@@ -1560,6 +1560,22 @@ class PipelineRunContextDataCreateRequestSchema(BaseSchema):
     class Meta:
         ordered = True
         unknown = EXCLUDE
+
+
+class PipelineRunContextDataUpdateRequestSchema(Schema):
+    """JSON schema for creating or updating one pipeline-run variable."""
+
+    name = fields.String(required=True, validate=Length(min=1, max=200))
+    value = fields.String(required=True, validate=Length(max=4000))
+
+    class Meta:
+        unknown = RAISE
+
+
+class PipelineRunContextDataSetRequestSchema(PipelineRunContextDataUpdateRequestSchema):
+    """Backward-compatible schema for the legacy context endpoint."""
+
+    pipeline_run_id = fields.Integer(required=True)
 
 
 class GlobalVariableListResponseSchema(BaseSchema):

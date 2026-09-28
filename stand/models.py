@@ -9,6 +9,7 @@ from sqlalchemy import (
     Enum,
     DateTime,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship, backref
@@ -702,6 +703,13 @@ class PipelineRunContextData(db.Model):
     """Pipeline run context data"""
 
     __tablename__ = "pipeline_run_context_data"
+    __table_args__ = (
+        UniqueConstraint(
+            "pipeline_run_id",
+            "name",
+            name="uq_pipeline_run_context_data_pipeline_run_name",
+        ),
+    )
 
     # Fields
     id = Column(Integer, primary_key=True)
