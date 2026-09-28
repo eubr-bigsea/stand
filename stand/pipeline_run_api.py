@@ -19,6 +19,7 @@ from stand.models import Job, PipelineRun, PipelineRunContextData, PipelineStepR
 from stand.models_extra import Period
 from stand.schema import (
     PipelineRunCreateRequestSchema,
+    PipelineRunCommentUpdateRequestSchema,
     PipelineRunItemResponseSchema,
     PipelineRunListResponseSchema,
     PipelineStepRunItemResponseSchema,
@@ -331,6 +332,38 @@ class PipelineRunDetailApi(Resource):
                     "data": [response_schema.dump(pipeline_run)],
                 }
         return result, return_code
+
+
+class PipelineRunCommentApi(Resource):
+    """REST API for updating only a PipelineRun comment."""
+
+    @requires_auth
+    def patch(self, pipeline_run_id):
+        pipeline_run = PipelineRun.query.get(pipeline_run_id)
+        if pipeline_run is None:
+            return {
+                "status": "ERROR",
+                "message": gettext(
+                    "%(name)s not found (id=%(id)s).",
+                    name=gettext("PipelineRun"),
+                    id=pipeline_run_id,
+                ),
+            }, HTTPStatus.NOT_FOUND
+
+        data = PipelineRunCommentUpdateRequestSchema().load(request.get_json())
+        pipeline_run.comment = data["comment"]
+        db.session.commit()
+
+        return {
+            "status": "OK",
+            "message": gettext(
+                "%(name)s (id=%(id)s) was updated with success!",
+                name=gettext("PipelineRun"),
+                id=pipeline_run_id,
+            ),
+            "data": [PipelineRunItemResponseSchema().dump(pipeline_run)],
+        }, HTTPStatus.OK
+
 
 class PipelineRunContextSchema(Schema):
     pipeline_run_id = fields.Integer(required=False)

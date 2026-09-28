@@ -98,3 +98,28 @@ def test_pipeline_run_delete_success(client, app):
     rv = client.delete(f'/pipeline-runs/{pipeline_run_id}', headers=headers)
     assert rv.status_code == 204
 
+
+def test_pipeline_run_comment_update_success(client):
+    headers = {'X-Auth-Token': str(client.secret)}
+    rv = client.patch(
+        '/pipeline-runs/1/comment',
+        headers=headers,
+        json={'comment': 'Updated comment'},
+    )
+
+    assert rv.status_code == 200
+    assert rv.json['status'] == 'OK'
+    assert rv.json['data'][0]['comment'] == 'Updated comment'
+    assert db.session.get(PipelineRun, 1).comment == 'Updated comment'
+
+
+def test_pipeline_run_comment_update_rejects_other_properties(client):
+    headers = {'X-Auth-Token': str(client.secret)}
+    rv = client.patch(
+        '/pipeline-runs/1/comment',
+        headers=headers,
+        json={'comment': 'Updated comment', 'status': 'COMPLETED'},
+    )
+
+    assert rv.status_code == 400
+    assert rv.json['status'] == 'ERROR'
