@@ -71,7 +71,7 @@ async def execute(config,current_queue, current_time=None,concurrent_jobs=5):
             new_queue[0:concurrent_jobs], pipelines, current_time, scheduled=False
         )
       
-        # await execute_commands(trigger_commands, config, step_logging=True)
+        await execute_commands(trigger_commands, config, step_logging=True)
     
 
     return []
