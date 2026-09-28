@@ -24,7 +24,7 @@ from stand.cluster_api import ClusterDetailApi, PerformanceModelEstimationApi
 from stand.cluster_api import ClusterListApi
 from stand.global_variable_api import GlobalVariableDetailApi, GlobalVariableListApi
 
-from stand.pipeline_run_api import (GetPipelineRunContextDataApi, PipelineRunDetailApi, PipelineRunListApi,
+from stand.pipeline_run_api import (GetPipelineRunContextDataApi, PipelineRunContextDataApi, PipelineRunDetailApi, PipelineRunListApi,
                                     PipelineRunFromPipelineApi,
                                     ExecutePipelineRunStepApi,
                                     PipelineRunSummaryApi,
@@ -187,6 +187,7 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
         '/pipeline-runs/execute': ExecutePipelineRunStepApi,
         '/pipeline-runs/summary': PipelineRunSummaryApi,
         '/pipeline-runs/context': SetPipelineRunContextDataApi,
+        '/pipeline-runs/<int:pipeline_run_id>/context': PipelineRunContextDataApi,
         '/pipeline-runs/<int:pipeline_run_id>/context/<name>': GetPipelineRunContextDataApi,
         '/pipeline-runs/<int:pipeline_run_id>/status/<status>':
             ChangePipelineRunStepApi,

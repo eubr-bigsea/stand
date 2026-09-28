@@ -1,5 +1,5 @@
 
-from stand.models import PipelineRun, db
+from stand.models import PipelineRun, PipelineRunContextData, db
 from flask import current_app
 
 
@@ -123,3 +123,91 @@ def test_pipeline_run_comment_update_rejects_other_properties(client):
 
     assert rv.status_code == 400
     assert rv.json['status'] == 'ERROR'
+
+
+def test_pipeline_run_context_patch_creates_and_updates_variable(client):
+    headers = {'X-Auth-Token': str(client.secret)}
+    url = '/pipeline-runs/1/context'
+
+    created = client.patch(
+        url,
+        headers=headers,
+        json={'name': 'customer_id', 'value': '12345'},
+    )
+    assert created.status_code == 200
+    assert created.json['status'] == 'OK'
+    assert created.json['data'][0]['name'] == 'customer_id'
+    assert created.json['data'][0]['value'] == '12345'
+
+    context_id = created.json['data'][0]['id']
+    updated = client.patch(
+        url,
+        headers=headers,
+        json={'name': 'customer_id', 'value': '67890'},
+    )
+    assert updated.status_code == 200
+    assert updated.json['data'][0]['id'] == context_id
+    assert updated.json['data'][0]['value'] == '67890'
+    assert PipelineRunContextData.query.filter_by(
+        pipeline_run_id=1, name='customer_id'
+    ).count() == 1
+
+
+def test_pipeline_run_context_patch_validates_scope_and_fields(client):
+    headers = {'X-Auth-Token': str(client.secret)}
+
+    not_found = client.patch(
+        '/pipeline-runs/999/context',
+        headers=headers,
+        json={'name': 'customer_id', 'value': '12345'},
+    )
+    assert not_found.status_code == 404
+
+    invalid = client.patch(
+        '/pipeline-runs/1/context',
+        headers=headers,
+        json={'name': '', 'value': 12345},
+    )
+    assert invalid.status_code == 400
+    assert invalid.json['status'] == 'ERROR'
+
+
+def test_pipeline_run_context_delete(client):
+    headers = {'X-Auth-Token': str(client.secret)}
+    client.patch(
+        '/pipeline-runs/1/context',
+        headers=headers,
+        json={'name': 'to_delete', 'value': 'value'},
+    )
+
+    deleted = client.delete(
+        '/pipeline-runs/1/context/to_delete',
+        headers=headers,
+    )
+    assert deleted.status_code == 204
+    assert PipelineRunContextData.query.filter_by(
+        pipeline_run_id=1, name='to_delete'
+    ).first() is None
+
+    missing = client.delete(
+        '/pipeline-runs/1/context/to_delete',
+        headers=headers,
+    )
+    assert missing.status_code == 404
+
+
+def test_legacy_pipeline_run_context_post_remains_compatible(client):
+    headers = {'X-Auth-Token': str(client.secret)}
+    rv = client.post(
+        '/pipeline-runs/context',
+        headers=headers,
+        json={
+            'pipeline_run_id': 1,
+            'name': 'legacy_name',
+            'value': 'legacy_value',
+        },
+    )
+
+    assert rv.status_code == 200
+    assert rv.json['data'][0]['name'] == 'legacy_name'
+    assert rv.json['data'][0]['value'] == 'legacy_value'
