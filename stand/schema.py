@@ -2,7 +2,7 @@ import datetime
 import json
 import re
 from copy import deepcopy
-from marshmallow import Schema, fields, post_load, post_dump, EXCLUDE, INCLUDE
+from marshmallow import Schema, fields, post_load, post_dump, EXCLUDE, INCLUDE, RAISE
 from marshmallow.validate import OneOf
 from flask_babel import gettext
 from .models import *
@@ -967,6 +967,15 @@ class PipelineRunCreateRequestSchema(BaseSchema):
     class Meta:
         ordered = True
         unknown = EXCLUDE
+
+
+class PipelineRunCommentUpdateRequestSchema(Schema):
+    """JSON schema for updating only a PipelineRun comment."""
+
+    comment = fields.String(required=True, allow_none=True)
+
+    class Meta:
+        unknown = RAISE
 
 
 class PipelineRunListResponseSchema(BaseSchema):

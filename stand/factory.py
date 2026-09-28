@@ -28,7 +28,8 @@ from stand.pipeline_run_api import (GetPipelineRunContextDataApi, PipelineRunDet
                                     PipelineRunFromPipelineApi,
                                     ExecutePipelineRunStepApi,
                                     PipelineRunSummaryApi,
-                                    ChangePipelineRunStepApi, SetPipelineRunContextDataApi)
+                                    ChangePipelineRunStepApi, SetPipelineRunContextDataApi,
+                                    PipelineRunCommentApi)
 from stand.room_api import RoomApi
 from stand.job_api import (JobListApi, JobDetailApi,
     JobStopActionApi, JobLockActionApi, JobUnlockActionApi,
@@ -181,6 +182,7 @@ def create_app(settings_override=None, log_level=logging.DEBUG, config_file=''):
         '/clusters/<int:cluster_id>': ClusterDetailApi,
         '/pipeline-runs': PipelineRunListApi,
         '/pipeline-runs/<int:pipeline_run_id>': PipelineRunDetailApi,
+        '/pipeline-runs/<int:pipeline_run_id>/comment': PipelineRunCommentApi,
         '/pipeline-runs/create': PipelineRunFromPipelineApi,
         '/pipeline-runs/execute': ExecutePipelineRunStepApi,
         '/pipeline-runs/summary': PipelineRunSummaryApi,
