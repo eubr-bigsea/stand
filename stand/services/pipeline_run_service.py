@@ -87,9 +87,11 @@ def create_pipeline_run_from_pipeline(
             PipelineRunContextData(name=ctx.get('name'), value=ctx.get('value'))
             for ctx in context
         ]
-    final_comment = f'{gettext("Execution")} - '
-        f'[{start.strftime("%d-%m-%Y")} '
-        f'/ {finish.strftime("%d-%m-%Y")}]' if comment is None else comment
+    if comment is None:
+        final_comment = (f'{gettext("Execution")} - [{start.strftime("%d-%m-%Y")} '
+            f'/ {finish.strftime("%d-%m-%Y")}]')
+    else:
+        final_comment = comment
     pipeline_run = PipelineRun(
         start=start,
         finish=finish,
