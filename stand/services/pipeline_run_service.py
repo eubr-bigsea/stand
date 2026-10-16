@@ -48,7 +48,7 @@ def get_workflow_from_api(config: typing.Dict, workflow_id: int) -> \
 
 def create_pipeline_run_from_pipeline(
     pipeline: Pipeline, period: Period, run_creation_method="scheduler",
-    context=None,
+    context=None, comment=None
 ) -> None:
     """Create a pipeline run from a pipeline"""
     now = datetime.utcnow()
@@ -87,15 +87,16 @@ def create_pipeline_run_from_pipeline(
             PipelineRunContextData(name=ctx.get('name'), value=ctx.get('value'))
             for ctx in context
         ]
+    final_comment = f'{gettext("Execution")} - '
+        f'[{start.strftime("%d-%m-%Y")} '
+        f'/ {finish.strftime("%d-%m-%Y")}]' if comment is None else comment
     pipeline_run = PipelineRun(
         start=start,
         finish=finish,
         pipeline_id=pipeline.id,
         pipeline_name=pipeline.name,
         last_executed_step=0,
-        comment=f'{gettext("Execution")} - '
-        f'[{start.strftime("%d-%m-%Y")} '
-        f'/ {finish.strftime("%d-%m-%Y")}]',
+        comment=final_comment,
         updated=now,
         #default status should waiting
         status=StatusExecution.WAITING,

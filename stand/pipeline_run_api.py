@@ -399,8 +399,10 @@ class PipelineRunFromPipelineApi(Resource):
 
             try:
                 run = create_pipeline_run_from_pipeline(
-                    pipeline, Period(params.get("start"), params.get("finish")),run_creation_method = params.get("run_creation_method"),
-                    context = params.get("context")
+                    pipeline, Period(params.get("start"), params.get("finish")),
+                    run_creation_method = params.get("run_creation_method"),
+                    context = params.get("context"),
+                    comment = params.get("comment")
                 )
             except ServiceException as se:
                 return {"status": "ERROR", "message": str(se)}, 400
