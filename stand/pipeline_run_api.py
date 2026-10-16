@@ -377,6 +377,7 @@ class CreatePipelineRunSchema(Schema):
     id = fields.Raw(required=True)
     start = fields.DateTime(required=True)
     finish = fields.DateTime(required=True)
+    comment = fields.String(required=False, max=200)
     run_creation_method = fields.String(missing=True)
     context = fields.Nested(PipelineRunContextSchema, required=False, many=True)
 
